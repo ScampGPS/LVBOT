@@ -18,13 +18,12 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 # Import async components
-from lvbot.utils.async_browser_pool import AsyncBrowserPool
-from lvbot.utils.availability_checker_v3 import AvailabilityCheckerV3
-from lvbot.utils.browser_lifecycle import BrowserLifecycle
+from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
+from lvbot.automation.availability.availability_checker_v3 import AvailabilityCheckerV3
+from lvbot.automation.browser.browser_lifecycle import BrowserLifecycle
 from lvbot.utils.telegram_ui import TelegramUI
-from lvbot.utils.reservation_queue import ReservationQueue
+from lvbot.domain.queue import ReservationQueue, ReservationScheduler
 from lvbot.utils.user_manager import UserManager
-from lvbot.utils.reservation_scheduler import ReservationScheduler
 from lvbot.utils.error_handler import ErrorHandler
 from lvbot.handlers.callback_handlers import CallbackHandler
 

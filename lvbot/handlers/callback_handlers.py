@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from lvbot.utils.telegram_ui import TelegramUI
-from lvbot.utils.datetime_helpers import DateTimeHelpers
+from lvbot.automation.availability.datetime_helpers import DateTimeHelpers
 from lvbot.utils.error_handler import ErrorHandler
 from lvbot.utils.immediate_booking_handler import ImmediateBookingHandler
 from lvbot.utils.constants import COURT_HOURS, get_court_hours

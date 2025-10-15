@@ -4,50 +4,50 @@ Working document that links existing modules (primarily under `lvbot/utils`) to
 their target homes in the post-refactor package layout. Package scaffolding for
 `lvbot/automation/{browser,executors,availability}` and `lvbot/domain/{queue,models}`
 was added in Phase 1 so code can migrate incrementally without disrupting
-imports.
+imports. Phase 2 moved the queue stack and core automation modules into these
+packages; items annotated with ✅ are already relocated.
 
 ## Automation Layer
 - **Browser Core** → `lvbot/automation/browser/`
-  - `async_browser_pool.py`
-  - `async_browser_helpers.py`
-  - `browser_lifecycle.py`
-  - `browser_refresh_manager.py`
-  - `browser_pool_recovery.py`
-  - `browser_health_checker.py`
-  - `browser_allocation.py`
-  - `browser_refresh_manager.py`
-  - `emergency_browser_fallback.py`
-  - `stateful_browser_refresh.py`
+  - ✅ `async_browser_pool.py`
+  - ✅ `async_browser_helpers.py`
+  - ✅ `browser_lifecycle.py`
+  - ✅ `browser_refresh_manager.py`
+  - ✅ `browser_pool_recovery.py`
+  - ✅ `browser_health_checker.py`
+  - ✅ `browser_allocation.py`
+  - ✅ `emergency_browser_fallback.py`
+  - ✅ `stateful_browser_refresh.py`
 - **Executors & Orchestrators** → `lvbot/automation/executors/`
-  - `async_booking_executor.py`
-  - `smart_async_booking_executor.py`
-  - `experienced_booking_executor.py`
-  - `working_booking_executor.py`
-  - `optimized_navigation.py`
-  - `reliable_navigation.py`
-  - `tennis_executor.py`
-  - `booking_orchestrator.py`
-  - `reservation_helpers.py`
+  - ✅ `async_booking_executor.py`
+  - ✅ `smart_async_booking_executor.py`
+  - ✅ `experienced_booking_executor.py`
+  - ✅ `working_booking_executor.py`
+  - ✅ `optimized_navigation.py`
+  - ✅ `reliable_navigation.py`
+  - ✅ `tennis_executor.py`
+  - ✅ `booking_orchestrator.py`
+  - `reservation_helpers.py` (moved under domain queue for now)
 - **Availability Parsing** → `lvbot/automation/availability/`
-  - `async_availability_checker.py`
-  - `availability_checker_v3.py`
-  - `availability_checker_v2.py` (legacy)
-  - `time_slot_extractor.py`
-  - `time_order_extraction.py`
-  - `court_availability.py`
-  - `day_mapper.py`
-  - `day_context_parser.py`
-  - `datetime_helpers.py`
+  - ✅ `async_availability_checker.py`
+  - ✅ `availability_checker_v3.py`
+  - ✅ `availability_checker_v2.py` (legacy)
+  - ✅ `time_slot_extractor.py`
+  - ✅ `time_order_extraction.py`
+  - ✅ `court_availability.py`
+  - ✅ `day_mapper.py`
+  - ✅ `day_context_parser.py`
+  - ✅ `datetime_helpers.py`
 
 ## Domain Layer
 - **Queue & Scheduling** → `lvbot/domain/queue/`
-  - `reservation_queue.py`
-  - `priority_manager.py`
-  - `reservation_scheduler.py`
-  - `reservation_tracker.py`
-  - `reservation_helpers.py` (split shared logic with automation)
+  - ✅ `reservation_queue.py`
+  - ✅ `priority_manager.py`
+  - ✅ `reservation_scheduler.py`
+  - ✅ `reservation_tracker.py`
+  - ✅ `reservation_helpers.py`
 - **Domain Models** → `lvbot/domain/models.py`
-  - `models/time_slot.py`
+  - ✅ `models/time_slot.py`
   - Introduce dataclasses for queue items, booking attempts, user tiers.
 - **User & State Management** → `lvbot/domain/users.py`
   - `user_manager.py`
