@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, List, Optional
 
 from lvbot.infrastructure.settings import get_settings
-from lvbot.utils.constants import AVAILABLE_COURT_NUMBERS, BrowserTimeouts
+from lvbot.infrastructure.constants import AVAILABLE_COURT_NUMBERS, BrowserTimeouts
 
 
 @dataclass(frozen=True)

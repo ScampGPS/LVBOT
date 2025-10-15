@@ -6,8 +6,8 @@ Provides quick CLI hooks into reservation services for manual inspection.
 from __future__ import annotations
 
 import argparse
-from lvbot.utils.user_manager import UserManager
-from lvbot.domain.services import ReservationService
+from lvbot.users.manager import UserManager
+from lvbot.reservations.services import ReservationService
 
 
 def _build_service() -> ReservationService:

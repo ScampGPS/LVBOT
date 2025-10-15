@@ -8,7 +8,7 @@ from .async_browser_helpers import BrowserHelpers
 from .court_availability import CourtAvailability
 from .acuity_page_validator import AcuityPageValidator
 from .constants import BOOKING_URL, BOOKING_WINDOW_HOURS
-from lvbot.domain.models.time_slot import TimeSlot
+from lvbot.reservations.models.time_slot import TimeSlot
 
 logger = logging.getLogger(__name__)
 

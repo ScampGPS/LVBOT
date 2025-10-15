@@ -21,7 +21,7 @@ class CourtMonitor:
         self.logger = logging.getLogger('CourtMonitor')
         self._setup_logging(logging.DEBUG if debug else logging.INFO)
 
-        from lvbot.utils.constants import WEEKDAY_COURT_HOURS, WEEKEND_COURT_HOURS
+        from lvbot.infrastructure.constants import WEEKDAY_COURT_HOURS, WEEKEND_COURT_HOURS
         self.weekday_slots = WEEKDAY_COURT_HOURS
         self.weekend_slots = WEEKEND_COURT_HOURS
 

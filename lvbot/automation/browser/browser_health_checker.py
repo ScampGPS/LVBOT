@@ -18,7 +18,7 @@ from enum import Enum
 from dataclasses import dataclass
 from playwright.async_api import Page
 
-from lvbot.utils.constants import BrowserTimeouts, COURT_CONFIG
+from lvbot.infrastructure.constants import BrowserTimeouts, COURT_CONFIG
 
 logger = logging.getLogger(__name__)
 

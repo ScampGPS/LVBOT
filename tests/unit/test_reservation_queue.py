@@ -3,8 +3,8 @@ from datetime import date, datetime
 
 import pytest
 
-from lvbot.domain.models import ReservationRequest, UserProfile
-from lvbot.domain.queue.reservation_queue import ReservationQueue, ReservationStatus
+from lvbot.reservations.models import ReservationRequest, UserProfile
+from lvbot.reservations.queue.reservation_queue import ReservationQueue, ReservationStatus
 
 
 def make_request(user_id: int = 1, status: str = ReservationStatus.PENDING.value) -> ReservationRequest:

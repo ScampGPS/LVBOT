@@ -38,7 +38,7 @@ class AvailabilityCheckerV2:
         
         # Import TimeSlot if available, otherwise use a simple dict
         try:
-            from lvbot.domain.models.time_slot import TimeSlot
+            from lvbot.reservations.models.time_slot import TimeSlot
             use_timeslot = True
         except ImportError:
             use_timeslot = False

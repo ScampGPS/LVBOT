@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 from playwright.async_api import Page, Frame, ElementHandle
 
-from lvbot.utils.constants import (
+from lvbot.infrastructure.constants import (
     SCHEDULING_IFRAME_URL_PATTERN,
     DEFAULT_TIMEOUT_SECONDS,
     FAST_POLL_INTERVAL

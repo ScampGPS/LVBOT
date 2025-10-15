@@ -16,7 +16,7 @@ import json
 from playwright.async_api import async_playwright, Page
 
 # Import existing modules
-from lvbot.utils.constants import COURT_CONFIG
+from lvbot.infrastructure.constants import COURT_CONFIG
 from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
 from lvbot.automation.availability.availability_checker_v3 import AvailabilityCheckerV3
 

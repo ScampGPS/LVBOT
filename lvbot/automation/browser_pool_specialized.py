@@ -14,14 +14,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Frame, Playwright
 
-from lvbot.utils.constants import (
+from lvbot.infrastructure.constants import (
     BOOKING_URL, DEFAULT_BROWSER_POOL_SIZE, MAX_BROWSER_AGE_MINUTES,
     MAX_BROWSER_USES, BROWSER_HEALTH_CHECK_INTERVAL, SCHEDULING_IFRAME_URL_PATTERN,
     court_number_to_index, AVAILABLE_COURT_NUMBERS, DEFAULT_COURT_PREFERENCES,
     FAST_POLL_INTERVAL, DEFAULT_WAIT_INTERVAL, RESERVATION_RETRY_DELAY,
     MAX_SINGLE_COURT_CHECK_TIME, MAX_NAVIGATION_WAIT_TIME, TARGET_AVAILABILITY_CHECK_TIME
 )
-from lvbot.utils.acuity_booking_form import AcuityBookingForm
+from lvbot.automation.forms.acuity_booking_form import AcuityBookingForm
 
 logging.basicConfig(
     level=logging.INFO,

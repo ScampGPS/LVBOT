@@ -17,7 +17,7 @@ from datetime import datetime
 from playwright.async_api import Page, Frame, ElementHandle
 
 from lvbot.automation.browser.async_browser_helpers import BrowserHelpers
-from lvbot.utils.constants import ACUITY_EMBED_URL, BrowserTimeouts
+from lvbot.infrastructure.constants import ACUITY_EMBED_URL, BrowserTimeouts
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +301,7 @@ class StatefulBrowserRefresh:
     async def _restore_form_data(self, page: Page, form_data: Dict[str, str]) -> bool:
         """Restore previously entered form data"""
         try:
-            from lvbot.utils.acuity_booking_form import AcuityBookingForm
+            from lvbot.automation.forms.acuity_booking_form import AcuityBookingForm
             
             form_handler = AcuityBookingForm()
             

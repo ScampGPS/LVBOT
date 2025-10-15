@@ -17,10 +17,10 @@ from typing import Dict, Any, Optional, Set
 from datetime import datetime
 import pytz
 
-from lvbot.utils.acuity_booking_form import AcuityBookingForm
+from lvbot.automation.forms.acuity_booking_form import AcuityBookingForm
 from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
 from lvbot.automation.executors.tennis_executor import ExecutionResult
-from lvbot.utils.constants import BrowserTimeouts
+from lvbot.infrastructure.constants import BrowserTimeouts
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from lvbot.domain.queue.priority_manager import PriorityManager, PriorityUser
-from lvbot.utils.user_manager import UserTier
+from lvbot.reservations.queue.priority_manager import PriorityManager, PriorityUser
+from lvbot.users.manager import UserTier
 
 
 class BookingStatus(Enum):
