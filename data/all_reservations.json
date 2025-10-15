@@ -1,0 +1,26 @@
+{
+  "imm_20250723191708_125763357": {
+    "id": "imm_20250723191708_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-07-23T19:17:08.365904",
+    "court": 3,
+    "date": "2025-07-25",
+    "time": "18:15",
+    "confirmation_id": "cd26bad53cd75dda6bc5409e9813b946",
+    "confirmation_url": "https://clublavilla.as.me/schedule/7d558012/confirmation/cd26bad53cd75dda6bc5409e9813b946"
+  },
+  "imm_20250820103954_8007340702": {
+    "id": "imm_20250820103954_8007340702",
+    "user_id": 8007340702,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-08-20T10:39:54.047415",
+    "court": 3,
+    "date": "2025-08-22",
+    "time": "07:00",
+    "confirmation_id": null,
+    "confirmation_url": null
+  }
+}

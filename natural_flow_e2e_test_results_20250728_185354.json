@@ -1,0 +1,5 @@
+{
+  "critical_failure": "AsyncBrowserPool.__init__() got an unexpected keyword argument 'courts_needed'",
+  "test_results": {},
+  "performance_metrics": {}
+}

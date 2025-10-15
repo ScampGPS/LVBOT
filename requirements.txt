@@ -1,0 +1,14 @@
+# Telegram bot framework
+python-telegram-bot==20.7
+
+# Web automation
+playwright==1.40.0
+
+# Timezone handling
+pytz==2023.3.post1
+
+# Event loop handling
+nest-asyncio==1.5.8
+
+# Image processing for debugging tools
+Pillow==10.2.0

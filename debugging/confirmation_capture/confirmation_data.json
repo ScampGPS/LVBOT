@@ -1,0 +1,42 @@
+{
+  "pageText": "REGISTRARSE\nINICIAR SESIÓN\n\n\nReglamento del sistema de citas\n\n1. Solo se puede hacer una reserva por día.\n2. No se pueden tener dos reservas hechas al mismo tiempo.\n3. En caso hacer una reserva y no presentarse se cobrará una multa de Q100 en la factura mensual.\n4. En caso se violen las reglas 1 y 2 se eliminará la reserva.\n5. Se debe de estar al día con las cuotas para poder hacer la reservar, de lo contrario se procederá a eliminar la reserva.\n\n\n\n\nRESERVAR OTRA CITA\nCita confirmada",
+  "buttons": [
+    {
+      "text": "REGISTRARSE",
+      "href": null,
+      "onclick": "function er(){}",
+      "className": "css-uan8r4",
+      "id": "",
+      "tagName": "BUTTON"
+    },
+    {
+      "text": "INICIAR SESIÓN",
+      "href": null,
+      "onclick": "function er(){}",
+      "className": "css-uan8r4",
+      "id": "",
+      "tagName": "BUTTON"
+    },
+    {
+      "text": "RESERVAR OTRA CITA",
+      "href": null,
+      "onclick": "function er(){}",
+      "className": "css-xeg772",
+      "id": "",
+      "tagName": "BUTTON"
+    }
+  ],
+  "links": [
+    {
+      "text": "",
+      "href": "https://www.acuityscheduling.com/?utm_campaign=acuity&amp;utm_medium=referral&amp;utm_source=scheduling",
+      "className": "",
+      "id": ""
+    }
+  ],
+  "actionLinks": [],
+  "confirmationInfo": {
+    "url": "https://clublavilla.as.me/schedule/7d558012/confirmation/0c560b8c7e55a02b2c2a1e57c433b177?appointmentTypeIds%5B%5D=calendar"
+  },
+  "timestamp": "2025-07-23T04:17:36.774Z"
+}

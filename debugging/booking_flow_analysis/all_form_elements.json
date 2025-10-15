@@ -1,0 +1,38 @@
+[
+  {
+    "tagName": "BUTTON",
+    "type": "submit",
+    "name": "",
+    "id": "",
+    "placeholder": null,
+    "className": "css-uan8r4",
+    "value": "",
+    "textContent": "Registrarse",
+    "ariaLabel": null,
+    "selector": null
+  },
+  {
+    "tagName": "BUTTON",
+    "type": "submit",
+    "name": "",
+    "id": "",
+    "placeholder": null,
+    "className": "css-uan8r4",
+    "value": "",
+    "textContent": "Iniciar sesi\u00f3n",
+    "ariaLabel": null,
+    "selector": null
+  },
+  {
+    "tagName": "BUTTON",
+    "type": "submit",
+    "name": "",
+    "id": "",
+    "placeholder": null,
+    "className": "css-axv8k9",
+    "value": "",
+    "textContent": "",
+    "ariaLabel": "M\u00e1s horas",
+    "selector": null
+  }
+]

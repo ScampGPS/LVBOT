@@ -1,0 +1,61 @@
+{
+  "capturedAt": "2025-07-22T22:20:51.818453",
+  "confirmationUrl": "https://clublavilla.as.me/schedule/7d558012/confirmation/dba234f2075e12c046d1c91c74ba1e7e?appointmentTypeIds%5B%5D=calendar",
+  "confirmationId": "dba234f2075e12c046d1c91c74ba1e7e",
+  "buttons": [
+    {
+      "text": "MODIFICAR",
+      "tagName": "BUTTON",
+      "href": null,
+      "id": null,
+      "className": "css-11e6ioz",
+      "onclick": "function er(){}",
+      "dataAttributes": {}
+    },
+    {
+      "text": "CANCELAR",
+      "tagName": "BUTTON",
+      "href": null,
+      "id": null,
+      "className": "css-11e6ioz",
+      "onclick": "function er(){}",
+      "dataAttributes": {}
+    }
+  ],
+  "interceptedActions": {
+    "cancelAction": {
+      "possibleUrls": [
+        "https://clublavilla.as.me/schedule/7d558012/cancel/dba234f2075e12c046d1c91c74ba1e7e",
+        "https://clublavilla.as.me/schedule/7d558012/appointment/cancel/dba234f2075e12c046d1c91c74ba1e7e",
+        "https://clublavilla.as.me/api/scheduling/v1/appointments/dba234f2075e12c046d1c91c74ba1e7e/cancel",
+        "https://clublavilla.as.me/schedule/7d558012/confirmation/dba234f2075e12c046d1c91c74ba1e7e?appointmentTypeIds%5B%5D=calendar/cancel"
+      ],
+      "confirmationId": "dba234f2075e12c046d1c91c74ba1e7e"
+    },
+    "modifyAction": {
+      "possibleUrls": [
+        "https://clublavilla.as.me/schedule/7d558012/reschedule/dba234f2075e12c046d1c91c74ba1e7e",
+        "https://clublavilla.as.me/schedule/7d558012/appointment/reschedule/dba234f2075e12c046d1c91c74ba1e7e",
+        "https://clublavilla.as.me/api/scheduling/v1/appointments/dba234f2075e12c046d1c91c74ba1e7e/reschedule",
+        "https://clublavilla.as.me/schedule/7d558012/confirmation/dba234f2075e12c046d1c91c74ba1e7e?appointmentTypeIds%5B%5D=calendar/reschedule"
+      ],
+      "confirmationId": "dba234f2075e12c046d1c91c74ba1e7e"
+    }
+  },
+  "apiCallsDetected": [
+    {
+      "url": "https://browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A5.35.1%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Apylon%2Cversion%3Aa0409ed9f49e9adfde87342b1f40c56a0aa48da6&dd-api-key=pub9743dfb6fa5aff233631b8e0ed8796d3&dd-evp-origin-version=5.35.1&dd-evp-origin=browser&dd-request-id=8ac68452-58c9-4dd2-83d5-dbefc5e9ca79",
+      "method": "POST",
+      "headers": {
+        "sec-ch-ua": "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\"",
+        "sec-ch-ua-platform": "\"Linux\"",
+        "referer": "",
+        "sec-ch-ua-mobile": "?0",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "content-type": "text/plain;charset=UTF-8"
+      }
+    }
+  ],
+  "baseUrl": "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312",
+  "appointmentTypeId": "calendar"
+}
