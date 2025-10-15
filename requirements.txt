@@ -12,3 +12,6 @@ nest-asyncio==1.5.8
 
 # Image processing for debugging tools
 Pillow==10.2.0
+
+# Testing
+pytest==8.1.1
