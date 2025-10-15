@@ -115,3 +115,7 @@
 - Automation helpers were reorganized into `lvbot/automation/browser/` and `lvbot/automation/availability/`, and executors reside in `lvbot/automation/executors/` with a unified facade.
 - `BrowserManager` and `BrowserSettings` encapsulate pool lifecycle state, while `UnifiedAsyncBookingExecutor` routes feature toggles through a single entry point.
 - Backwards compatibility shims ensure existing tests and scripts importing from `lvbot.utils` or `lvbot.models` continue to function during transition.
+
+## Progress Update (Phase 3 → Phase 5)
+- Domain dataclasses (`ReservationRequest`, `BookingResult`, `UserProfile`) and `ReservationService` now provide a clear API between the Telegram layer and scheduling logic.
+- Added a pytest harness (`pytest.ini`) with initial unit coverage for `ReservationQueue`; compatibility shims in `lvbot/utils` and `lvbot/domain/queue` keep heavy Playwright dependencies out of unit tests.
