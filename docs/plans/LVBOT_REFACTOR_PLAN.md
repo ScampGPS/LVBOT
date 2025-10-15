@@ -109,3 +109,9 @@
 - README now includes a “Refactor Status” section pointing contributors to this plan and the migration map during the transition.
 - Phase 1 scaffolding created the new `lvbot/infrastructure/settings.py` loader plus empty package namespaces under `lvbot/automation/{browser,executors,availability}` and `lvbot/domain/{queue,models}` to support incremental code moves.
 - `docs/plans/LVBOT_MODULE_MIGRATION_MAP.md` tracks module relocation targets and records completed archival steps, keeping the team aligned on upcoming migrations.
+
+## Progress Update (Phase 2 → Phase 3)
+- Queue and scheduling modules now live under `lvbot/domain/queue/` with compatibility shims left in `lvbot/utils/` while consumers migrate.
+- Automation helpers were reorganized into `lvbot/automation/browser/` and `lvbot/automation/availability/`, and executors reside in `lvbot/automation/executors/` with a unified facade.
+- `BrowserManager` and `BrowserSettings` encapsulate pool lifecycle state, while `UnifiedAsyncBookingExecutor` routes feature toggles through a single entry point.
+- Backwards compatibility shims ensure existing tests and scripts importing from `lvbot.utils` or `lvbot.models` continue to function during transition.

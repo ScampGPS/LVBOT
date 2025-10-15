@@ -21,11 +21,12 @@ PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
 from lvbot.automation.browser_pool_specialized import SpecializedBrowserPool
 from lvbot.automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from lvbot.automation.browser.browser_allocation import BrowserAllocationHelper
-from lvbot.automation.browser.browser_refresh_manager import BrowserRefreshManager
 from lvbot.automation.executors.tennis_executor import TennisExecutor, create_tennis_config_from_user_info
-from lvbot.automation.executors.async_booking_executor import AsyncBookingExecutor
-from lvbot.automation.browser.browser_health_checker import BrowserHealthChecker, HealthStatus
-from lvbot.automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
+from lvbot.automation.executors import (
+    AsyncExecutorConfig,
+    UnifiedAsyncBookingExecutor,
+)
+from lvbot.automation.browser.manager import BrowserManager
 
 
 class ReservationScheduler:
@@ -34,7 +35,15 @@ class ReservationScheduler:
     Uses 3 browsers with staggered refresh rates for optimal booking success
     """
     
-    def __init__(self, config, queue, notification_callback, bot_handler=None, browser_pool=None):
+    def __init__(
+        self,
+        config,
+        queue,
+        notification_callback,
+        bot_handler=None,
+        browser_pool=None,
+        executor_config: Optional[AsyncExecutorConfig] = None,
+    ):
         # Support both old and new initialization patterns
         if bot_handler:
             self.bot = bot_handler
@@ -58,8 +67,10 @@ class ReservationScheduler:
         
         # Dynamic booking orchestrator
         self.orchestrator = DynamicBookingOrchestrator()
+        self.executor_config = executor_config or AsyncExecutorConfig()
         
-        # Use pre-initialized browser pool if provided, otherwise will initialize lazily
+        # Browser manager coordinates pool lifecycle and helpers
+        self.browser_manager = BrowserManager(pool=browser_pool)
         self.browser_pool = browser_pool
         self._pool_initialized = browser_pool is not None
         
@@ -74,10 +85,8 @@ class ReservationScheduler:
             # Set global browser pool for smart executor
             
         
-        # Browser refresh manager (initialized with pool)
+        # Browser lifecycle helpers provided by the manager
         self.refresh_manager = None
-        
-        # Health check and recovery services
         self.health_checker = None
         self.recovery_service = None
         
@@ -140,57 +149,38 @@ class ReservationScheduler:
         return current.date() if as_date else current
     
     async def _ensure_browser_pool(self):
-        """Ensure browser pool is initialized (lazy initialization)"""
+        """Ensure browser pool is initialized (lazy initialization)."""
+
         if not self._pool_initialized:
-            # Check if we've exceeded max attempts
             if self._pool_init_attempts >= self.MAX_POOL_INIT_ATTEMPTS:
-                self.logger.error(f"Exceeded max browser pool initialization attempts ({self.MAX_POOL_INIT_ATTEMPTS})")
+                self.logger.error(
+                    "Exceeded max browser pool initialization attempts (%s)",
+                    self.MAX_POOL_INIT_ATTEMPTS,
+                )
                 return
-            
+
             self._pool_init_attempts += 1
-            self.logger.info(f"Browser pool not initialized, initializing now... (attempt {self._pool_init_attempts}/{self.MAX_POOL_INIT_ATTEMPTS})")
+            self.logger.info(
+                "Browser pool not initialized, initializing now... (attempt %s/%s)",
+                self._pool_init_attempts,
+                self.MAX_POOL_INIT_ATTEMPTS,
+            )
             await self._initialize_browser_pool()
             self._pool_initialized = True
-        else:
-            if not PRODUCTION_MODE:
-                self.logger.debug("Browser pool already initialized")
+        elif not PRODUCTION_MODE:
+            self.logger.debug("Browser pool already initialized")
             
     async def _initialize_browser_pool(self):
         """Initialize persistent browser pool with 3 browsers"""
         try:
-            # Check if browser pool was already provided during initialization
-            if self.browser_pool and self._pool_initialized:
-                self.logger.info("Using pre-initialized AsyncBrowserPool from main bot")
-                if not PRODUCTION_MODE:
-                    self.logger.info(f"Browser pool already initialized: {self.browser_pool}")
-                
-                # Initialize health check and recovery services with existing pool
-                self.health_checker = BrowserHealthChecker(self.browser_pool)
-                self.recovery_service = BrowserPoolRecoveryService(self.browser_pool)
-                if not PRODUCTION_MODE:
-                    self.logger.info("Health check and recovery services initialized with existing pool")
-                return  # Don't create a new pool
-            
-            self.logger.info("No browser pool provided, creating new SpecializedBrowserPool")
-            
-            # Create browser pool directly in main thread (required by Playwright)
-            self.browser_pool = await self._create_and_initialize_browser_pool_async()
-            
+            pool = await self.browser_manager.ensure_pool()
+            self.browser_pool = pool
+            self.refresh_manager = self.browser_manager.refresh_manager
+            self.health_checker = self.browser_manager.health_checker
+            self.recovery_service = self.browser_manager.recovery_service
             if self.browser_pool:
-                self.logger.info(f"Browser pool initialized successfully: {self.browser_pool}")
-                # Set global browser pool for smart executor
-                # from lvbot.utils.smart_tennis_executor import set_global_browser_pool
-                # set_global_browser_pool(self.browser_pool)
-                self.logger.info("Browser pool initialized (smart executor disabled)")
-                
-                # Initialize health check and recovery services
-                self.health_checker = BrowserHealthChecker(self.browser_pool)
-                self.recovery_service = BrowserPoolRecoveryService(self.browser_pool)
-                if not PRODUCTION_MODE:
-                    self.logger.info("Health check and recovery services initialized")
-            else:
-                self.logger.error("Browser pool creation returned None")
-            
+                self.logger.info("Browser pool initialized successfully: %s", self.browser_pool)
+        
         except Exception as e:
             self.logger.error(f"Failed to initialize browser pool: {e}")
             self.browser_pool = None
@@ -810,8 +800,10 @@ class ReservationScheduler:
             
             if self.browser_pool:
                 try:
-                    # Create AsyncBookingExecutor with natural flow DISABLED
-                    async_executor = AsyncBookingExecutor(self.browser_pool, use_natural_flow=False)
+                    async_executor = UnifiedAsyncBookingExecutor(
+                        self.browser_pool,
+                        config=self.executor_config,
+                    )
                     
                     # Execute booking with proper user data mapping
                     result = await async_executor.execute_booking(
@@ -837,10 +829,10 @@ class ReservationScheduler:
                     self.logger.error(f"❌ Natural flow queue booking exception: {e}")
                     async_executor_completed = True
             
-            # CRITICAL: Only try pool execution fallback AFTER AsyncBookingExecutor fully completes
+            # CRITICAL: Only try pool execution fallback AFTER async executor fully completes
             # This prevents resource conflicts and ensures sequential execution
             if async_executor_completed and (not result or not result.success):
-                self.logger.info("AsyncBookingExecutor completed unsuccessfully, trying pool execution as fallback")
+                self.logger.info("Async booking executor completed unsuccessfully, trying pool execution as fallback")
                 result = await executor.execute(
                     tennis_config,
                     target_date,

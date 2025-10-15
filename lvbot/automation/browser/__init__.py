@@ -9,6 +9,8 @@ from .browser_health_checker import BrowserHealthChecker, HealthStatus
 from .browser_allocation import BrowserAllocationHelper
 from .emergency_browser_fallback import EmergencyBrowserFallback
 from .stateful_browser_refresh import StatefulBrowserRefresh
+from .manager import BrowserManager
+from .settings import BrowserSettings, load_browser_settings
 
 __all__ = [
     "AsyncBrowserPool",
@@ -21,4 +23,7 @@ __all__ = [
     "BrowserAllocationHelper",
     "EmergencyBrowserFallback",
     "StatefulBrowserRefresh",
+    "BrowserManager",
+    "BrowserSettings",
+    "load_browser_settings",
 ]
