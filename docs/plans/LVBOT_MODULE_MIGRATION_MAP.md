@@ -1,7 +1,10 @@
 # LVBot Module Migration Map
 
 Working document that links existing modules (primarily under `lvbot/utils`) to
-their target homes in the post-refactor package layout.
+their target homes in the post-refactor package layout. Package scaffolding for
+`lvbot/automation/{browser,executors,availability}` and `lvbot/domain/{queue,models}`
+was added in Phase 1 so code can migrate incrementally without disrupting
+imports.
 
 ## Automation Layer
 - **Browser Core** → `lvbot/automation/browser/`
@@ -71,8 +74,9 @@ their target homes in the post-refactor package layout.
 - `telegram_ui.py` splits into presentation-only helpers under `bot/ui/`.
 
 ## De-Duplication Targets
-- Archive `async_booking_executor_backup.py` and `async_booking_executor_clean.py`
-  after the consolidated executor is in place.
+- ~~Archive `async_booking_executor_backup.py` and `async_booking_executor_clean.py`
+  after the consolidated executor is in place.~~ ✅ Archived to
+  `docs/archive/legacy_modules/` during Phase 0.5 cleanup.
 - Merge `working_booking_executor.py`, `experienced_booking_executor.py`, and
   `smart_async_booking_executor.py` behind feature flags so a single async
   executor exposes configuration toggles instead of module forks.
