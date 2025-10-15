@@ -103,3 +103,9 @@
 - Domain responsibilities—queue persistence, scheduler orchestration, priority management—remain dict-based and reside in utils (`reservation_queue.py`, `reservation_scheduler.py`, `priority_manager.py`), with only `lvbot/models/time_slot.py` offering typed models. Telegram handlers in `lvbot/handlers/callback_handlers.py` reach across layers, reflecting loose boundaries.
 - Persistent data lives in repo-root JSON files (`queue.json`, `users.json`) while hardcoded VIP/admin lists and court metadata sit in `lvbot/utils/constants.py`; configuration is scattered and not yet centralized per the refactor plan.
 - Immediate cleanup candidates include redundant executor variants, `.backup` snapshots (e.g., `reservation_scheduler.py.backup`, `booking_orchestrator.py.backup`, `user_manager.py.backup`), and the deprecated `SpecializedBrowserPool`. Scripts under `scripts/` still depend on the utils monolith and will need evaluation once module boundaries solidify.
+
+## Progress Update (Phase 0.5 → Phase 1)
+- Phase 0.5 cleanup archived legacy executor/scheduler/user backups to `docs/archive/legacy_modules/`, leaving only active implementations in the runtime path.
+- README now includes a “Refactor Status” section pointing contributors to this plan and the migration map during the transition.
+- Phase 1 scaffolding created the new `lvbot/infrastructure/settings.py` loader plus empty package namespaces under `lvbot/automation/{browser,executors,availability}` and `lvbot/domain/{queue,models}` to support incremental code moves.
+- `docs/plans/LVBOT_MODULE_MIGRATION_MAP.md` tracks module relocation targets and records completed archival steps, keeping the team aligned on upcoming migrations.
