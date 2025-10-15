@@ -96,3 +96,10 @@
 - Imports follow the new package structure with clear ownership boundaries.
 - Automated test suite and linting pass locally and in CI.
 - Documentation accurately reflects the reorganized architecture and onboarding steps.
+
+## Baseline Architecture Snapshot (2025-08-20)
+- `lvbot/bot/telegram_tennis_bot.py` wires `CleanBot` directly to utils-layer services (`AsyncBrowserPool`, `AvailabilityCheckerV3`, `ReservationQueue`, `UserManager`, `ReservationScheduler`) with inline env defaults (including a hard-coded Telegram token fallback) and no dedicated settings module.
+- Automation logic lives primarily under `lvbot/utils/`, which hosts multiple competing browser pools and booking executors (e.g., `async_booking_executor.py`, `working_booking_executor.py`, `async_booking_executor_backup.py`, `optimized_booking_executor.py`) plus orchestration helpers that double as infrastructure (`browser_lifecycle.py`, `browser_refresh_manager.py`). The newer `lvbot/automation/` package still references legacy helpers and includes a stale `SpecializedBrowserPool` that tries to import non-existent managers.
+- Domain responsibilities—queue persistence, scheduler orchestration, priority management—remain dict-based and reside in utils (`reservation_queue.py`, `reservation_scheduler.py`, `priority_manager.py`), with only `lvbot/models/time_slot.py` offering typed models. Telegram handlers in `lvbot/handlers/callback_handlers.py` reach across layers, reflecting loose boundaries.
+- Persistent data lives in repo-root JSON files (`queue.json`, `users.json`) while hardcoded VIP/admin lists and court metadata sit in `lvbot/utils/constants.py`; configuration is scattered and not yet centralized per the refactor plan.
+- Immediate cleanup candidates include redundant executor variants, `.backup` snapshots (e.g., `reservation_scheduler.py.backup`, `booking_orchestrator.py.backup`, `user_manager.py.backup`), and the deprecated `SpecializedBrowserPool`. Scripts under `scripts/` still depend on the utils monolith and will need evaluation once module boundaries solidify.
