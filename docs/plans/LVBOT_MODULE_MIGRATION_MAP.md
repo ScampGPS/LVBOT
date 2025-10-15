@@ -46,6 +46,8 @@ packages; items annotated with ✅ are already relocated.
   - ✅ `reservation_scheduler.py`
   - ✅ `reservation_tracker.py`
   - ✅ `reservation_helpers.py`
+- **Services** → `lvbot/domain/services/`
+  - ✅ `reservation_service.py`
 - **Domain Models** → `lvbot/domain/models.py`
   - ✅ `models/time_slot.py`
   - Introduce dataclasses for queue items, booking attempts, user tiers.
@@ -72,6 +74,7 @@ packages; items annotated with ✅ are already relocated.
 - `handlers/callback_handlers.py` migrates to thin orchestration wrappers that
   call domain services.
 - `telegram_ui.py` splits into presentation-only helpers under `bot/ui/`.
+- `ReservationService` now brokers queue/scheduler usage inside the bot layer.
 
 ## De-Duplication Targets
 - ~~Archive `async_booking_executor_backup.py` and `async_booking_executor_clean.py`

@@ -43,6 +43,7 @@ class ReservationScheduler:
         bot_handler=None,
         browser_pool=None,
         executor_config: Optional[AsyncExecutorConfig] = None,
+        user_manager: Optional[Any] = None,
     ):
         # Support both old and new initialization patterns
         if bot_handler:
@@ -56,7 +57,7 @@ class ReservationScheduler:
             self.bot = None
             self.config = config
             self.queue = queue
-            self.user_db = None
+            self.user_db = user_manager
             self.notification_callback = notification_callback
         
         self.logger = logging.getLogger('ReservationScheduler')

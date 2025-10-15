@@ -22,7 +22,7 @@ from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
 from lvbot.automation.availability.availability_checker_v3 import AvailabilityCheckerV3
 from lvbot.automation.browser.browser_lifecycle import BrowserLifecycle
 from lvbot.utils.telegram_ui import TelegramUI
-from lvbot.domain.queue import ReservationQueue, ReservationScheduler
+from lvbot.domain.services import ReservationService
 from lvbot.utils.user_manager import UserManager
 from lvbot.utils.error_handler import ErrorHandler
 from lvbot.handlers.callback_handlers import CallbackHandler
@@ -63,20 +63,24 @@ class CleanBot:
         self.config = BotConfig()
         self.browser_pool = AsyncBrowserPool()
         self.availability_checker = AvailabilityCheckerV3(self.browser_pool)
-        self.reservation_queue = ReservationQueue()
         self.user_manager = UserManager('data/users.json')
-        self.callback_handler = CallbackHandler(self.availability_checker, self.reservation_queue, self.user_manager, self.browser_pool)
-        # Add queue attribute for scheduler compatibility
+        self.reservation_service = ReservationService(
+            config=self.config,
+            notification_callback=self.send_notification,
+            user_manager=self.user_manager,
+            browser_pool=self.browser_pool,
+        )
+        self.reservation_queue = self.reservation_service.queue
+        self.scheduler = self.reservation_service.scheduler
+        self.callback_handler = CallbackHandler(
+            self.availability_checker,
+            self.reservation_queue,
+            self.user_manager,
+            self.browser_pool,
+        )
+        # Attributes preserved for backward compatibility
         self.queue = self.reservation_queue
         self.user_db = self.user_manager
-        
-        self.scheduler = ReservationScheduler(
-            config=self.config,
-            queue=self.reservation_queue,
-            notification_callback=self.send_notification,
-            bot_handler=self,
-            browser_pool=self.browser_pool
-        )
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""

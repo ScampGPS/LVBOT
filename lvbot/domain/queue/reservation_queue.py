@@ -8,9 +8,12 @@ It handles storage, retrieval, and status updates of reservation requests with J
 import json
 import uuid
 import logging
-from typing import List, Dict, Any, Optional
+from datetime import datetime
+from typing import List, Dict, Any, Optional, Iterable
 from pathlib import Path
 from enum import Enum
+
+from lvbot.domain.models import ReservationRequest, UserProfile
 
 
 class ReservationStatus(Enum):
@@ -142,6 +145,55 @@ class ReservationQueue:
         Total queue size: {len(self.queue)}
         """)
         return reservation_id
+
+    def add_reservation_request(self, request: ReservationRequest) -> str:
+        """Add a dataclass reservation request to the queue."""
+
+        payload = {
+            'user_id': request.user.user_id,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+            'phone': request.user.phone,
+            'tier': request.user.tier,
+            'target_date': request.target_date.isoformat(),
+            'target_time': request.target_time,
+            'court_preferences': request.court_preferences,
+            'created_at': request.created_at.isoformat(),
+            'status': request.status,
+        }
+
+        reservation_id = self.add_reservation(payload)
+        return reservation_id
+
+    def list_reservations(self) -> List[ReservationRequest]:
+        """Return reservations as dataclasses."""
+
+        results: List[ReservationRequest] = []
+        for item in self.queue:
+            user = UserProfile(
+                user_id=item.get('user_id'),
+                first_name=item.get('first_name', ''),
+                last_name=item.get('last_name', ''),
+                email=item.get('email', ''),
+                phone=item.get('phone', ''),
+                tier=item.get('tier'),
+            )
+            request = ReservationRequest(
+                request_id=item.get('id'),
+                user=user,
+                target_date=datetime.fromisoformat(item['target_date']).date()
+                if isinstance(item.get('target_date'), str)
+                else item.get('target_date'),
+                target_time=item.get('target_time'),
+                court_preferences=item.get('court_preferences', []),
+                created_at=datetime.fromisoformat(item['created_at'])
+                if isinstance(item.get('created_at'), str)
+                else item.get('created_at'),
+                status=item.get('status', 'pending'),
+            )
+            results.append(request)
+        return results
     
     def get_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         """
