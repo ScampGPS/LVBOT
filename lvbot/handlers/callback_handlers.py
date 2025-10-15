@@ -53,7 +53,7 @@ class CallbackHandler:
         self.booking_handler = ImmediateBookingHandler(user_manager, browser_pool)
         
         # Initialize reservation tracker for managing all reservations
-        from lvbot.utils.reservation_tracker import ReservationTracker
+        from lvbot.domain.queue.reservation_tracker import ReservationTracker
         self.reservation_tracker = ReservationTracker()
         
         # Map callback_data to handler methods
@@ -2752,7 +2752,7 @@ class CallbackHandler:
                 return []
             
             # FIXED: Use date-specific extraction instead of generic extraction
-            from lvbot.utils.time_order_extraction import AcuityTimeParser
+            from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
             from lvbot.utils.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction
@@ -2812,7 +2812,7 @@ class CallbackHandler:
             }
         """
         import asyncio
-        from lvbot.utils.time_order_extraction import AcuityTimeParser
+        from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
         from lvbot.utils.acuity_page_validator import AcuityPageValidator
         
         try:
@@ -2875,7 +2875,7 @@ class CallbackHandler:
                 self.logger.warning(f"No page available for court {court_num}")
                 return {}
             
-            from lvbot.utils.time_order_extraction import AcuityTimeParser
+            from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
             from lvbot.utils.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction

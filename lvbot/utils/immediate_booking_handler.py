@@ -11,8 +11,8 @@ import logging
 
 from .callback_parser import CallbackParser
 from .telegram_ui import TelegramUI
-from lvbot.utils.tennis_executor import TennisExecutor, create_tennis_config_from_user_info
-from lvbot.utils.async_booking_executor import AsyncBookingExecutor
+from lvbot.automation.executors.tennis_executor import TennisExecutor, create_tennis_config_from_user_info
+from lvbot.automation.executors import UnifiedAsyncBookingExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class ImmediateBookingHandler:
             
             # Save successful booking to reservation tracker
             try:
-                from lvbot.utils.reservation_tracker import ReservationTracker
+                from lvbot.domain.queue.reservation_tracker import ReservationTracker
                 tracker = ReservationTracker()
                 
                 # Extract confirmation ID from message if available
@@ -288,8 +288,7 @@ class ImmediateBookingHandler:
             if self.browser_pool:
                 self.logger.info("🎯 IMMEDIATE BOOKING - Using natural flow with 2.5x speed optimization")
                 try:
-                    # Create AsyncBookingExecutor with natural flow enabled
-                    async_executor = AsyncBookingExecutor(self.browser_pool, use_natural_flow=True)
+                    async_executor = UnifiedAsyncBookingExecutor(self.browser_pool)
                     result = await async_executor.execute_booking(
                         court_number=booking_data['court_number'],
                         time_slot=booking_data['time'],

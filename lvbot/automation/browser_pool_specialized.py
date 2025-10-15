@@ -846,7 +846,7 @@ class SpecializedBrowserPool:
                 self.logger.info(f"🔄 Refreshing browser {browser_id} (Court {court}, Age: {age_minutes:.1f}min)")
                 
                 # Use stateful refresh to maintain court position
-                from lvbot.utils.stateful_browser_refresh import StatefulBrowserRefresh
+                from lvbot.automation.browser.stateful_browser_refresh import StatefulBrowserRefresh
                 stateful_refresh = StatefulBrowserRefresh()
                 
                 success, message = await stateful_refresh.refresh_with_state(browser.page)
