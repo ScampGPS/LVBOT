@@ -1,0 +1,97 @@
+{
+  "url": "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312/datetime/2025-07-23T06%3A00%3A00-06%3A00?appointmentTypeIds%5B%5D=16021953",
+  "title": "Reservar cita",
+  "form_inputs": [
+    {
+      "tagName": "INPUT",
+      "type": "text",
+      "name": "client.firstName",
+      "id": "client.firstName",
+      "placeholder": "",
+      "value": "",
+      "className": "css-1rc5sf7",
+      "isVisible": true
+    },
+    {
+      "tagName": "INPUT",
+      "type": "text",
+      "name": "client.lastName",
+      "id": "client.lastName",
+      "placeholder": "",
+      "value": "",
+      "className": "css-1rc5sf7",
+      "isVisible": true
+    },
+    {
+      "tagName": "SELECT",
+      "type": "select-one",
+      "name": "client.phoneCountry",
+      "id": "",
+      "placeholder": null,
+      "value": "GT",
+      "className": "PhoneInputCountrySelect",
+      "isVisible": true
+    },
+    {
+      "tagName": "INPUT",
+      "type": "tel",
+      "name": "client.phone",
+      "id": "client.phone",
+      "placeholder": "",
+      "value": "+502",
+      "className": "PhoneInputInput css-196ytgo",
+      "isVisible": true
+    },
+    {
+      "tagName": "INPUT",
+      "type": "email",
+      "name": "client.email",
+      "id": "client.email",
+      "placeholder": "Añadir...",
+      "value": "",
+      "className": "css-1u22zwl",
+      "isVisible": true
+    },
+    {
+      "tagName": "TEXTAREA",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "id": "g-recaptcha-response-100000",
+      "placeholder": "",
+      "value": "",
+      "className": "g-recaptcha-response",
+      "isVisible": false
+    }
+  ],
+  "buttons": [
+    {
+      "tagName": "BUTTON",
+      "text": "Registrarse",
+      "type": "submit",
+      "className": "css-uan8r4",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "Iniciar sesión",
+      "type": "submit",
+      "className": "css-uan8r4",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "Fecha y hora",
+      "type": "submit",
+      "className": "css-xeg772",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "Confirmar cita",
+      "type": "submit",
+      "className": "btn css-sid2pv",
+      "isVisible": true
+    }
+  ],
+  "timestamp": "2025-07-22T21:28:22.326759"
+}

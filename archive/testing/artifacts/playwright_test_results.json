@@ -1,0 +1,80 @@
+{
+  "start_time": "2025-07-27T20:40:13.523938",
+  "tests": [
+    {
+      "test_name": "form_readiness_checks",
+      "start_time": 1753670413.5259342,
+      "steps": [
+        "Navigating to test page",
+        "Testing _ensure_form_ready() method",
+        "Form readiness check completed in 15.06s",
+        "\u2705 Form readiness check completed without hanging",
+        "Testing modern locator API",
+        "\u2705 Locator API completed in 0.03s"
+      ],
+      "success": true,
+      "errors": [],
+      "duration": 17.717140913009644,
+      "end_time": 1753670431.2430766
+    },
+    {
+      "test_name": "modern_vs_legacy_selectors",
+      "start_time": 1753670431.244591,
+      "modern_locator_time": 0.08414506912231445,
+      "legacy_selector_time": 0.0543520450592041,
+      "steps": [
+        "Navigated to test form page",
+        "Testing modern locator API",
+        "\u2705 Modern locator completed in 0.08s",
+        "Testing legacy selector method with timeout protection",
+        "\u2705 Legacy selector completed in 0.05s",
+        "Testing submit button interaction"
+      ],
+      "success": false,
+      "errors": [
+        "Submit button test failed: Timeout 5000ms exceeded."
+      ],
+      "duration": 6.248056888580322,
+      "end_time": 1753670437.4926493
+    },
+    {
+      "test_name": "combined_form_operation",
+      "start_time": 1753670437.4938762,
+      "steps": [
+        "Navigated to test form",
+        "Testing combined form filling operation"
+      ],
+      "success": false,
+      "errors": [
+        "Combined operation timed out - hanging selector issue may persist"
+      ],
+      "duration": 22.017086029052734,
+      "end_time": 1753670459.5109632
+    },
+    {
+      "test_name": "performance_validation",
+      "start_time": 1753670459.5118942,
+      "steps": [
+        "Navigated to test form"
+      ],
+      "timings": {
+        "form_readiness": 10.087644100189209,
+        "field_filling": 0.04638957977294922
+      },
+      "success": false,
+      "errors": [
+        "Performance test error: Timeout 5000ms exceeded."
+      ],
+      "duration": 16.236889123916626,
+      "end_time": 1753670475.7487843
+    }
+  ],
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 1,
+    "failed_tests": 3,
+    "pass_rate": 25.0,
+    "end_time": "2025-07-27T20:41:15.749573",
+    "overall_success": false
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "url": "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312?appointmentTypeIds[]=16021953",
+  "title": "Reservar cita",
+  "form_inputs": [
+    {
+      "tagName": "TEXTAREA",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "id": "g-recaptcha-response-100000",
+      "placeholder": "",
+      "value": "",
+      "className": "g-recaptcha-response",
+      "isVisible": false
+    }
+  ],
+  "buttons": [
+    {
+      "tagName": "BUTTON",
+      "text": "Registrarse",
+      "type": "submit",
+      "className": "css-uan8r4",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "Iniciar sesión",
+      "type": "submit",
+      "className": "css-uan8r4",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "Guatemala (GMT-06:00)",
+      "type": "button",
+      "className": "css-6lr58m",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "06:00",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "09:00",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "10:00",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "11:00",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "12:00",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "20:15",
+      "type": "button",
+      "className": "time-selection css-tq4fs9",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "10:00",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "11:00",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "12:00",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "13:00",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "19:15",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    },
+    {
+      "tagName": "BUTTON",
+      "text": "20:15",
+      "type": "button",
+      "className": "time-selection css-m4syaq",
+      "isVisible": true
+    }
+  ],
+  "timestamp": "2025-07-22T21:28:10.334755"
+}
