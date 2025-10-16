@@ -59,7 +59,6 @@ botapp.app.cleanup_browser_processes
 botapp.app.main
 botapp.app.signal_handler
 botapp.booking.immediate_handler.ImmediateBookingHandler.__init__
-botapp.booking.immediate_handler.ImmediateBookingHandler._create_confirmation_ui
 botapp.booking.immediate_handler.ImmediateBookingHandler._execute_booking
 botapp.booking.immediate_handler.ImmediateBookingHandler._get_validated_user
 botapp.booking.immediate_handler.ImmediateBookingHandler.handle_booking_confirmation
@@ -80,6 +79,7 @@ botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_sel
 botapp.handlers.callback_handlers.CallbackHandler._handle_reserve_menu
 botapp.handlers.callback_handlers.CallbackHandler._handle_year_selection
 botapp.handlers.callback_handlers.CallbackHandler.handle_callback
+botapp.ui.confirmation_ui.build_immediate_confirmation_ui
 botapp.ui.telegram_ui.TelegramUI._build_time_matrix
 botapp.ui.telegram_ui.TelegramUI._create_matrix_keyboard_rows
 botapp.ui.telegram_ui.TelegramUI._create_matrix_layout_keyboard

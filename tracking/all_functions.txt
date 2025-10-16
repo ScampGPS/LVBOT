@@ -542,7 +542,6 @@ botapp.app.cleanup_browser_processes
 botapp.app.main
 botapp.app.signal_handler
 botapp.booking.immediate_handler.ImmediateBookingHandler.__init__
-botapp.booking.immediate_handler.ImmediateBookingHandler._create_confirmation_ui
 botapp.booking.immediate_handler.ImmediateBookingHandler._execute_booking
 botapp.booking.immediate_handler.ImmediateBookingHandler._format_failure_message
 botapp.booking.immediate_handler.ImmediateBookingHandler._format_success_message
@@ -653,6 +652,9 @@ botapp.state.state_manager.UserStateManager.on_state_change
 botapp.state.state_manager.UserStateManager.set_state
 botapp.state.state_manager.UserStateManager.set_temp_data
 botapp.state.state_manager.UserStateManager.update_temp_data
+botapp.ui.confirmation_ui.build_immediate_confirmation_keyboard
+botapp.ui.confirmation_ui.build_immediate_confirmation_ui
+botapp.ui.confirmation_ui.format_immediate_confirmation_message
 botapp.ui.telegram_ui.TelegramUI._build_time_matrix
 botapp.ui.telegram_ui.TelegramUI._create_matrix_keyboard_rows
 botapp.ui.telegram_ui.TelegramUI._create_matrix_layout_keyboard

@@ -6,7 +6,7 @@ from tracking import t
 
 from typing import Dict, Any, Optional
 from datetime import datetime, date
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 import logging
 
@@ -19,6 +19,7 @@ from automation.executors.tennis import (
 from automation.shared.booking_contracts import BookingRequest, BookingResult
 
 from ..callbacks.parser import CallbackParser
+from ..ui.confirmation_ui import build_immediate_confirmation_ui
 from ..ui.telegram_ui import TelegramUI
 from .request_builder import build_immediate_booking_request
 from .persistence import persist_immediate_failure, persist_immediate_success
@@ -83,8 +84,8 @@ class ImmediateBookingHandler:
             return
         
         # Create confirmation UI
-        confirm_ui = self._create_confirmation_ui(parsed, user)
-        
+        confirm_ui = build_immediate_confirmation_ui(self.parser, parsed, user)
+
         await query.edit_message_text(
             confirm_ui['message'],
             parse_mode='Markdown',
@@ -214,55 +215,6 @@ class ImmediateBookingHandler:
                 return None
         
         return user
-    
-    def _create_confirmation_ui(self, booking_data: Dict[str, Any], 
-                               user_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create confirmation dialog UI components
-        
-        Args:
-            booking_data: Parsed booking data from callback
-            user_data: User information
-            
-        Returns:
-            Dict with 'message' and 'keyboard' keys
-        """
-        t('botapp.booking.immediate_handler.ImmediateBookingHandler._create_confirmation_ui')
-        # Format confirmation message
-        message = (
-            f"🎾 **Confirm Immediate Booking**\n\n"
-            f"📅 Date: {booking_data['date'].strftime('%A, %B %d, %Y')}\n"
-            f"⏰ Time: {booking_data['time']}\n"
-            f"🎾 Court: {booking_data['court_number']}\n"
-            f"👤 Name: {user_data.get('first_name', '')} {user_data.get('last_name', '')}\n"
-            f"📱 Phone: {user_data.get('phone', 'Not set')}\n\n"
-            f"Would you like to book this court now?"
-        )
-        
-        # Create keyboard using CallbackParser for consistent formatting
-        confirm_callback = self.parser.format_booking_callback(
-            'confirm_book',
-            booking_data['date'],
-            booking_data['court_number'],
-            booking_data['time']
-        )
-        
-        cancel_callback = self.parser.format_booking_callback(
-            'cancel_book',
-            booking_data['date']
-        )
-        
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ Book Now", callback_data=confirm_callback),
-                InlineKeyboardButton("❌ Cancel", callback_data=cancel_callback)
-            ]
-        ])
-        
-        return {
-            'message': message,
-            'keyboard': keyboard
-        }
     
     async def _execute_booking(self, booking_request: BookingRequest) -> BookingResult:
         """Execute a booking request and return a shared booking result."""
