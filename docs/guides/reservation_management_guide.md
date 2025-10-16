@@ -10,12 +10,12 @@ The LVBOT reservation management system now provides comprehensive functionality
 
 ## System Architecture
 
-### 1. **ReservationQueue** (`utils/reservation_queue.py`)
+### 1. **ReservationQueue** (`reservations/queue/reservation_queue.py`)
 - Manages queued reservations (booked > 48h in advance)
-- Stores in `queue.json`
+- Stores in `data/queue.json`
 - Used by scheduler for automatic booking
 
-### 2. **ReservationTracker** (`utils/reservation_tracker.py`)
+### 2. **ReservationTracker** (`reservations/queue/reservation_tracker.py`)
 - Tracks immediate reservations (within 48h)
 - Tracks completed bookings with confirmation IDs
 - Stores in `data/all_reservations.json`
@@ -75,7 +75,7 @@ The LVBOT reservation management system now provides comprehensive functionality
 
 ## Data Storage
 
-### Queue Reservations (`queue.json`)
+### Queue Reservations (`data/queue.json`)
 ```json
 {
   "id": "abc123...",

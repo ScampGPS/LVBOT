@@ -16,7 +16,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "botapp"
 
 # Import logging configuration to initialize proper logging
-import logging_config
+from infrastructure import logging_config
 
 # Now do imports
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters

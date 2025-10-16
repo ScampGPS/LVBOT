@@ -68,8 +68,8 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     browser_pool_size = int(env.get("BROWSER_POOL_SIZE", "3"))
     browser_refresh_interval = int(env.get("BROWSER_REFRESH_INTERVAL", "180"))
 
-    queue_file = env.get("QUEUE_FILE", "queue.json")
-    users_file = env.get("USERS_FILE", "users.json")
+    queue_file = env.get("QUEUE_FILE", "data/queue.json")
+    users_file = env.get("USERS_FILE", "data/users.json")
     data_directory = env.get("DATA_DIRECTORY", "data")
 
     return AppSettings(

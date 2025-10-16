@@ -44,12 +44,12 @@ class ReservationQueue:
         logger (logging.Logger): Logger instance for this class
     """
     
-    def __init__(self, file_path: str = 'queue.json'):
+    def __init__(self, file_path: str = 'data/queue.json'):
         """
         Initialize the ReservationQueue.
-        
+
         Args:
-            file_path (str): Path to the JSON file for persistence. Defaults to 'queue.json'.
+            file_path (str): Path to the JSON file for persistence. Defaults to 'data/queue.json'.
         """
         t('reservations.queue.reservation_queue.ReservationQueue.__init__')
         self.file_path = file_path

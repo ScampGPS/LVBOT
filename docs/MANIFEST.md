@@ -764,7 +764,7 @@ current queue system no longer imports these helpers.
 - `get_waitlist_for_slot(target_date, target_time)` → List[Dict]
   Get waitlisted reservations for a time slot
 
-### `logging_config.py`
+### `infrastructure/logging_config.py`
 **Purpose**: Comprehensive logging configuration with dedicated reservation queue logging
 
 #### Key Functions:

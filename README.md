@@ -110,9 +110,10 @@ LVBot/
 │   └── botapp/                         # Telegram bot modules
 │
 ├── Configuration & Data
-│   ├── authorized_users.json           # Authorized user IDs
-│   ├── users.json                      # User profile storage
-│   ├── queue.json                      # Reservation queue
+│   ├── config/.env.example             # Environment variable template
+│   ├── data/authorized_users.json      # Authorized user IDs
+│   ├── data/users.json                 # User profile storage
+│   ├── data/queue.json                 # Reservation queue
 │   └── requirements.txt                # Python dependencies
 │
 ├── Deployment
@@ -156,8 +157,8 @@ LVBot/
 - Concurrent execution for multiple reservations
 
 ### Data Storage
-- **authorized_users.json**: List of authorized Telegram user IDs
-- **users.json**: User profiles and preferences
+- **data/authorized_users.json** (if used): List of authorized Telegram user IDs
+- **data/users.json**: User profiles and preferences
 - **queue.json**: Pending reservation requests
 - All data persisted in JSON format for simplicity
 
@@ -178,7 +179,11 @@ LVBot/
    playwright install chromium
    ```
 
-3. Create `.env` file:
+3. Copy the template and create your `.env` file:
+   ```bash
+   cp config/.env.example .env
+   ```
+   Then set the values:
    ```
    BOT_TOKEN=your_bot_token_here
    ADMIN_USER_ID=your_telegram_user_id
