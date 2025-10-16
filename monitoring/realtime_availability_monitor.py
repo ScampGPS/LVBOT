@@ -16,9 +16,9 @@ import json
 from playwright.async_api import async_playwright, Page
 
 # Import existing modules
-from lvbot.infrastructure.constants import COURT_CONFIG
-from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
-from lvbot.automation.availability.availability_checker_v3 import AvailabilityCheckerV3
+from infrastructure.constants import COURT_CONFIG
+from automation.browser.async_browser_pool import AsyncBrowserPool
+from automation.availability import AvailabilityChecker
 
 # Configure logging with colors for better visibility
 class ColoredFormatter(logging.Formatter):
@@ -73,7 +73,7 @@ class RealtimeAvailabilityMonitor:
         await self.browser_pool.start()
         
         # Initialize availability checker
-        self.checker = AvailabilityCheckerV3(self.browser_pool)
+        self.checker = AvailabilityChecker(self.browser_pool)
         
         # Initialize separate browser for monitoring/screenshots
         self.playwright = await async_playwright().start()

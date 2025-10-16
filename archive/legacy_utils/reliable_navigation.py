@@ -1,7 +1,5 @@
-"""Compatibility shim for migrated module."""
-from importlib import import_module
+"""Compatibility shim for migrated reliable navigation helper."""
 
-_module = import_module("lvbot.automation.executors.reliable_navigation")
+from automation.executors.navigation import ReliableNavigation
 
-globals().update(_module.__dict__)
-__all__ = getattr(_module, '__all__', [name for name in globals() if not name.startswith('_')])
+__all__ = ["ReliableNavigation"]

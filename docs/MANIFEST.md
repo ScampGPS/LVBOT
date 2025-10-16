@@ -36,9 +36,9 @@
 ### Availability Checker Refactoring (2025-07-29)
 - Created modular architecture for availability checking following DRY principles
 - Added centralized COURT_CONFIG in constants.py with all court IDs and URLs
-- Created time_slot_extractor.py for single-responsibility DOM extraction
-- Created day_mapper.py for Spanish day name to date mapping
-- Created availability_checker_v3.py using composition pattern
+- Created consolidated support.py for DOM extraction and date helpers
+- Introduced checker.py as single entry point for availability checks
+- Flattened booking executors into booking.py/core.py/navigation.py/tennis.py for easier maintenance
 - Updated async_browser_pool.py to use centralized COURT_CONFIG
 - Deprecated availability_checker_v2.py and async_availability_checker.py
 - Fixed availability detection using correct selectors (button.time-selection)
@@ -50,7 +50,7 @@
 - Reduced after-click delay from 3-5s to 2-3s
 - Reduced confirmation wait from 5s minimum to 3s minimum
 - Maintained 100% booking success rate with no bot detection
-- All optimizations applied to working_booking_executor.py
+- Optimizations now live under WorkingBookingExecutor in automation/executors/booking.py
 
 ### Experienced User Mode Implementation (2025-07-29)
 - Added experienced_mode flag to AsyncBookingExecutor for faster bookings
@@ -412,51 +412,71 @@
 - `_check_court_with_simple_pool(court_number, get_dates)` → Optional[Dict]
   Handle SimpleBrowserPool without court_manager
 
-### `availability_checker_v2.py` *(DEPRECATED)*
-**Purpose**: Updated availability checker with correct selectors (button.time-selection)
+### `availability/checker.py`
+**Purpose**: Primary interface for Playwright-based court availability checks
 
 #### Key Functions:
 - `check_availability(court_numbers, max_concurrent, timeout_per_court)` → Dict[int, Dict[str, List[str]]]
-  Check availability for specified courts
-- `check_single_court(court_num)` → Dict[str, List[str]]
-  Check availability for a single court
-- `_wait_for_scheduling_iframe(page, timeout)` → Optional[Page]
-  Wait for scheduling iframe to load
-
-### `availability_checker_v3.py` *(CURRENT)*
-**Purpose**: Refactored modular availability checker using composition pattern
-
-#### Key Functions:
-- `check_availability(court_numbers, max_concurrent, timeout_per_court)` → Dict[int, Dict[str, List[str]]]
-  Check availability for specified courts with concurrent execution
-- `check_single_court(court_num)` → Dict[str, List[str]]
-  Check availability for a single court using modular components
+  Collect availability grouped by date for each court
+- `check_all_courts_parallel()` → Dict[int, List[str]]
+  Backwards-compatible flattened availability result
 - `get_next_available_slot(court_numbers, min_time, max_time)` → Optional[Tuple[int, date, str]]
-  Find the next available slot across specified courts
+  Return the earliest slot that matches the provided filters
 - `format_availability_message(availability)` → str
-  Format availability data into user-friendly message
+  Build a user-facing summary of availability data
 
-### `time_slot_extractor.py`
-**Purpose**: Single-responsibility module for extracting time slots from DOM
+### `availability/support.py`
+**Purpose**: Consolidated helpers for DOM extraction and date utilities
 
-#### Key Functions:
-- `extract_all_time_buttons(page)` → List[object]
-  Extract all time buttons from the page using multiple selectors
-- `extract_time_text(button)` → Optional[str]
-  Extract and normalize time text from a button element
-- `find_specific_time_button(page, time_slot)` → Optional[object]
-  Find a specific time slot button on the page
+#### Key Components:
+- `AcuityTimeParser.extract_times_by_day(frame)` → Dict[str, List[str]]
+  Group DOM-ordered time buttons into day buckets with simple heuristics
+- `filter_future_times_for_today(times, current_time)` → List[str]
+  Remove already-expired slots from the current day
+- `DateTimeHelpers.*`
+  Shared formatting/parsing helpers used by Telegram handlers and executors
 
-### `day_mapper.py`
-**Purpose**: Map Spanish day names to dates and organize times by day
+### `executors/booking.py`
+**Purpose**: Central home for booking executors and helper routines
 
-#### Key Functions:
-- `extract_day_labels(page)` → List[str]
-  Extract day labels from the page using multiple selectors
-- `map_labels_to_dates(day_labels)` → Dict[str, date]
-  Map Spanish day labels to actual dates
-- `distribute_times_to_days(times, day_labels)` → Dict[date, List[str]]
-  Distribute times across identified days using heuristics
+#### Key Classes:
+- `WorkingBookingExecutor`
+  Proven baseline flow used for consistent bookings
+- `ExperiencedBookingExecutor`
+  Faster variant with aggressive timing and pre-window refresh support
+- `AsyncBookingExecutor`
+  Orchestrates multi-court attempts and chooses the appropriate strategy
+- `SmartAsyncBookingExecutor`
+  Adds retry logic, timeout budgeting, and detailed diagnostics
+- `UnifiedAsyncBookingExecutor`
+  Facade that selects an executor based on `AsyncExecutorConfig`
+
+### `executors/core.py`
+**Purpose**: Shared dataclasses and config for executors
+
+#### Key Items:
+- `ExecutionResult`
+  Unified result object consumed across executors and schedulers
+- `AsyncExecutorConfig` / `DEFAULT_EXECUTOR_CONFIG`
+  Feature toggles for executor selection
+
+### `executors/navigation.py`
+**Purpose**: Navigation helpers used by booking flows
+
+#### Key Classes:
+- `OptimizedNavigation`
+  Progressive navigation strategies with fallback selection
+- `ReliableNavigation`
+  Event-driven navigation for scenarios where Playwright's `goto` hangs
+
+### `executors/tennis.py`
+**Purpose**: Tennis-specific executor facade and config helpers
+
+#### Key Components:
+- `TennisConfig` / `create_tennis_config_from_user_info`
+  Normalized structure for user booking preferences
+- `TennisExecutor`
+  Routes bookings to pooled async execution or synchronous fallback
 
 ### `acuity_booking_form.py`
 **Purpose**: Handle Acuity scheduling form filling and submission

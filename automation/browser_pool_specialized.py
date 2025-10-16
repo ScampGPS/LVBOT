@@ -842,28 +842,21 @@ class SpecializedBrowserPool:
             try:
                 court = self.court_manager.get_court_for_browser(browser_id)
                 age_minutes = (datetime.now() - browser.created_at).total_seconds() / 60
-                
-                self.logger.info(f"🔄 Refreshing browser {browser_id} (Court {court}, Age: {age_minutes:.1f}min)")
-                
-                # Use stateful refresh to maintain court position
-                from lvbot.automation.browser.stateful_browser_refresh import StatefulBrowserRefresh
-                stateful_refresh = StatefulBrowserRefresh()
-                
-                success, message = await stateful_refresh.refresh_with_state(browser.page)
-                
-                if success:
-                    self.logger.info(f"✅ Browser {browser_id}: {message}")
-                    # Update browser health and reset use count
-                    browser.is_healthy = True
-                    browser.use_count = 0
-                    browser.last_used = datetime.now()
-                    refresh_results[browser_id] = True
-                else:
-                    self.logger.error(f"❌ Browser {browser_id}: {message}")
-                    # Mark as unhealthy for recycling
-                    browser.is_healthy = False
-                    refresh_results[browser_id] = False
-                    
+
+                self.logger.info(
+                    "🔄 Refreshing browser %s (Court %s, Age: %.1fmin)",
+                    browser_id,
+                    court,
+                    age_minutes,
+                )
+
+                await browser.page.reload(wait_until='domcontentloaded', timeout=MAX_NAVIGATION_WAIT_TIME)
+
+                browser.is_healthy = True
+                browser.use_count = 0
+                browser.last_used = datetime.now()
+                refresh_results[browser_id] = True
+
             except Exception as e:
                 self.logger.error(f"❌ Failed to refresh browser {browser_id}: {e}")
                 refresh_results[browser_id] = False

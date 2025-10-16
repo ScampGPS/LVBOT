@@ -1,7 +1,5 @@
-"""Compatibility shim for migrated module."""
-from importlib import import_module
+"""Compatibility shim for migrated tennis executor."""
 
-_module = import_module("lvbot.automation.executors.tennis_executor")
+from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
 
-globals().update(_module.__dict__)
-__all__ = getattr(_module, '__all__', [name for name in globals() if not name.startswith('_')])
+__all__ = ["TennisExecutor", "create_tennis_config_from_user_info"]

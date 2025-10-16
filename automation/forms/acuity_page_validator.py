@@ -179,7 +179,7 @@ class AcuityPageValidator:
             logger.debug(f"Error getting extraction frame: {e}")
             # Fallback to iframe if page fails
             try:
-                from .async_browser_helpers import BrowserHelpers
+                from automation.browser import BrowserHelpers
                 iframe = await BrowserHelpers.get_scheduling_frame(page, timeout=1.0)
                 if iframe:
                     logger.debug("Fallback: Using scheduling iframe for extraction")

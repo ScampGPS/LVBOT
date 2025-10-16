@@ -11,8 +11,8 @@ import logging
 
 from lvbot.telegram.callbacks.parser import CallbackParser
 from lvbot.telegram.ui.telegram_ui import TelegramUI
-from lvbot.automation.executors.tennis_executor import TennisExecutor, create_tennis_config_from_user_info
-from lvbot.automation.executors import UnifiedAsyncBookingExecutor
+from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
+from automation.executors import UnifiedAsyncBookingExecutor
 
 logger = logging.getLogger(__name__)
 

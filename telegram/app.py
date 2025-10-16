@@ -19,8 +19,8 @@ from telegram.ext import ContextTypes
 
 # Import async components
 from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
-from lvbot.automation.availability.availability_checker_v3 import AvailabilityCheckerV3
-from lvbot.automation.browser.browser_lifecycle import BrowserLifecycle
+from automation.availability import AvailabilityChecker
+from lvbot.automation.browser.manager import BrowserManager
 from lvbot.telegram.ui.telegram_ui import TelegramUI
 from lvbot.reservations.services import ReservationService
 from lvbot.users.manager import UserManager
@@ -62,7 +62,8 @@ class CleanBot:
         self.logger = logging.getLogger('CleanBot')
         self.config = BotConfig()
         self.browser_pool = AsyncBrowserPool()
-        self.availability_checker = AvailabilityCheckerV3(self.browser_pool)
+        self.browser_manager = BrowserManager(pool=self.browser_pool)
+        self.availability_checker = AvailabilityChecker(self.browser_pool)
         self.user_manager = UserManager('data/users.json')
         self.reservation_service = ReservationService(
             config=self.config,
@@ -391,7 +392,7 @@ class CleanBot:
         
         # Initialize browser pool - CRITICAL for tennis automation
         try:
-            await BrowserLifecycle.start_pool(self.browser_pool, self.logger)
+            await self.browser_manager.start_pool(self.logger)
         except Exception as e:
             self.logger.error(f"CRITICAL: Browser pool failed to start - bot functionality limited: {e}")
             # Continue running but log the issue
@@ -439,7 +440,7 @@ class CleanBot:
         # Stop browser pool using lifecycle helper with enhanced logging
         self.logger.info("🔄 Stopping browser pool...")
         try:
-            success = await BrowserLifecycle.stop_pool(self.browser_pool, self.logger)
+            success = await self.browser_manager.stop_pool(self.logger)
             if success:
                 self.logger.info("✅ Browser pool cleanup completed")
             else:

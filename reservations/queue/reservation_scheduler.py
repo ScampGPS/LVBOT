@@ -19,10 +19,9 @@ PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
 
 # Use the now-async SpecializedBrowserPool
 from lvbot.automation.browser_pool_specialized import SpecializedBrowserPool
-from lvbot.automation.executors.booking_orchestrator import DynamicBookingOrchestrator
-from lvbot.automation.browser.browser_allocation import BrowserAllocationHelper
-from lvbot.automation.executors.tennis_executor import TennisExecutor, create_tennis_config_from_user_info
-from lvbot.automation.executors import (
+from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
+from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
+from automation.executors import (
     AsyncExecutorConfig,
     UnifiedAsyncBookingExecutor,
 )
@@ -87,7 +86,6 @@ class ReservationScheduler:
             
         
         # Browser lifecycle helpers provided by the manager
-        self.refresh_manager = None
         self.health_checker = None
         self.recovery_service = None
         
@@ -176,7 +174,6 @@ class ReservationScheduler:
         try:
             pool = await self.browser_manager.ensure_pool()
             self.browser_pool = pool
-            self.refresh_manager = self.browser_manager.refresh_manager
             self.health_checker = self.browser_manager.health_checker
             self.recovery_service = self.browser_manager.recovery_service
             if self.browser_pool:
@@ -235,12 +232,6 @@ class ReservationScheduler:
             self.logger.info("✓ All browsers initialized with performance optimizations")
             self.logger.info("✓ Ready for high-speed court checking")
             
-            # Initialize refresh manager (now using async-safe pre-booking refresh)
-            # Browser refresh is now handled via async pre-booking refresh in _execute_reservation_group
-            # This avoids event loop conflicts while preventing browser staleness
-            self.refresh_manager = None
-            self.logger.info("✓ Browser refresh manager replaced with async-safe pre-booking refresh")
-            
             # Initialize health check and recovery services with the pool
             self.health_checker = BrowserHealthChecker(browser_pool)
             self.recovery_service = BrowserPoolRecoveryService(browser_pool)
@@ -265,11 +256,6 @@ class ReservationScheduler:
             await self._ensure_browser_pool()
         else:
             self.logger.info("Using pre-initialized browser pool from main thread")
-            # Initialize refresh manager with pre-initialized pool
-            # Browser refresh now handled via async-safe pre-booking refresh in _execute_reservation_group
-            self.refresh_manager = None
-            self.logger.info("✓ Browser refresh manager replaced with async-safe pre-booking refresh")
-            
             # Initialize health check and recovery services if not already done
             if self.health_checker is None:
                 self.health_checker = BrowserHealthChecker(self.browser_pool)
@@ -299,11 +285,7 @@ class ReservationScheduler:
             await self._ensure_browser_pool()
         else:
             self.logger.info("Using pre-initialized browser pool from main thread")
-            # Initialize refresh manager with pre-initialized pool
-            # Browser refresh now handled via async-safe pre-booking refresh in _execute_reservation_group
-            self.refresh_manager = None
-            self.logger.info("✓ Browser refresh manager replaced with async-safe pre-booking refresh")
-            
+
             # Initialize health check and recovery services if not already done
             if self.health_checker is None:
                 self.health_checker = BrowserHealthChecker(self.browser_pool)
@@ -329,11 +311,6 @@ class ReservationScheduler:
         self.logger.info("Stopping reservation scheduler")
         self.running = False
         
-        # Stop browser refresh manager first
-        if self.refresh_manager:
-            self.refresh_manager.stop()
-            self.refresh_manager = None
-            
         # Note: Browser pool is managed by main app, don't stop it here
         # to avoid interfering with other components
         

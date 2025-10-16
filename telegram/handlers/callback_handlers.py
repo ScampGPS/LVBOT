@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from lvbot.telegram.ui.telegram_ui import TelegramUI
-from lvbot.automation.availability.datetime_helpers import DateTimeHelpers
+from automation.availability import DateTimeHelpers
 from lvbot.telegram.error_handler import ErrorHandler
 from lvbot.telegram.booking.immediate_handler import ImmediateBookingHandler
 from lvbot.infrastructure.constants import COURT_HOURS, get_court_hours
@@ -2752,7 +2752,7 @@ class CallbackHandler:
                 return []
             
             # FIXED: Use date-specific extraction instead of generic extraction
-            from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
+            from automation.availability import AcuityTimeParser
             from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction
@@ -2812,7 +2812,7 @@ class CallbackHandler:
             }
         """
         import asyncio
-        from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
+        from automation.availability import AcuityTimeParser
         from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
         
         try:
@@ -2875,7 +2875,7 @@ class CallbackHandler:
                 self.logger.warning(f"No page available for court {court_num}")
                 return {}
             
-            from lvbot.automation.availability.time_order_extraction import AcuityTimeParser
+            from automation.availability import AcuityTimeParser
             from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction

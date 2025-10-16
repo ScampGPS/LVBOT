@@ -1,25 +1,20 @@
 """Availability detection utilities for LVBot automation."""
 
-from .async_availability_checker import AsyncAvailabilityChecker
-from .availability_checker_v3 import AvailabilityCheckerV3
-from .availability_checker_v2 import AvailabilityCheckerV2
-from .time_slot_extractor import TimeSlotExtractor
-from .time_order_extraction import TimeOrderExtractor
-from .court_availability import CourtAvailability
-from .day_mapper import DayMapper
-from .day_context_parser import DayContextParser
-from .datetime_helpers import DateTimeHelpers
-from .time_feasibility_validator import TimeFeasibilityValidator
+from .checker import AvailabilityChecker, AvailabilityCheckerV3
+from .support import AcuityTimeParser, DateTimeHelpers, filter_future_times_for_today
 
 __all__ = [
-    "AsyncAvailabilityChecker",
+    "AvailabilityChecker",
     "AvailabilityCheckerV3",
     "AvailabilityCheckerV2",
-    "TimeSlotExtractor",
-    "TimeOrderExtractor",
-    "CourtAvailability",
-    "DayMapper",
-    "DayContextParser",
+    "AcuityTimeParser",
     "DateTimeHelpers",
-    "TimeFeasibilityValidator",
+    "filter_future_times_for_today",
 ]
+
+
+class AvailabilityCheckerV2(AvailabilityChecker):
+    """Deprecated alias kept for backwards compatibility."""
+
+    def __init__(self, *args, **kwargs):
+        raise RuntimeError("AvailabilityCheckerV2 has been replaced by AvailabilityChecker")

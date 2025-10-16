@@ -1,2 +1,2 @@
-"""Compatibility shim for lvbot.automation.executors.tennis_config."""
-from lvbot.automation.executors.tennis_config import *  # noqa: F401,F403
+"""Compatibility shim for legacy tennis configuration imports."""
+from automation.executors.tennis import *  # noqa: F401,F403

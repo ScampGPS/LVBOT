@@ -601,7 +601,6 @@ class AsyncBrowserPool:
             if experienced_mode:
                 # Use ExperiencedBookingExecutor with mouse clicks
                 logger.info(f"Using EXPERIENCED mode (mouse clicks) for Court {court_number}")
-                from lvbot.automation.executors.experienced_booking_executor import ExperiencedBookingExecutor
                 executor = ExperiencedBookingExecutor(self)
                 
                 # Execute the booking
@@ -614,7 +613,6 @@ class AsyncBrowserPool:
             else:
                 # Use SmartAsyncBookingExecutor with direct URL navigation
                 logger.info(f"Using STANDARD mode (direct URL) for Court {court_number}")
-                from lvbot.automation.executors.smart_async_booking_executor import SmartAsyncBookingExecutor
                 executor = SmartAsyncBookingExecutor(self)
                 
                 # Execute the booking with smart timeout and retry
@@ -652,79 +650,6 @@ class AsyncBrowserPool:
                 'error': str(e)
             }
     
-    async def refresh_all_pages(self, refresh_type: str = "current"):
-        """
-        Refresh all court pages to get latest availability data
-        
-        Args:
-            refresh_type: Type of refresh to perform
-                - "calendar": Navigate back to calendar page (for availability checking)
-                - "current": Maintain current page state (default, for booking process)
-        
-        Refreshes all 3 courts in parallel for speed. If refresh fails,
-        proceeds with existing page content (might be slightly stale but functional).
-        """
-        # Check if critical operation is in progress
-        if self.is_critical_operation_in_progress():
-            logger.warning("Skipping page refresh - critical booking operation in progress")
-            return
-            
-        logger.info(f"Refreshing all court pages (mode: {refresh_type}) for latest availability data")
-        tasks = []
-        for court in self.courts:
-            if court in self.pages:
-                tasks.append(self._refresh_court_page(court, refresh_type))
-        
-        # Wait for all refreshes to complete (or fail)
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info("All court page refreshes completed")
-
-    async def _refresh_court_page(self, court: int, refresh_type: str = "current"):
-        """
-        Refresh specific court page
-        
-        Args:
-            court: The court number to refresh
-            refresh_type: Type of refresh ("calendar" or "current")
-        """
-        try:
-            page = self.pages[court]
-            
-            if refresh_type == "calendar":
-                # Navigate back to the calendar page
-                logger.info(f"Court {court}: Refreshing to calendar page")
-                court_url = self.DIRECT_COURT_URLS[court]
-                await page.goto(court_url, wait_until='domcontentloaded', timeout=BrowserTimeouts.SLOW_NAVIGATION)
-                
-                # Log where we ended up
-                final_url = page.url
-                logger.info(f"Court {court}: After refresh, current URL: {final_url}")
-                
-                # Wait for time elements to appear
-                try:
-                    await page.wait_for_selector('[class*="time"]', timeout=30000)
-                    if not PRODUCTION_MODE:
-                        logger.debug(f"Court {court}: Calendar elements loaded")
-                except:
-                    logger.warning(f"Court {court}: Calendar elements not found after refresh")
-                    
-            else:
-                # Use stateful refresh to maintain current state
-                logger.debug(f"Court {court}: Starting stateful refresh")
-                from lvbot.automation.browser.stateful_browser_refresh import StatefulBrowserRefresh
-                stateful_refresh = StatefulBrowserRefresh()
-                
-                success, message = await stateful_refresh.refresh_with_state(page)
-                
-                if success:
-                    logger.info(f"Court {court}: {message}")
-                else:
-                    logger.warning(f"Court {court}: {message}")
-            
-        except Exception as e:
-            logger.warning(f"Court {court}: Page refresh failed: {e} - proceeding with existing content")
-            # Don't raise - proceed with existing page content
-    
     async def is_slot_available(self, court_number: int, time_slot: str, target_date: datetime) -> Dict[str, Any]:
         """
         Check if a time slot is available without actually booking it
@@ -755,9 +680,7 @@ class AsyncBrowserPool:
                 }
             
             # Use the same navigation logic as SmartAsyncBookingExecutor but without booking
-            from lvbot.automation.executors.smart_async_booking_executor import SmartAsyncBookingExecutor
-            
-            # Create executor instance to use its navigation methods
+            # Reuse smart executor navigation logic without booking
             executor = SmartAsyncBookingExecutor(self)
             
             # Construct direct URL to check availability

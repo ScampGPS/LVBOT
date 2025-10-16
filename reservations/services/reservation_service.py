@@ -9,7 +9,7 @@ from typing import Iterable, List, Optional
 from lvbot.reservations.models import ReservationRequest, UserProfile
 from lvbot.reservations.queue import ReservationQueue, ReservationScheduler
 from lvbot.users.manager import UserManager
-from lvbot.automation.executors import AsyncExecutorConfig
+from automation.executors import AsyncExecutorConfig
 
 
 class ReservationService:

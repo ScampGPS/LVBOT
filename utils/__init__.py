@@ -11,25 +11,21 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from lvbot.automation.browser.async_browser_helpers import BrowserHelpers
-    from lvbot.automation.executors.booking_orchestrator import DynamicBookingOrchestrator
-    from lvbot.automation.browser.browser_allocation import BrowserAllocationHelper
+    from automation.browser import BrowserHelpers
+    from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 
 
 __all__ = [
     'BrowserHelpers',
-    'DynamicBookingOrchestrator', 
-    'BrowserAllocationHelper'
+    'DynamicBookingOrchestrator',
 ]
 
 
 def __getattr__(name: str):
     if name == 'BrowserHelpers':
-        module = import_module('lvbot.automation.browser.async_browser_helpers')
+        module = import_module('automation.browser')
     elif name == 'DynamicBookingOrchestrator':
-        module = import_module('lvbot.automation.executors.booking_orchestrator')
-    elif name == 'BrowserAllocationHelper':
-        module = import_module('lvbot.automation.browser.browser_allocation')
+        module = import_module('automation.executors.booking_orchestrator')
     else:
         raise AttributeError(name)
     return getattr(module, name)

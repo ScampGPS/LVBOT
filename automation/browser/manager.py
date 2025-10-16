@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Optional
 
 from .async_browser_pool import AsyncBrowserPool
-from .browser_refresh_manager import BrowserRefreshManager
 from .browser_health_checker import BrowserHealthChecker, HealthStatus
 from .browser_pool_recovery import BrowserPoolRecoveryService
 from .settings import BrowserSettings, load_browser_settings
@@ -22,7 +22,6 @@ class BrowserManager:
     ) -> None:
         self.settings = settings or load_browser_settings()
         self._pool: Optional[AsyncBrowserPool] = pool
-        self._refresh_manager: Optional[BrowserRefreshManager] = None
         self._health_checker: Optional[BrowserHealthChecker] = None
         self._recovery_service: Optional[BrowserPoolRecoveryService] = None
         self._pool_lock = asyncio.Lock()
@@ -34,8 +33,6 @@ class BrowserManager:
             if self._pool is None:
                 self._pool = AsyncBrowserPool(courts=self.settings.courts)
                 await self._pool.start()
-            if self._refresh_manager is None:
-                self._refresh_manager = BrowserRefreshManager(self._pool)
             if self._health_checker is None:
                 self._health_checker = BrowserHealthChecker(self._pool)
             if self._recovery_service is None:
@@ -49,10 +46,6 @@ class BrowserManager:
         return self._pool
 
     @property
-    def refresh_manager(self) -> Optional[BrowserRefreshManager]:
-        return self._refresh_manager
-
-    @property
     def health_checker(self) -> Optional[BrowserHealthChecker]:
         return self._health_checker
 
@@ -60,15 +53,40 @@ class BrowserManager:
     def recovery_service(self) -> Optional[BrowserPoolRecoveryService]:
         return self._recovery_service
 
-    async def shutdown(self) -> None:
-        """Attempt to gracefully close the browser pool."""
+    async def start_pool(self, logger: Optional[logging.Logger] = None) -> bool:
+        """Start the browser pool with logging."""
 
-        if self._pool:
+        pool = self._pool or await self.ensure_pool()
+
+        log = logger or logging.getLogger("BrowserManager")
+        try:
+            log.info("Initializing browser pool...")
+            await pool.start()
+            log.info("✅ Browser pool started successfully")
+            return True
+        except Exception:
+            log.exception("Failed to start browser pool")
+            raise
+
+    async def stop_pool(self, logger: Optional[logging.Logger] = None) -> bool:
+        """Stop the browser pool with logging."""
+
+        if not self._pool:
+            return True
+
+        log = logger or logging.getLogger("BrowserManager")
+        try:
+            log.info("Stopping browser pool...")
             await self._pool.stop()
-        self._pool = None
-        self._refresh_manager = None
-        self._health_checker = None
-        self._recovery_service = None
+            log.info("✅ Browser pool stopped successfully")
+            return True
+        except Exception:
+            log.exception("Error stopping browser pool")
+            return False
+        finally:
+            self._pool = None
+            self._health_checker = None
+            self._recovery_service = None
 
     async def perform_health_check(self) -> Optional[HealthStatus]:
         """Run a health check if the service is initialised."""

@@ -1,7 +1,5 @@
-"""Compatibility shim for migrated module."""
-from importlib import import_module
+"""Compatibility shim for migrated smart async booking executor."""
 
-_module = import_module("lvbot.automation.executors.smart_async_booking_executor")
+from automation.executors.booking import SmartAsyncBookingExecutor
 
-globals().update(_module.__dict__)
-__all__ = getattr(_module, '__all__', [name for name in globals() if not name.startswith('_')])
+__all__ = ["SmartAsyncBookingExecutor"]
