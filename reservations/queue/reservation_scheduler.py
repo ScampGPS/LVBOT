@@ -26,6 +26,66 @@ from automation.browser.manager import BrowserManager
 from automation.browser.browser_health_checker import BrowserHealthChecker
 from automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
 from botapp.booking.immediate_handler import ImmediateBookingHandler
+from automation.shared.booking_contracts import BookingResult, BookingUser
+from reservations.queue.request_builder import build_request_from_reservation
+from reservations.queue.persistence import persist_queue_outcome
+from botapp.notifications import format_failure_message, format_success_message
+
+
+def _booking_result_to_dict(result: BookingResult) -> Dict[str, Any]:
+    """Normalize a `BookingResult` into the legacy dict structure used by the scheduler."""
+
+    error_message = None
+    if not result.success:
+        error_message = result.message or ('; '.join(result.errors) if result.errors else 'Unknown error')
+
+    return {
+        'success': result.success,
+        'court': result.court_reserved,
+        'time': result.time_reserved,
+        'confirmation_code': result.confirmation_code,
+        'confirmation_url': result.confirmation_url,
+        'message': result.message,
+        'error': error_message,
+        'errors': list(result.errors),
+        'booking_result': result,
+    }
+
+
+def _failure_result_from_reservation(reservation: Dict[str, Any], message: str, *, errors: Optional[List[str]] = None) -> BookingResult:
+    """Build a failure result when execution cannot proceed."""
+
+    user_profile = {
+        'user_id': reservation.get('user_id') or 0,
+        'first_name': reservation.get('first_name') or 'Unknown',
+        'last_name': reservation.get('last_name') or '',
+        'email': reservation.get('email') or '',
+        'phone': reservation.get('phone') or '',
+        'tier': reservation.get('tier'),
+    }
+
+    booking_user = BookingUser(
+        user_id=int(user_profile['user_id']),
+        first_name=str(user_profile['first_name']),
+        last_name=str(user_profile['last_name']),
+        email=str(user_profile['email']),
+        phone=str(user_profile['phone']),
+        tier=user_profile.get('tier'),
+    )
+
+    metadata = {
+        'source': 'queue_scheduler',
+        'target_date': reservation.get('target_date'),
+        'target_time': reservation.get('target_time'),
+    }
+
+    return BookingResult.failure_result(
+        booking_user,
+        reservation.get('id'),
+        message=message,
+        errors=errors or [message],
+        metadata=metadata,
+    )
 
 
 class ReservationScheduler:
@@ -613,8 +673,16 @@ class ReservationScheduler:
                     self.logger.warning(f"Cancelling hanging task for reservation {reservation_id[:8]}...")
                     task.cancel()
                     # Mark reservation as failed due to timeout
-                    self._update_reservation_failed(reservation_id, f"Booking timed out after {timeout} seconds")
-                    results[reservation_id] = {'success': False, 'error': f'Booking timed out after {timeout} seconds'}
+                    reservation_data = reservation_lookup.get(reservation_id, {})
+                    timeout_message = f'Booking timed out after {timeout} seconds'
+                    failure_result = _failure_result_from_reservation(
+                        reservation_data,
+                        timeout_message,
+                        errors=[timeout_message],
+                    )
+                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                    self._update_reservation_failed(reservation_id, timeout_message)
+                    results[reservation_id] = _booking_result_to_dict(failure_result)
                 
                 # Wait briefly for cancellation to complete
                 if pending:
@@ -655,12 +723,28 @@ class ReservationScheduler:
 
                 except asyncio.CancelledError:
                     self.logger.warning(f"Task was cancelled for reservation {reservation_id[:8]}...")
-                    results[reservation_id] = {'success': False, 'error': 'Task was cancelled'}
-                    self._update_reservation_failed(reservation_id, 'Task was cancelled')
+                    reservation_data = reservation_lookup.get(reservation_id, {})
+                    cancel_message = 'Task was cancelled'
+                    failure_result = _failure_result_from_reservation(
+                        reservation_data,
+                        cancel_message,
+                        errors=[cancel_message],
+                    )
+                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                    results[reservation_id] = _booking_result_to_dict(failure_result)
+                    self._update_reservation_failed(reservation_id, cancel_message)
                 except Exception as e:
                     self.logger.error(f"Task failed for reservation {reservation_id}: {e}")
-                    results[reservation_id] = {'success': False, 'error': str(e)}
-                    self._update_reservation_failed(reservation_id, str(e))
+                    reservation_data = reservation_lookup.get(reservation_id, {})
+                    error_message = str(e)
+                    failure_result = _failure_result_from_reservation(
+                        reservation_data,
+                        error_message,
+                        errors=[error_message],
+                    )
+                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                    results[reservation_id] = _booking_result_to_dict(failure_result)
+                    self._update_reservation_failed(reservation_id, error_message)
             
             # Process results from completed and cancelled tasks
         
@@ -682,7 +766,8 @@ class ReservationScheduler:
     
     
     async def _execute_single_booking(self, assignment: Dict, reservation: Dict, target_date: datetime, index: int, total: int) -> Dict:
-        """Execute a single queued booking using the immediate booking flow."""
+        """Execute a single queued booking using the unified booking contracts."""
+
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_single_booking')
         import time
 
@@ -691,7 +776,7 @@ class ReservationScheduler:
         reservation_id = attempt.reservation_id
 
         self.logger.info(
-            """🔄 PROCESSING QUEUE BOOKING {index}/{total}
+            """🔄 PROCESSING QUEUED BOOKING {index}/{total}
         Reservation ID: {reservation_id_short}...
         Assigned browser: {browser_id}
         Target court: {target_court}
@@ -706,50 +791,74 @@ class ReservationScheduler:
 
         if not self.immediate_booking_handler:
             self.logger.error("Immediate booking handler not initialized; cannot execute queued booking")
-            return {'success': False, 'error': 'Booking handler unavailable'}
+            failure = _failure_result_from_reservation(reservation, 'Booking handler unavailable')
+            persist_queue_outcome(reservation_id, failure, queue=self.queue)
+            return _booking_result_to_dict(failure)
 
         user_id = self._get_reservation_field(reservation, 'user_id')
         self.logger.info(f"👤 User: {user_id}")
 
-        user = self.user_db.get_user(user_id) if self.user_db else None
-        if not user:
+        user_profile = self.user_db.get_user(user_id) if self.user_db else None
+        if not user_profile:
             self.logger.error(f"❌ User {user_id} not found for reservation {reservation_id[:8]}...")
-            return {'success': False, 'error': 'User not found'}
+            failure = _failure_result_from_reservation(reservation, 'User not found')
+            persist_queue_outcome(reservation_id, failure, queue=self.queue)
+            return _booking_result_to_dict(failure)
 
-        target_time = self._get_reservation_field(reservation, 'target_time')
-        courts = self._get_reservation_field(reservation, 'court_preferences') or []
-        target_court = attempt.target_court or (courts[0] if courts else 1)
-        booking_date = self._parse_datetime_field(reservation, 'target_date', as_date=True)
-
-        booking_data = {
-            'court_number': target_court,
-            'time': target_time,
-            'date': booking_date,
-        }
-
-        self.logger.info(
-            "Using immediate booking flow for reservation %s (Court %s at %s)",
-            reservation_id[:8],
-            booking_data['court_number'],
-            booking_data['time'],
-        )
+        attempt_number = getattr(attempt, 'attempt_number', None)
+        if attempt_number is None:
+            attempt_number = getattr(attempt, 'attempt', None)
 
         try:
-            handler_result = await self.immediate_booking_handler._execute_booking(user_id, booking_data)
-        except Exception as exc:  # pragma: no cover - defensive guard
-            execution_time = time.time() - execution_start
+            booking_request = build_request_from_reservation(
+                reservation,
+                user_profile=user_profile,
+                metadata={
+                    'queue_reservation_id': reservation_id,
+                    'queue_attempt': attempt_number,
+                    'assigned_browser': assignment.get('browser_id'),
+                },
+            )
+        except ValueError as exc:
             self.logger.error(
-                "❌ Immediate booking execution error for %s: %s (execution time: %.2fs)",
+                "Failed to build booking request for reservation %s: %s",
+                reservation_id[:8],
+                exc,
+            )
+            failure = _failure_result_from_reservation(reservation, str(exc))
+            persist_queue_outcome(reservation_id, failure, queue=self.queue)
+            return _booking_result_to_dict(failure)
+
+        try:
+            booking_result = await self.immediate_booking_handler._execute_booking(booking_request)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error(
+                "❌ Immediate booking execution error for %s: %s",
                 reservation_id,
                 exc,
-                execution_time,
             )
-            return {'success': False, 'error': str(exc)}
+            booking_result = BookingResult.failure_result(
+                booking_request.user,
+                booking_request.request_id,
+                message=str(exc),
+                errors=[str(exc)],
+                metadata={**booking_request.metadata, 'flow': 'queue_execution_exception'},
+            )
 
         execution_time = time.time() - execution_start
-        success = handler_result.get('success', False)
+        booking_result = booking_result.merge_metadata(
+            {
+                'queue_execution_time_seconds': execution_time,
+                'queue_attempt': attempt_number,
+                'assigned_browser': assignment.get('browser_id'),
+                'target_date': booking_request.target_date.isoformat(),
+                'target_time': booking_request.target_time,
+            }
+        )
 
-        if success:
+        persist_queue_outcome(reservation_id, booking_result, queue=self.queue)
+
+        if booking_result.success:
             self.logger.info(
                 """✅ QUEUE BOOKING SUCCESSFUL
                 Reservation ID: {reservation_id}
@@ -758,40 +867,25 @@ class ReservationScheduler:
                 Execution time: {elapsed:.2f}s (Immediate flow)
                 """.format(
                     reservation_id=reservation_id[:8],
-                    court=handler_result.get('court', target_court) or 'Unknown',
-                    confirmation=handler_result.get('confirmation_code', 'Pending'),
+                    court=booking_result.court_reserved or 'Unknown',
+                    confirmation=booking_result.confirmation_code or 'Pending',
                     elapsed=execution_time,
                 )
             )
-            return {
-                'success': True,
-                'court': handler_result.get('court', target_court),
-                'time': handler_result.get('time', booking_data['time']),
-                'confirmation_code': handler_result.get('confirmation_code'),
-                'confirmation_url': handler_result.get('confirmation_url'),
-                'message': handler_result.get('message'),
-            }
-
-        error_message = handler_result.get('message', 'Unknown error')
-        self.logger.warning(
-            """❌ QUEUE BOOKING FAILED
-            Reservation ID: {reservation_id}
-            Error: {error}
-            Execution time: {elapsed:.2f}s (Immediate flow)
-            """.format(
-                reservation_id=reservation_id[:8],
-                error=error_message,
-                elapsed=execution_time,
+        else:
+            self.logger.warning(
+                """❌ QUEUE BOOKING FAILED
+                Reservation ID: {reservation_id}
+                Error: {error}
+                Execution time: {elapsed:.2f}s (Immediate flow)
+                """.format(
+                    reservation_id=reservation_id[:8],
+                    error=booking_result.message or '; '.join(booking_result.errors) or 'Unknown error',
+                    elapsed=execution_time,
+                )
             )
-        )
 
-        return {
-            'success': False,
-            'error': error_message,
-            'court': handler_result.get('court', target_court),
-            'time': handler_result.get('time', booking_data['time']),
-            'confirmation_code': handler_result.get('confirmation_code'),
-        }
+        return _booking_result_to_dict(booking_result)
     
     
     def _update_reservation_success(self, reservation_id: str, result: Dict):
@@ -853,26 +947,34 @@ class ReservationScheduler:
             # Format notification message
             target_date = self._get_reservation_field(reservation, 'target_date')
             time = self._get_reservation_field(reservation, 'target_time')
-            
-            if result.get('success'):
-                court = result.get('court', 'Unknown')
-                message = (
-                    f"✅ **Reservation Successful!**\n\n"
-                    f"🎾 Court {court} booked\n"
-                    f"📅 {target_date}\n"
-                    f"⏰ {time}\n\n"
-                    f"See you on the court!"
-                )
+
+            booking_result = result.get('booking_result') if isinstance(result, dict) else None
+
+            if isinstance(booking_result, BookingResult):
+                if booking_result.success:
+                    message = format_success_message(booking_result)
+                else:
+                    message = format_failure_message(booking_result)
             else:
-                error = result.get('error', 'Unknown error')
-                message = (
-                    f"❌ **Reservation Failed**\n\n"
-                    f"📅 {target_date} at {time}\n"
-                    f"Reason: {error}\n\n"
-                    f"Your reservation has been removed from the queue.\n"
-                    f"Please try booking manually or create a new reservation."
-                )
-            
+                if result.get('success'):
+                    court = result.get('court', 'Unknown')
+                    message = (
+                        f"✅ **Reservation Successful!**\n\n"
+                        f"🎾 Court {court} booked\n"
+                        f"📅 {target_date}\n"
+                        f"⏰ {time}\n\n"
+                        f"See you on the court!"
+                    )
+                else:
+                    error = result.get('error', 'Unknown error')
+                    message = (
+                        f"❌ **Reservation Failed**\n\n"
+                        f"📅 {target_date} at {time}\n"
+                        f"Reason: {error}\n\n"
+                        f"Your reservation has been removed from the queue.\n"
+                        f"Please try booking manually or create a new reservation."
+                    )
+
             # Send notification (async)
             self.logger.info(f"📨 Sending notification to user {user_id}")
             self.logger.info(f"Message preview: {message[:100]}...")

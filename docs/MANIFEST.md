@@ -275,6 +275,25 @@
 - `_get_next_day(current_date, available_dates)` → str
   Gets next available date for intelligent day cycling with edge case handling
 
+### `automation/shared/booking_contracts.py`
+**Purpose**: Define shared booking request/result data structures used across bot, scheduler, and executors
+
+#### Key Types:
+- `BookingSource` - Enum for request origin (immediate, queued, tennis, admin, retry)
+- `CourtPreference` - Primary/fallback court container with helpers (`from_sequence`, `as_list`)
+- `BookingUser` - Immutable user payload required for bookings and notifications
+- `BookingRequest` - Canonical booking contract with constructors (`from_immediate_payload`, `from_reservation_record`) and helpers (`preferred_courts`)
+- `BookingResult` / `BookingStatus` - Canonical outcome with factories (`success_result`, `failure_result`) and metadata merging
+
+### `automation/executors/request_factory.py`
+**Purpose**: Bridge executor inputs/results with the shared booking contracts
+
+#### Key Functions:
+- `build_executor_request(...)` / `build_tennis_booking_request(...)` / `build_retry_request(...)` → `BookingRequest`
+  Normalise executor-specific inputs into the canonical request structure
+- `build_booking_result_from_execution(request, execution, *, metadata=None, started_at=None, completed_at=None)` → `BookingResult`
+  Convert legacy `ExecutionResult` data into the shared outcome format with metadata enrichment
+
 ### `utils/callback_parser.py`
 **Purpose**: Modular callback data parser following DRY principles
 
@@ -286,28 +305,57 @@
 - `format_booking_callback(action, date, court_number, time)` → str
   Format callback data for booking actions
 
-### `utils/immediate_booking_handler.py`
-**Purpose**: Handles immediate booking flow from court availability display
+### `botapp/booking/immediate_handler.py`
+**Purpose**: Orchestrates immediate bookings end-to-end using shared booking contracts
 
 #### Key Functions:
-- `__init__(user_manager)` → None
-  Initialize handler with user management dependency
+- `__init__(user_manager, browser_pool=None)` → None
+  Initialize handler with user management and optional browser pool dependencies
 - `handle_booking_request(update, context)` → None
   Handle initial booking request when user clicks a time slot
 - `handle_booking_confirmation(update, context)` → None
-  Execute booking after user confirmation
+  Confirm booking, build a `BookingRequest`, execute, persist, and notify
 - `handle_booking_cancellation(update, context)` → None
   Handle booking cancellation and return to availability view
 - `_get_validated_user(user_id)` → Optional[Dict[str, Any]]
   Get and validate user data with required fields check
 - `_create_confirmation_ui(booking_data, user_data)` → Dict[str, Any]
   Create confirmation dialog UI components
-- `_execute_booking(user_id, booking_data)` → Dict[str, Any]
-  Execute actual booking using smart executor
-- `_format_success_message(result, booking_data)` → str
-  Format successful booking message
-- `_format_failure_message(result, booking_data)` → str
-  Format booking failure message
+- `_execute_booking(request)` → `BookingResult`
+  Run natural-flow and fallback executors, returning the canonical booking result
+
+### `botapp/booking/request_builder.py`
+**Purpose**: Convert bot-level payloads and user profiles into `BookingRequest` objects
+
+#### Key Functions:
+- `booking_user_from_profile(user_profile)` → `BookingUser`
+  Validate and convert a stored user profile into the shared booking user contract
+- `build_immediate_booking_request(user_profile, *, target_date, time_slot, court_number, metadata=None, executor_config=None)` → `BookingRequest`
+  Assemble the canonical booking request for immediate Telegram-triggered flows
+- `build_admin_booking_request(user_profile, *, target_date, time_slot, courts, request_id=None, metadata=None, executor_config=None)` → `BookingRequest`
+  Prepare booking requests for future admin overrides or manual triggers
+
+### `botapp/booking/persistence.py`
+**Purpose**: Persist immediate booking outcomes for auditing and history
+
+#### Key Functions:
+- `persist_immediate_success(request, result, tracker=None)` → str
+  Record a successful immediate booking in the reservation tracker and return its ID
+- `persist_immediate_failure(request, result, tracker=None)` → str
+  Store failed attempts for diagnostics while reusing the shared booking metadata
+
+### `botapp/notifications.py`
+**Purpose**: Format booking notifications and payloads based on `BookingResult`
+
+#### Key Functions:
+- `format_success_message(result)` → str
+  Produce a Markdown success message including confirmation details if available
+- `format_failure_message(result)` → str
+  Generate a Markdown failure message summarizing errors and guidance
+- `send_success_notification(user_id, result)` → Dict[str, Any]
+  Build the Telegram payload (message, parse mode, reply markup) for success flows
+- `send_failure_notification(user_id, result)` → Dict[str, Any]
+  Build the Telegram payload for failure flows with retry guidance
 
 ### `utils/acuity_page_validator.py`
 **Purpose**: Validates Acuity scheduling pages for extraction readiness
@@ -524,28 +572,40 @@ current queue system no longer imports these helpers.
 - `check_single_court_sync(browser_pool, court_number, get_dates)` → Dict[str, Any]
   Check single court synchronously
 
-### `reservation_scheduler.py` *(Updated 2025-07-25)*
-**Purpose**: Background scheduler for executing reservations at 48-hour mark. Now with non-blocking concurrent execution and timeout handling.
+### `reservation_scheduler.py` *(Updated 2025-08-05)*
+**Purpose**: Background scheduler that promotes queued reservations into shared `BookingRequest` contracts, executes them concurrently, and persists `BookingResult` outcomes with structured notifications.
 
 #### Key Functions:
-- `__init__(config, queue, notification_callback, bot_handler=None, browser_pool=None)` → None
-  Initialize scheduler with optional pre-initialized browser pool
-- `start()` → None
-  Start scheduler, uses pre-initialized browser pool if provided
-- `_ensure_browser_pool()` → None
-  Ensure browser pool is initialized (only if not provided)
-- `_create_browser_pool_sync()` → OptimizedBrowserPool/SimpleBrowserPool
-  Create browser pool (prefers OptimizedBrowserPool for faster startup)
-- `add_reservation(reservation)` → str
-  Add reservation to queue
-- `cancel_reservation(reservation_id)` → bool
-  Cancel pending reservation
-- `_update_reservation_success(reservation_id, result)` → None
-  Update reservation status to completed
-- `_update_reservation_failed(reservation_id, error)` → None
-  Update reservation status to failed and remove from queue
-- `_execute_single_booking(assignment, reservation, target_date, index, total)` → Dict *(NEW)*
-  Execute a single booking asynchronously with proper error handling
+- `__init__(config, queue, notification_callback, bot_handler=None, browser_pool=None, executor_config=None)` → None
+  Initialize scheduler with queue, persistence helpers, and optional pre-initialized browser pool
+- `start()` / `stop()` → None
+  Manage scheduler lifecycle while reusing a persistent browser pool when available
+- `_execute_with_persistent_pool(booking_plan, target_date, reservations)` → None
+  Launch concurrent booking tasks with timeout handling and metadata enrichment
+- `_execute_single_booking(assignment, reservation, target_date, index, total)` → Dict[str, Any]
+  Build a `BookingRequest`, delegate to the immediate handler, persist the resulting `BookingResult`, and emit legacy-compatible summaries
+- `_notify_booking_results(results)` → None
+  Format and deliver Telegram messages using shared notification helpers when `BookingResult` metadata is present
+- `_update_reservation_success(reservation_id, result)` / `_update_reservation_failed(reservation_id, error)` → None
+  Maintain queue status counters and removal logic using the new persistence layer
+
+### `reservations/queue/request_builder.py`
+**Purpose**: Translate queued reservation records into shared booking contracts
+
+#### Key Functions:
+- `build_request_from_reservation(reservation, *, user_profile=None, metadata=None, executor_config=None)` → `BookingRequest`
+  Normalise stored reservation dicts (dates, courts, user info) into the canonical request structure
+- `build_request_from_dataclass(reservation, *, metadata=None, executor_config=None)` → `BookingRequest`
+  Adapter for `ReservationRequest` dataclasses used by queue services
+
+### `reservations/queue/persistence.py`
+**Purpose**: Update queue state based on shared `BookingResult` objects
+
+#### Key Functions:
+- `persist_queue_outcome(reservation_id, result, queue=None)` → bool
+  Apply success/failure status, confirmation data, and error details to queue entries
+- `persist_queue_cancellation(reservation_id, queue=None, metadata=None)` → bool
+  Mark queued reservations as cancelled while storing optional metadata for audits
 
 ### `utils/acuity_booking_form.py`
 **Purpose**: Handles the Acuity appointment booking form interaction
