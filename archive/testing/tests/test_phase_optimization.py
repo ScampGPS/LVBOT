@@ -38,7 +38,7 @@ async def test_phase_optimization():
     
     # Import modules
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
-    from optimized_booking_executor import OptimizedBookingExecutor
+    from archive.legacy_modules.browser_cleanup.optimized_booking_executor import OptimizedBookingExecutor
     from lvbot.utils.court_availability import CourtAvailability
     
     # Initialize browser pool with optimized settings

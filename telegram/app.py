@@ -8,6 +8,12 @@ import sys
 import logging
 import asyncio
 import signal
+from pathlib import Path
+
+# Ensure project root is on sys.path when executed as a script
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 # Import logging configuration to initialize proper logging
 from lvbot import logging_config

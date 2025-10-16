@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from lvbot.reservations.queue.priority_manager import PriorityManager, PriorityUser
+from .priority_manager import PriorityManager, PriorityUser
 from lvbot.users.manager import UserTier
 
 

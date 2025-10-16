@@ -18,7 +18,7 @@ import pytz
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
 
 # Use the now-async SpecializedBrowserPool
-from lvbot.automation.browser_pool_specialized import SpecializedBrowserPool
+from lvbot.automation.browser.pools import SpecializedBrowserPool
 from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
 from automation.executors import (

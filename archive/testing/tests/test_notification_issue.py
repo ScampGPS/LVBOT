@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from lvbot.utils.reservation_queue import ReservationQueue
 from lvbot.utils.user_manager import UserManager
-from lvbot.utils.priority_manager import PriorityManager
+from automation.executors.priority_manager import PriorityManager
 from lvbot.utils.booking_orchestrator import DynamicBookingOrchestrator
 from lvbot.utils.reservation_scheduler import ReservationScheduler
 

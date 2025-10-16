@@ -20,7 +20,7 @@ from telegram_tennis_bot import CleanBot
 from lvbot.utils.user_manager import UserManager
 from lvbot.utils.reservation_queue import ReservationQueue
 from booking_orchestrator import BookingOrchestrator
-from lvbot.utils.priority_manager import PriorityManager
+from automation.executors.priority_manager import PriorityManager
 from immediate_booking_handler import ImmediateBookingHandler
 
 # Setup logging

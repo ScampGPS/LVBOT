@@ -198,7 +198,7 @@
 - `set_user_tier(user_id, tier)` → None
   Set user's tier level
 
-### `priority_manager.py`
+### `automation/executors/priority_manager.py`
 **Purpose**: Priority management system handling two-tier FCFS user sorting
 
 #### Key Classes:
@@ -369,15 +369,10 @@
   Extract available time slots from frame
 
 ### `reservation_helpers.py`
-**Purpose**: Core reservation logic and booking algorithms
+**Status**: Archived (`archive/legacy_modules/reservations_queue/reservation_helpers.py`)
 
-#### Key Functions:
-- `find_best_court(preferences, available_courts)` → int
-  Determine optimal court based on preferences
-- `calculate_booking_time(target_date)` → datetime
-  Calculate exact time to attempt booking
-- `verify_reservation_success(page)` → bool
-  Verify booking was successful
+Legacy retry and conflict-detection utilities retained for reference. The
+current queue system no longer imports these helpers.
 
 ### `message_handlers.py`
 **Purpose**: Message handling patterns for Telegram bot
@@ -735,7 +730,7 @@
 - `log_availability(court, times)` → None
   Log availability to file
 
-### `browser_pool_specialized.py`
+### `browser/pools/specialized.py`
 **Purpose**: Specialized browser pool with court pre-positioning
 
 #### Key Functions:

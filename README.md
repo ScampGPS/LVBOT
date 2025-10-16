@@ -57,7 +57,7 @@ Advanced browser instance management:
 - **BrowserPool**: Maintains pre-warmed browser instances
 - **BrowserInstance**: Wrapper with health monitoring
 - Automatic instance recycling and health checks
-- Variants: `browser_pool_persistent.py`, `browser_pool_specialized.py`
+- Variants: `browser_pool_persistent.py`, `browser/pools/specialized.py`
 - Dramatic performance improvements by eliminating startup time
 
 #### 4. **Court Assignment Logic** (`court_assignment_manager.py`)

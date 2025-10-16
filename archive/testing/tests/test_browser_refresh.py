@@ -13,7 +13,7 @@ from datetime import datetime
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from browser_pool_specialized import SpecializedBrowserPool
+from lvbot.automation.browser.pools import SpecializedBrowserPool
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('BrowserRefreshTest')
