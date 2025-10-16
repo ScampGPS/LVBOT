@@ -2,7 +2,7 @@
 """
 Test navigation timing in isolation to verify the optimization
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -2,7 +2,7 @@
 User Management System for Tennis Bot
 Handles persistent storage and retrieval of user profiles
 """
-from utils.tracking import t
+from tracking import t
 
 import json
 import logging

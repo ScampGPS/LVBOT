@@ -3,7 +3,7 @@
 Reservation Scheduler with Dynamic Booking Orchestration
 Manages the execution of queued reservations with 3 browsers and staggered refresh
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -15,8 +15,8 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 
-# Read production mode setting
-PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
+# Read production mode setting (opt-in; default is false for richer diagnostics)
+PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 
 # Use the now-async SpecializedBrowserPool
 from automation.browser.pools import SpecializedBrowserPool

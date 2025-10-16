@@ -1,7 +1,7 @@
 """Core availability checker built on consolidated helpers."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

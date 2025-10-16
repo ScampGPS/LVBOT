@@ -6,7 +6,7 @@ Run LVBOT Availability Diagnostics
 Purpose: Run all debugging tools to diagnose availability detection issues.
 This script coordinates all three debugging tools and provides a summary.
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

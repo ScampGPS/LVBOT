@@ -1,7 +1,7 @@
 """
 Debug version of experienced_booking_executor with detailed logging
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import random

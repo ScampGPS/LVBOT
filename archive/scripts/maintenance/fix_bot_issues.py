@@ -7,7 +7,7 @@ Fixes:
 2. Force kills all browser processes
 3. Provides clean restart instructions
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

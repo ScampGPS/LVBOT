@@ -3,7 +3,7 @@
 Comprehensive Logging Configuration for LVBOT
 Provides detailed logging for debugging the tennis reservation bot
 """
-from utils.tracking import t
+from tracking import t
 
 import os
 import logging

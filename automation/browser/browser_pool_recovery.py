@@ -9,7 +9,7 @@ SCOPE: Browser pool recovery and emergency fallback mechanisms
 This module provides resilient recovery from browser failures while maintaining
 thread safety and async compatibility.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

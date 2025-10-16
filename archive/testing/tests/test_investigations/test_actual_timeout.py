@@ -1,7 +1,7 @@
 """
 Test if the code is actually stuck vs just slow
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import time

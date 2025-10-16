@@ -6,7 +6,7 @@ Tracks all reservations including:
 - Immediate reservations made within 48h window
 - Completed reservations with confirmation IDs
 """
-from utils.tracking import t
+from tracking import t
 
 import json
 import logging

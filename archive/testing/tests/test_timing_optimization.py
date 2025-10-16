@@ -3,7 +3,7 @@
 Timing optimization test - Find the fastest settings that still avoid bot detection
 Tests different warm-up times and action delays systematically
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -98,7 +98,7 @@ class TimingOptimizer:
         pool_module.WARMUP_DELAY = warmup_seconds
         
         # Temporarily modify the working executor delays
-        import lvbot.utils.working_booking_executor as executor_module
+        import automation.executors.booking as executor_module
         original_delay_min = getattr(executor_module, 'INITIAL_DELAY_MIN', 3.0)
         original_delay_max = getattr(executor_module, 'INITIAL_DELAY_MAX', 5.0)
         executor_module.INITIAL_DELAY_MIN = initial_delay_min

@@ -2,7 +2,7 @@
 Message handling helper functions
 Common patterns for handling Telegram messages and updates
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import Optional, Union, List, Dict, Any
 from telegram import Update, Message, CallbackQuery

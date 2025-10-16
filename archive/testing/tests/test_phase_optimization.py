@@ -3,7 +3,7 @@
 Test the phase-optimized booking executor
 Compares current timing vs optimized phase timing
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -2,7 +2,7 @@
 Acuity Page Validator - Validates Acuity scheduling pages for extraction
 Implements modular page readiness validation following DRY principles
 """
-from utils.tracking import t
+from tracking import t
 
 import logging
 from typing import Optional

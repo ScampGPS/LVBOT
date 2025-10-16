@@ -2,7 +2,7 @@
 """
 Analyze all phases of the booking process to identify optimization opportunities
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -65,7 +65,7 @@ class BookingPhaseAnalyzer:
         
         # Import modules
         from lvbot.utils.async_browser_pool import AsyncBrowserPool
-        from lvbot.utils.working_booking_executor import WorkingBookingExecutor
+        from automation.executors.booking import WorkingBookingExecutor
         from playwright.async_api import Page
         import random
         

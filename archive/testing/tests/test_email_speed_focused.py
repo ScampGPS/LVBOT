@@ -3,7 +3,7 @@
 Focused test for email typing speed limits
 Tests only the email field typing speed in isolation
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

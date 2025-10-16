@@ -3,7 +3,7 @@
 Test to analyze DOM and network differences between Court 1, 2, and 3 pages
 Specifically looking for why Court 3 fails to load properly
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import json

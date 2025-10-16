@@ -2,7 +2,7 @@
 """
 Test that experienced mode is now the default
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

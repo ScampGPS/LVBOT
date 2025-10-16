@@ -3,7 +3,7 @@ Emergency Browser Fallback System
 Independent booking mechanism that operates without browser pool dependencies
 Used as last resort when browser pool is completely unavailable
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

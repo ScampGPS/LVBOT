@@ -2,7 +2,7 @@
 """
 Test the new AvailabilityCheckerV2 implementation
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

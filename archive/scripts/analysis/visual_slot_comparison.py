@@ -6,7 +6,7 @@ Visual Slot Comparison Tool for LVBOT
 Purpose: Visually compare what slots are shown on screen vs what the bot detects.
 Creates side-by-side comparisons and detailed analysis.
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

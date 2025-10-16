@@ -2,7 +2,7 @@
 Validation utility functions
 Handles input validation for various user inputs
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import Tuple, List, Optional
 import re

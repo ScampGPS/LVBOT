@@ -2,7 +2,7 @@
 """
 Script to record manual booking flow - launches browser and records what happens
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

@@ -2,7 +2,7 @@
 Telegram UI utility functions
 Handles keyboard creation and message formatting
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import List, Optional, Dict, Any
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton

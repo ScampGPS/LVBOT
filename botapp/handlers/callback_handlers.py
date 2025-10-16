@@ -2,7 +2,7 @@
 Callback handlers for telegram bot
 Handles all inline keyboard button callbacks in a modular way
 """
-from utils.tracking import t
+from tracking import t
 
 import os
 import logging
@@ -17,8 +17,8 @@ from ..ui.telegram_ui import TelegramUI
 from ..error_handler import ErrorHandler
 from ..booking.immediate_handler import ImmediateBookingHandler
 
-# Read production mode setting
-PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
+# Read production mode setting (defaults to false for dev-focused UX)
+PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 
 
 class CallbackHandler:

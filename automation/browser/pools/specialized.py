@@ -3,7 +3,7 @@
 Specialized Browser Pool - One Browser Per Court
 Each browser is pre-positioned on a specific court for instant booking
 """
-from utils.tracking import t
+from tracking import t
 
 import threading
 import time

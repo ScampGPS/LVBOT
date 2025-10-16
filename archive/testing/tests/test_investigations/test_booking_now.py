@@ -1,7 +1,7 @@
 """
 Test immediate booking execution with the event loop fix
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import sys

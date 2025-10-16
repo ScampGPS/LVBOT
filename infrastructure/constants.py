@@ -8,7 +8,7 @@ SCOPE: Application-wide configuration values
 
 This module eliminates hardcoded values and provides easy configuration.
 """
-from utils.tracking import t
+from tracking import t
 
 # Browser and Frame Constants
 SCHEDULING_IFRAME_URL_PATTERN = 'squarespacescheduling'

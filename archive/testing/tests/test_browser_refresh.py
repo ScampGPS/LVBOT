@@ -3,7 +3,7 @@
 Test script for the new browser refresh functionality
 Validates that browsers can be refreshed without event loop conflicts
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

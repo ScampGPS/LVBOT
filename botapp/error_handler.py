@@ -2,7 +2,7 @@
 Centralized Error Handling System for Tennis Bot
 Provides robust, user-friendly error handling across all bot operations
 """
-from utils.tracking import t
+from tracking import t
 
 import logging
 from typing import Optional

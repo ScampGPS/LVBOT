@@ -1,7 +1,7 @@
 """
 Test the time grouping fix to ensure times are properly associated with their days
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import sys

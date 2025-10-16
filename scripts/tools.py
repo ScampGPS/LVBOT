@@ -4,7 +4,7 @@ Provides quick CLI hooks into reservation services for manual inspection.
 """
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import argparse
 from users.manager import UserManager

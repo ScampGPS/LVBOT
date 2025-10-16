@@ -2,7 +2,7 @@
 """
 Simple test of availability checking without browser pool warm-up
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -3,7 +3,7 @@
 Script to monitor manual booking - logs all events, fields, and information
 while you perform a manual booking
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

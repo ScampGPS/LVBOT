@@ -2,7 +2,7 @@
 """
 Test booking execution timing to identify bottlenecks
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

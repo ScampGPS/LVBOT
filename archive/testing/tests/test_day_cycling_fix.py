@@ -2,7 +2,7 @@
 """
 Test the day cycling fix
 """
-from utils.tracking import t
+from tracking import t
 
 import sys
 import os

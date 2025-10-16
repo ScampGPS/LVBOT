@@ -2,7 +2,7 @@
 """
 Script to capture confirmation page details after successful booking
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

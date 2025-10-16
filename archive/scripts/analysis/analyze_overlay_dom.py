@@ -1,7 +1,7 @@
 """
 Analyze the DOM structure of the rules overlay to find a way to bypass it
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

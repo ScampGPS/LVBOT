@@ -3,7 +3,7 @@
 Direct test of immediate booking functionality
 Tests booking for tomorrow using Saul's information
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

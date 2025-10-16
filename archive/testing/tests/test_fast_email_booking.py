@@ -3,7 +3,7 @@
 Test fast email typing in actual booking flow
 Tests if faster email typing works in full booking context
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

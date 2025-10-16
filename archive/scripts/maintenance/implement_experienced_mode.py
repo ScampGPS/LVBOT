@@ -3,7 +3,7 @@
 Implement experienced user mode in the main booking executor
 Adds a flag to enable fast booking for experienced users
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 import shutil

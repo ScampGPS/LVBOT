@@ -1,7 +1,7 @@
 """
 Debug script to investigate DOM query performance issues on Acuity booking page
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

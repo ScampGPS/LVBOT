@@ -1,7 +1,7 @@
 """Browser settings dataclass and helpers."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 from dataclasses import dataclass, field
 from typing import Iterable, List, Optional

@@ -3,7 +3,7 @@
 Test script to validate actual booking functionality
 Tests whether the system can navigate through the booking process
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

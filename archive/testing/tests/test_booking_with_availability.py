@@ -3,7 +3,7 @@
 Test booking with actual court availability checking
 This simulates the Telegram flow and books the first available slot
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -32,7 +32,7 @@ async def test_booking_with_availability():
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.court_availability import CourtAvailability
     from lvbot.utils.async_booking_executor import AsyncBookingExecutor
-    from lvbot.utils.immediate_booking_handler import ImmediateBookingHandler
+    from botapp.booking.immediate_handler import ImmediateBookingHandler
     from lvbot.utils.user_manager import UserManager
     
     # User information

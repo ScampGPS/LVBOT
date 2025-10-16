@@ -3,7 +3,7 @@ Acuity booking form handler for filling appointment details
 Following LVBOT principles: modular, reusable, focused on one task
 Simplified implementation using working patterns from successful tests
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -2,7 +2,7 @@
 Priority Management System for Tennis Bot
 Handles user priority sorting with two-tier FCFS system
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import List, Tuple, Dict, Any
 from dataclasses import dataclass

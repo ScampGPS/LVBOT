@@ -1,7 +1,7 @@
 """Domain service encapsulating reservation queue and scheduler."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import logging
 from datetime import date

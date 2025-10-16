@@ -3,7 +3,7 @@
 Script to analyze the Acuity booking form that appears after clicking a time slot.
 This follows LVBOT principles: modular, reusable, and focused on one task.
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

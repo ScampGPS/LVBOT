@@ -1,7 +1,7 @@
 """
 Unified Court Monitor - Monitors court availability with flexible strategies.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import json

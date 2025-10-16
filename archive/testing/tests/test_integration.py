@@ -2,7 +2,7 @@
 """
 Integration test to verify the updated CourtAvailability works without breaking existing functionality
 """
-from utils.tracking import t
+from tracking import t
 
 import sys
 import os

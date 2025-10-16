@@ -2,7 +2,7 @@
 """
 Debug script to take screenshots of what's actually on the page during queue booking
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

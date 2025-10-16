@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Test script to verify health checker fix"""
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

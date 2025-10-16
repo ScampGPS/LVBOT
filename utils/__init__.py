@@ -6,7 +6,7 @@ Helper modules for the Tennis Reservation Bot
 # Only import modules that exist and are safe to import
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 from importlib import import_module
 from typing import TYPE_CHECKING

@@ -2,7 +2,7 @@
 """
 Analyze the DOM structure to understand how to find courts
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

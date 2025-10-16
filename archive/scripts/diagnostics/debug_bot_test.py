@@ -7,7 +7,7 @@ Tests:
 2. Browser cleanup verification
 3. Process cleanup validation
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

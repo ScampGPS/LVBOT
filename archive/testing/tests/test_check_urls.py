@@ -2,7 +2,7 @@
 """
 Quick test to check what URLs we're on after direct navigation
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

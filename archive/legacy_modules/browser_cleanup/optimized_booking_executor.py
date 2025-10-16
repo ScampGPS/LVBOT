@@ -3,7 +3,7 @@
 Optimized Booking Executor - Faster version based on phase analysis
 Targets the slowest phases identified in analysis
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import random

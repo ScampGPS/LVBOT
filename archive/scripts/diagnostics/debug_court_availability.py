@@ -13,7 +13,7 @@ This tool:
 4. Saves screenshots with timestamps and court numbers
 5. Compares detected slots with visible slots
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

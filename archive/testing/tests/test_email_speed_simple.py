@@ -3,12 +3,13 @@
 Simple test for email typing speed limits
 Modifies the working executor directly for each test
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 import random
 import shutil
 
@@ -29,8 +30,9 @@ async def test_with_email_speed(email_speed_multiplier: float):
     print(f"{'='*60}")
     
     # Create a temporary modified version of working_booking_executor
-    original_file = '/mnt/c/Documents/code/python/lvbot/utils/working_booking_executor.py'
-    backup_file = '/mnt/c/Documents/code/python/lvbot/utils/working_booking_executor.py.backup'
+    repo_root = Path(__file__).resolve().parents[3]
+    original_file = repo_root / 'automation' / 'executors' / 'booking.py'
+    backup_file = original_file.with_suffix(original_file.suffix + '.backup')
     
     # Backup original file
     shutil.copy2(original_file, backup_file)
@@ -42,17 +44,8 @@ async def test_with_email_speed(email_speed_multiplier: float):
         
         # Create modified version with custom email speed
         modified_content = content.replace(
-            '# Fill EMAIL\n            self.logger.info("Typing EMAIL...")\n            email = await page.query_selector(\'#client\\\\.email\')\n            if email:\n                await human_type_with_mistakes(email, user_info.get(\'email\', \'test@example.com\'), 0.10)',
-            f'''# Fill EMAIL
-            self.logger.info("Typing EMAIL...")
-            email = await page.query_selector('#client\\\\.email')
-            if email:
-                # TESTING: Using {email_speed_multiplier}x speed for email
-                original_speed = SPEED_MULTIPLIER
-                import lvbot.utils.working_booking_executor
-                utils.working_booking_executor.SPEED_MULTIPLIER = {email_speed_multiplier}
-                await human_type_with_mistakes(email, user_info.get('email', 'test@example.com'), 0.10)
-                utils.working_booking_executor.SPEED_MULTIPLIER = original_speed'''
+            "await _working_human_type_with_mistakes(email_field, email)",
+            f"""# TESTING: Using {email_speed_multiplier}x speed for email\n        original_speed = SPEED_MULTIPLIER\n        import automation.executors.booking as booking_module\n        booking_module.SPEED_MULTIPLIER = {email_speed_multiplier}\n        await _working_human_type_with_mistakes(email_field, email)\n        booking_module.SPEED_MULTIPLIER = original_speed"""
         )
         
         # Write modified version

@@ -2,7 +2,7 @@
 Dynamic Booking Orchestrator
 Coordinates multiple browsers with refresh strategies and dynamic fallbacks
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import threading

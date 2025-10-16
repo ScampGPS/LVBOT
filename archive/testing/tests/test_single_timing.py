@@ -3,7 +3,7 @@
 Test a single timing configuration safely
 Only books ONE slot for tomorrow
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -51,7 +51,7 @@ async def test_single_timing(warmup_seconds: float, initial_delay_min: float, in
     
     # Configure executor timing
     executor = AsyncBookingExecutor(browser_pool, use_natural_flow=False)
-    from lvbot.utils.working_booking_executor import WorkingBookingExecutor
+    from automation.executors.booking import WorkingBookingExecutor
     WorkingBookingExecutor.INITIAL_DELAY_MIN = initial_delay_min
     WorkingBookingExecutor.INITIAL_DELAY_MAX = initial_delay_max
     

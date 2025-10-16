@@ -1,5 +1,5 @@
 """Archived browser-related modules kept for reference."""
-from utils.tracking import t
+from tracking import t
 
 from importlib import import_module
 from typing import Any

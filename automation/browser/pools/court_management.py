@@ -1,7 +1,7 @@
 """Court assignment and switching utilities for specialized browser pools."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import logging
 from dataclasses import dataclass

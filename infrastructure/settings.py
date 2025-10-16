@@ -7,7 +7,7 @@ they can migrate to :func:`get_settings` gradually without behaviour changes.
 """
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import os
 from dataclasses import dataclass
@@ -60,7 +60,7 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
         "7768823561:AAHxxvzil7lKsdf64ZuDF3Cch2KYoPJx2AY",
     )
 
-    production_mode = _to_bool(env.get("PRODUCTION_MODE", "true"), default=True)
+    production_mode = _to_bool(env.get("PRODUCTION_MODE", "false"), default=False)
 
     booking_url = env.get("BOOKING_URL", utils_constants.BOOKING_URL)
     timezone = env.get("BOT_TIMEZONE", "America/Guatemala")
@@ -91,4 +91,3 @@ def get_settings() -> AppSettings:
     t('infrastructure.settings.get_settings')
 
     return load_settings()
-

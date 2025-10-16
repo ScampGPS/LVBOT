@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Test script to reproduce the notification issue"""
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

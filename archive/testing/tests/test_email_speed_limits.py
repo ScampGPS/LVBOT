@@ -3,7 +3,7 @@
 Test email typing speed limits to find the threshold for bot detection
 Tests progressively faster speeds until detection occurs
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -39,7 +39,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
     # Import modules
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.async_booking_executor import AsyncBookingExecutor
-    from lvbot.utils.working_booking_executor import WorkingBookingExecutor
+    from automation.executors.booking import WorkingBookingExecutor
     from lvbot.utils.court_availability import CourtAvailability
     
     # Temporarily override the typing function with custom speed
@@ -128,7 +128,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
                 return result
         
         # Monkey patch the specific email typing
-        import lvbot.utils.working_booking_executor as executor_module
+        import automation.executors.booking as executor_module
         original_func = executor_module.human_type_with_mistakes
         
         async def patched_human_type(element, text, mistake_prob=0.10):

@@ -1,7 +1,7 @@
 """
 Trace the exact execution path during booking to find where it's getting stuck
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

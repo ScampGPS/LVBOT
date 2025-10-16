@@ -3,7 +3,7 @@
 Test booking with humanized browser behavior
 Includes warm-up delays and anti-bot measures
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

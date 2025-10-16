@@ -1,7 +1,7 @@
 """
 Investigate why mouse.move is taking so long
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import time

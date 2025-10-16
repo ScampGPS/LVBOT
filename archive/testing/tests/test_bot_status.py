@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Test script to check LVBOT system status and take diagnostic screenshots."""
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import os

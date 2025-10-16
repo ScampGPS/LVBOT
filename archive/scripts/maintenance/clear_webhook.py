@@ -2,7 +2,7 @@
 """
 Clear any webhooks set for the bot to ensure polling works correctly
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

@@ -3,7 +3,7 @@
 Test Telegram bot booking flow with dynamic time selection
 Simulates user clicking through the Book Now flow and selecting from available times
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

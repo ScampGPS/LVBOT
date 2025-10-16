@@ -1,7 +1,7 @@
 """Minimal async helpers for locating the Acuity scheduling iframe."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

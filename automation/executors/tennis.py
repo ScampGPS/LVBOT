@@ -1,7 +1,7 @@
 """Unified tennis executor utilities and configuration."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import concurrent.futures

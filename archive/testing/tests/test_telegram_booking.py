@@ -3,7 +3,7 @@
 Test script to simulate Telegram button clicks for booking
 Tests the "Book Now" (within 48h) functionality
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

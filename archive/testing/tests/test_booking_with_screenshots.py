@@ -3,7 +3,7 @@
 Test booking with screenshots at every step
 This will show EXACTLY what happens during and after booking
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -36,7 +36,7 @@ async def book_with_screenshots():
     
     # Import required modules
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
-    from lvbot.utils.working_booking_executor import WorkingBookingExecutor
+    from automation.executors.booking import WorkingBookingExecutor
     
     # User information
     user_info = {

@@ -2,7 +2,7 @@
 Reservation helper functions
 Handles reservation-specific operations and calculations
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime, timedelta

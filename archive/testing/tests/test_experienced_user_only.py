@@ -3,7 +3,7 @@
 Test experienced user pattern with minimal delays
 Simulating a frequent user who knows exactly where everything is
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -1,5 +1,5 @@
 """Compatibility package forwarding to reservations modules."""
-from utils.tracking import t
+from tracking import t
 from importlib import import_module
 from typing import Any
 import sys

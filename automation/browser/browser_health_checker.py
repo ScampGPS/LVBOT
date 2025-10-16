@@ -9,7 +9,7 @@ SCOPE: AsyncBrowserPool health validation
 This module provides comprehensive health checks for the browser pool to
 ensure bookings have the best chance of success by detecting issues early.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

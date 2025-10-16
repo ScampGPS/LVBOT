@@ -3,7 +3,7 @@
 Comprehensive test script for LVBOT browser pool system
 Tests browser pool initialization, health checks, and booking functionality
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

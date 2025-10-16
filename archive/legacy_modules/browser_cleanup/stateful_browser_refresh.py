@@ -10,7 +10,7 @@ This module ensures that when a browser is refreshed, it returns to the exact
 state it was in before the refresh, including any selected time slots or
 partially filled forms.
 """
-from utils.tracking import t
+from tracking import t
 
 import logging
 from typing import Optional, Dict, Any, List, Tuple

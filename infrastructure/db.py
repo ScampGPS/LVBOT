@@ -2,7 +2,7 @@
 Database operation helpers
 Handles common database operations and queries
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta

@@ -1,7 +1,7 @@
 """
 Test booking in scheduler context to understand the hang
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import time

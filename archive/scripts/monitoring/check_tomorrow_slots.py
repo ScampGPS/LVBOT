@@ -3,7 +3,7 @@
 Check available slots for tomorrow WITHOUT booking
 This is safe to run - it only checks availability
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

@@ -1,4 +1,4 @@
-from utils.tracking import t
+from tracking import t
 import asyncio
 import logging
 import time
@@ -8,8 +8,8 @@ from datetime import datetime
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 from infrastructure.constants import BrowserTimeouts, BrowserPoolConfig, COURT_CONFIG
 
-# Read production mode setting
-PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
+# Read production mode setting (off by default to keep verbose debugging enabled)
+PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@
 Simple test of Telegram immediate booking
 Tests if the bot can execute a booking for tomorrow
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

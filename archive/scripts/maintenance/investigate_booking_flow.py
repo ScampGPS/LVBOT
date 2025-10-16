@@ -1,7 +1,7 @@
 """
 Investigate the actual booking flow and why we're seeing rules page instead of calendar
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

@@ -1,7 +1,7 @@
 """Queue and scheduling domain services."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 from importlib import import_module
 from typing import TYPE_CHECKING

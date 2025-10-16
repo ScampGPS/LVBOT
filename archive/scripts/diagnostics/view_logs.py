@@ -2,7 +2,7 @@
 """
 Simple log viewer to analyze bot logs
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 import sys
 

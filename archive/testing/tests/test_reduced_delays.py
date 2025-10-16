@@ -3,12 +3,13 @@
 Test reduced initial delay and pre-submit review times
 Find the minimum safe values for these delays
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, Tuple
 
 # Setup logging
@@ -28,7 +29,7 @@ async def test_with_reduced_delays(initial_delay_min: float, initial_delay_max: 
     print(f"{'='*60}")
     
     # Temporarily modify the working executor delays
-    import lvbot.utils.working_booking_executor as executor_module
+    import automation.executors.booking as executor_module
     
     # Store original values
     original_init_min = getattr(executor_module.WorkingBookingExecutor, 'INITIAL_DELAY_MIN', 3.0)
@@ -40,9 +41,10 @@ async def test_with_reduced_delays(initial_delay_min: float, initial_delay_max: 
     
     # Also need to modify the pre-submit review delay in the code
     import shutil
-    original_file = '/mnt/c/Documents/code/python/lvbot/utils/working_booking_executor.py'
-    backup_file = original_file + '.backup_delays'
-    
+    repo_root = Path(__file__).resolve().parents[3]
+    original_file = repo_root / 'automation' / 'executors' / 'booking.py'
+    backup_file = original_file.with_suffix(original_file.suffix + '.backup_delays')
+
     # Backup original
     shutil.copy2(original_file, backup_file)
     

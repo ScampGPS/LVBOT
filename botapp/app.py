@@ -2,7 +2,7 @@
 """
 Async telegram bot - Full asyncio architecture
 """
-from utils.tracking import t
+from tracking import t
 
 import os
 import sys
@@ -36,7 +36,7 @@ from .ui.telegram_ui import TelegramUI
 # Simple config
 # NOTE: Hardcoded per ops request; rotate and update here when token changes.
 BOT_TOKEN = "7768823561:AAHxxvzil7lKsdf64ZuDF3Cch2KYoPJx2AY"
-PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'  # Set to true for production
+PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'  # Opt-in flag; defaults to false for safer debugging
 
 
 class BotConfig:

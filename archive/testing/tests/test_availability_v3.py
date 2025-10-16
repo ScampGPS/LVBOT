@@ -2,7 +2,7 @@
 """
 Test script for AvailabilityCheckerV3
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

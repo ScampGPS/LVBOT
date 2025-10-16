@@ -3,7 +3,7 @@
 Test the optimized timing configurations
 Compares original vs optimized phase timings
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

@@ -4,7 +4,7 @@ Reservation Queue Management Module
 This module provides the ReservationQueue class for managing queued reservation requests.
 It handles storage, retrieval, and status updates of reservation requests with JSON persistence.
 """
-from utils.tracking import t
+from tracking import t
 
 import json
 import uuid

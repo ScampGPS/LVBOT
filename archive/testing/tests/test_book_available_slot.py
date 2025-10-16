@@ -3,7 +3,7 @@
 Test booking an available slot for tomorrow
 Books the first available slot from the courts
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

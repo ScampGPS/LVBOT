@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Take screenshots of browser pool state"""
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

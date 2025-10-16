@@ -9,7 +9,7 @@ SCOPE: Works with SimpleBrowserPool and other pool implementations
 This module provides automatic browser refresh functionality that can be
 attached to any browser pool implementation.
 """
-from utils.tracking import t
+from tracking import t
 
 import logging
 import threading

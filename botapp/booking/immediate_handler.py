@@ -2,7 +2,7 @@
 Immediate booking handler for direct court reservations
 Manages the flow from availability display to booking execution
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import Dict, Any, Optional
 from datetime import datetime, date
@@ -10,7 +10,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import logging
 
-from automation.executors import UnifiedAsyncBookingExecutor
+from automation.executors import AsyncExecutorConfig, UnifiedAsyncBookingExecutor
 from automation.executors.tennis import (
     TennisExecutor,
     create_tennis_config_from_user_info,
@@ -300,7 +300,11 @@ class ImmediateBookingHandler:
             if self.browser_pool:
                 self.logger.info("🎯 IMMEDIATE BOOKING - Using natural flow with 2.5x speed optimization")
                 try:
-                    async_executor = UnifiedAsyncBookingExecutor(self.browser_pool)
+                    working_flow_config = AsyncExecutorConfig(natural_flow=True)
+                    async_executor = UnifiedAsyncBookingExecutor(
+                        self.browser_pool,
+                        config=working_flow_config,
+                    )
                     result = await async_executor.execute_booking(
                         court_number=booking_data['court_number'],
                         time_slot=booking_data['time'],
@@ -317,8 +321,16 @@ class ImmediateBookingHandler:
                         self.logger.info("✅ Natural flow booking successful")
                         return {
                             'success': True,
-                            'message': result.message or f"Court {booking_data['court_number']} booked successfully",
-                            'confirmation_code': getattr(result, 'confirmation_code', None),
+                            'message': (
+                                result.message
+                                or getattr(result, 'details', {}).get('message')
+                                or f"Court {booking_data['court_number']} booked successfully"
+                            ),
+                            'confirmation_code': (
+                                getattr(result, 'confirmation_id', None)
+                                or getattr(result, 'confirmation_code', None)
+                            ),
+                            'confirmation_url': getattr(result, 'confirmation_url', None),
                             'court': booking_data['court_number']
                         }
                     else:
@@ -342,7 +354,11 @@ class ImmediateBookingHandler:
             return {
                 'success': result.success,
                 'message': result.message or result.error_message,
-                'confirmation_code': getattr(result, 'confirmation_code', None),
+                'confirmation_code': (
+                    getattr(result, 'confirmation_id', None)
+                    or getattr(result, 'confirmation_code', None)
+                ),
+                'confirmation_url': getattr(result, 'confirmation_url', None),
                 'court': booking_data['court_number']
             }
             

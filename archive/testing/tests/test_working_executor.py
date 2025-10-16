@@ -3,7 +3,7 @@
 Test the working booking executor directly
 This tests the exact same flow as court_booking_final.py but within LVBOT context
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import working executor
-from lvbot.utils.working_booking_executor import WorkingBookingExecutor
+from automation.executors.booking import WorkingBookingExecutor
 from lvbot.utils.async_browser_pool import AsyncBrowserPool
 
 # Setup logging

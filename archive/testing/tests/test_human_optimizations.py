@@ -4,7 +4,7 @@ Test human-like optimizations:
 1. Copy-paste email instead of typing
 2. Experienced user with minimal delays
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

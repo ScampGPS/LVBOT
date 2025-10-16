@@ -2,7 +2,7 @@
 Callback data parser for Telegram bot callbacks
 Handles parsing of various callback data formats
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import Optional, Tuple, Dict, Any
 from datetime import datetime, date

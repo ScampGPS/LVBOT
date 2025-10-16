@@ -14,7 +14,7 @@ This script performs comprehensive testing of the browser pool to determine:
 
 Run this script to diagnose browser pool failures.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

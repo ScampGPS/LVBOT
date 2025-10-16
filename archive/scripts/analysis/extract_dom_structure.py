@@ -6,7 +6,7 @@ DOM Structure Extractor for Acuity Scheduling
 This script creates a browser and extracts the raw DOM structure
 around day headers and time buttons to understand the day-specific extraction issue.
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

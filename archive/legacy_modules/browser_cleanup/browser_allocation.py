@@ -2,7 +2,7 @@
 Smart Browser Allocation Helper
 Determines which courts need browsers based on queued reservations
 """
-from utils.tracking import t
+from tracking import t
 
 from typing import List, Dict, Set, Tuple
 from collections import defaultdict

@@ -6,7 +6,7 @@ Real-time Availability Monitor for LVBOT
 Purpose: Monitor in real-time what the bot detects vs what's actually available.
 Shows live updates and takes periodic screenshots for comparison.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging

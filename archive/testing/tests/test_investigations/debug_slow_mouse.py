@@ -1,7 +1,7 @@
 """
 Debug why mouse movement is taking 3.4 seconds instead of 0.7s
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import time

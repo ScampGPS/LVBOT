@@ -1,7 +1,7 @@
 """
 TimeSlot model for representing court availability time slots
 """
-from utils.tracking import t
+from tracking import t
 
 from dataclasses import dataclass
 from typing import Optional

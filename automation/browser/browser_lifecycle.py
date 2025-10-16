@@ -2,7 +2,7 @@
 Browser lifecycle management utilities
 Centralizes browser pool initialization and shutdown
 """
-from utils.tracking import t
+from tracking import t
 
 import logging
 from typing import Optional

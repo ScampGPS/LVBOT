@@ -2,7 +2,7 @@
 """
 Script to inspect what happens after booking form submission (automatic version)
 """
-from utils.tracking import t
+from tracking import t
 import pathlib
 from pathlib import Path
 import sys

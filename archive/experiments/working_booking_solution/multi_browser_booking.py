@@ -2,7 +2,7 @@
 """
 Multi-browser safe booking - optimized for environments with 3+ concurrent browsers.
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import random

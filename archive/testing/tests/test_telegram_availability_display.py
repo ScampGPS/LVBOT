@@ -2,7 +2,7 @@
 """
 Test script to verify Telegram availability display after handler fix
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import sys

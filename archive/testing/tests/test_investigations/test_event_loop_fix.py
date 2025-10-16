@@ -1,7 +1,7 @@
 """
 Test that the scheduler now runs in the main event loop and bookings work
 """
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import sys

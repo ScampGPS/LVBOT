@@ -1,7 +1,7 @@
 """Consolidated booking executors and related helpers."""
 
 from __future__ import annotations
-from utils.tracking import t
+from tracking import t
 
 import asyncio
 import logging
@@ -223,7 +223,7 @@ class WorkingBookingExecutor:
 # ---------------------------------------------------------------------------
 
 EXPERIENCED_SPEED_MULTIPLIER = 3.0
-PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "true").lower() == "true"
+PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "false").lower() == "true"
 
 
 def _experienced_apply_speed(delay_seconds: float) -> float:

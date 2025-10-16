@@ -2,7 +2,7 @@
 """
 Session isolation manager for multi-browser environments.
 """
-from utils.tracking import t
+from tracking import t
 
 import os
 import json

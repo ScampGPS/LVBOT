@@ -1,5 +1,5 @@
 """Availability detection utilities for LVBot automation."""
-from utils.tracking import t
+from tracking import t
 
 from .checker import AvailabilityChecker, AvailabilityCheckerV3
 from .support import AcuityTimeParser, DateTimeHelpers, filter_future_times_for_today
