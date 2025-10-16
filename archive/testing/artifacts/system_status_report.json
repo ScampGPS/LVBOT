@@ -1,9 +1,0 @@
-{
-  "timestamp": "2025-08-05T09:57:18.116302",
-  "browser_pool": false,
-  "browsers_initialized": 0,
-  "screenshots_taken": [],
-  "errors": [
-    "Browser pool initialization failed: AsyncBrowserPool.__init__() got an unexpected keyword argument 'size'"
-  ]
-}
