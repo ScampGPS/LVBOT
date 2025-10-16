@@ -616,53 +616,26 @@ class AsyncBrowserPool:
                     'error': error_msg
                 }
             
-            # Check if experienced mode is enabled in user_info
-            experienced_mode = user_info.get('experienced_mode', True)  # Default to True
-            
-            if experienced_mode:
-                # Use ExperiencedBookingExecutor with mouse clicks
-                logger.info(f"Using EXPERIENCED mode (mouse clicks) for Court {court_number}")
-                executor = ExperiencedBookingExecutor(self)
-                
-                # Execute the booking
-                result = await executor.execute_booking(
-                    court_number=court_number,
-                    target_date=target_date or datetime.now(),
-                    time_slot=target_time or '10:00',
-                    user_info=user_info
-                )
-            else:
-                # Use SmartAsyncBookingExecutor with direct URL navigation
-                logger.info(f"Using STANDARD mode (direct URL) for Court {court_number}")
-                executor = SmartAsyncBookingExecutor(self)
-                
-                # Execute the booking with smart timeout and retry
-                result = await executor.execute_booking_with_retry(
-                    court_number=court_number,
-                    time_slot=target_time or '10:00',
-                    user_info=user_info,
-                    target_date=target_date or datetime.now()
-                )
-            
-            # Map result fields based on executor type
-            if experienced_mode:
-                # ExperiencedBookingExecutor returns different fields
-                return {
-                    'success': result.success,
-                    'court': result.court_number,
-                    'time': target_time or '10:00',  # Time from input since not in result
-                    'message': result.confirmation_url if result.success else result.error_message,
-                    'error': result.error_message
-                }
-            else:
-                # SmartAsyncBookingExecutor fields
-                return {
-                    'success': result.success,
-                    'court': result.court_reserved,
-                    'time': result.time_reserved,
-                    'message': result.message or result.error_message,
-                    'error': result.error_message
-                }
+            from automation.executors.booking import BookingFlowExecutor  # Local import to avoid circular dependency
+
+            mode = 'fast' if user_info.get('experienced_mode', True) else 'natural'
+            logger.info(f"Using {mode.upper()} booking mode for Court {court_number}")
+
+            executor = BookingFlowExecutor(self, mode=mode)
+            result = await executor.execute_booking(
+                court_number=court_number,
+                target_date=target_date or datetime.now(),
+                time_slot=target_time or '10:00',
+                user_info=user_info,
+            )
+
+            return {
+                'success': result.success,
+                'court': result.court_reserved or result.court_number,
+                'time': result.time_reserved or (target_time or '10:00'),
+                'message': result.message or result.confirmation_url,
+                'error': result.error_message,
+            }
             
         except Exception as e:
             logger.error(f"Error in execute_parallel_booking: {e}")
@@ -701,10 +674,6 @@ class AsyncBrowserPool:
                     'court': court_number
                 }
             
-            # Use the same navigation logic as SmartAsyncBookingExecutor but without booking
-            # Reuse smart executor navigation logic without booking
-            executor = SmartAsyncBookingExecutor(self)
-            
             # Construct direct URL to check availability
             court_urls = {
                 1: "https://clublavilla.as.me/schedule/7d558012/appointment/15970897/calendar/4282490",
@@ -718,40 +687,33 @@ class AsyncBrowserPool:
             
             logger.info(f"Checking availability for Court {court_number} at {time_slot} on {date_str}")
             
-            # Navigate to the booking form to check availability
-            navigation_result = await executor._navigate_with_smart_timeout(page, direct_url)
-            
-            if not navigation_result['success']:
-                return {
-                    'available': False,
-                    'reason': f"Navigation failed: {navigation_result.get('error', 'unknown error')}",
-                    'checked_at': datetime.now(),
-                    'court': court_number
-                }
-            
-            # Check if form was detected (indicates availability)
-            if navigation_result.get('form_ready', False):
-                return {
-                    'available': True,
-                    'reason': 'Booking form detected - slot appears available',
-                    'checked_at': datetime.now(),
-                    'court': court_number
-                }
-            else:
-                reason = navigation_result.get('reason', 'unknown')
-                if reason == 'no_form_after_dom_ready':
-                    reason_text = 'No booking form found - slot likely unavailable'
-                elif reason == 'unavailable_message_found':
-                    reason_text = 'Slot explicitly marked as unavailable'
-                else:
-                    reason_text = f'Form not ready - {reason}'
-                
-                return {
-                    'available': False,
-                    'reason': reason_text,
-                    'checked_at': datetime.now(),
-                    'court': court_number
-                }
+            await page.goto(direct_url, wait_until="domcontentloaded", timeout=30000)
+
+            selectors = [
+                f'button.time-selection:has(p:text("{time_slot}"))',
+                f'button:has-text("{time_slot}")',
+                f'button:has-text("{time_slot.replace(":00", "")}")',
+            ]
+
+            for selector in selectors:
+                try:
+                    button = await page.wait_for_selector(selector, timeout=BrowserTimeouts.PAGE_LOAD)
+                    if button and await button.is_enabled():
+                        return {
+                            'available': True,
+                            'reason': 'Booking form detected - slot appears available',
+                            'checked_at': datetime.now(),
+                            'court': court_number
+                        }
+                except Exception:
+                    continue
+
+            return {
+                'available': False,
+                'reason': 'Booking form not detected - slot may be unavailable',
+                'checked_at': datetime.now(),
+                'court': court_number
+            }
                 
         except Exception as e:
             logger.error(f"Error checking availability for Court {court_number}: {e}")

@@ -50,27 +50,14 @@
 - Reduced after-click delay from 3-5s to 2-3s
 - Reduced confirmation wait from 5s minimum to 3s minimum
 - Maintained 100% booking success rate with no bot detection
-- Optimizations now live under WorkingBookingExecutor in automation/executors/booking.py
+- Optimizations now live under BookingFlowExecutor in automation/executors/booking.py
 
-### Experienced User Mode Implementation (2025-07-29)
-- Added experienced_mode flag to AsyncBookingExecutor for faster bookings
-- Created ExperiencedBookingExecutor with minimal delays (26.5s execution)
-- Uses paste-like behavior for all form fields (consistent fast filling)
-- Minimal initial delay (0.8-1.2s) and reduced waits throughout
-- Achieves 34% faster bookings while avoiding bot detection
-- **DEFAULT MODE**: Experienced mode is now enabled by default
-- Usage: AsyncBookingExecutor(browser_pool) # Uses experienced mode
-- For standard mode: AsyncBookingExecutor(browser_pool, experienced_mode=False)
-
-### Smart Booking Executor Implementation (2025-07-24)
-- Created SmartAsyncBookingExecutor with progressive timeout and retry logic
-- Implements smart timeout: 15s base + up to 6x10s extensions based on loading progress
-- Time-aware retry strategy: Immediate retries before target time, 2s delay after
-- Up to 10 retry attempts with smart timing based on target booking time
-- Monitors network activity and DOM changes to intelligently extend timeout
-- Fixes issue where bookings were timing out after 60s without retry
-- Added URL checking to refresh page if already on target datetime URL
-- Added automatic navigation back to court page after booking attempts
+### Unified Booking Flow Executor (2025-08-05)
+- Consolidated working and experienced executors into `BookingFlowExecutor` with `natural` and `fast` modes
+- Fast mode retains the aggressive refresh and paste-fill behaviour from the experienced implementation
+- Natural mode preserves human-like delays and typing for safer operation windows
+- `AsyncBookingExecutor` and `UnifiedAsyncBookingExecutor` now delegate to the unified flow rather than specialised classes
+- Smart executor and retry-specific navigation logic were retired in favour of the consolidated flow + queue-level retries
 
 ### Browser Pool Loading Optimization (2025-07-24)
 - Changed navigation strategy from 'networkidle' to 'domcontentloaded' for faster initialization
@@ -483,16 +470,12 @@ current queue system no longer imports these helpers.
 **Purpose**: Central home for booking executors and helper routines
 
 #### Key Classes:
-- `WorkingBookingExecutor`
-  Proven baseline flow used for consistent bookings
-- `ExperiencedBookingExecutor`
-  Faster variant with aggressive timing and pre-window refresh support
+- `BookingFlowExecutor`
+  Unified executor supporting natural and fast modes for single bookings
 - `AsyncBookingExecutor`
-  Orchestrates multi-court attempts and chooses the appropriate strategy
-- `SmartAsyncBookingExecutor`
-  Adds retry logic, timeout budgeting, and detailed diagnostics
+  Orchestrates multi-court attempts and delegates to `BookingFlowExecutor`
 - `UnifiedAsyncBookingExecutor`
-  Facade that selects an executor based on `AsyncExecutorConfig`
+  Facade that selects an executor configuration based on `AsyncExecutorConfig`
 
 ### `executors/core.py`
 **Purpose**: Shared dataclasses and config for executors
@@ -867,7 +850,7 @@ current queue system no longer imports these helpers.
 - **Issue**: Timeout wasn't working properly - tasks were running sequentially
 - **Final Solution**: 
   - Used `asyncio.wait()` for true concurrent execution with proper timeout
-  - Added 85-second timeout at executor level (SmartAsyncBookingExecutor)
+  - Added 85-second timeout at executor level (now handled within BookingFlowExecutor fast mode)
   - Added 90-second timeout at scheduler level for defense in depth
   - Improved task cancellation handling with proper cleanup
   - Added task names for better debugging
