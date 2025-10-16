@@ -16,6 +16,10 @@ from infrastructure.constants import COURT_HOURS, get_court_hours
 from ..ui.telegram_ui import TelegramUI
 from ..error_handler import ErrorHandler
 from ..booking.immediate_handler import ImmediateBookingHandler
+from ..notifications import (
+    format_duplicate_reservation_message,
+    format_queue_reservation_added,
+)
 
 # Read production mode setting (defaults to false for dev-focused UX)
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
@@ -1763,12 +1767,6 @@ class CallbackHandler:
             )
             return
         
-        # Format court list for display
-        if len(selected_courts) == len(self.AVAILABLE_COURTS):
-            courts_text = "All Courts"
-        else:
-            courts_text = ', '.join([f"Court {court}" for court in sorted(selected_courts)])
-        
         # Store complete reservation details for final confirmation
         # Aligned with FEATURE_SPECS.md Queue Entry Structure
         context.user_data['queue_booking_summary'] = {
@@ -1842,35 +1840,16 @@ class CallbackHandler:
             # Create back to menu keyboard
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
             
-            # Parse date from string format for display
-            target_date = datetime.strptime(booking_summary['target_date'], '%Y-%m-%d').date()
-            
             # Import test mode constants
             from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
             
-            # Build success message
-            success_message = (
-                f"✅ **Reservation Added to Queue!**\n\n"
-                f"📅 Date: {target_date.strftime('%A, %B %d, %Y')}\n"
-                f"⏱️ Time: {booking_summary['target_time']}\n"
-                f"🎾 Courts: {courts_text}\n\n"
-                f"🤖 **Queue ID:** {reservation_id[:8]}...\n\n"
+            success_message = format_queue_reservation_added(
+                booking_summary,
+                reservation_id,
+                test_mode_enabled=TEST_MODE_ENABLED,
+                test_mode_delay_minutes=TEST_MODE_TRIGGER_DELAY_MINUTES,
             )
-            
-            if TEST_MODE_ENABLED:
-                success_message += (
-                    f"🧪 **TEST MODE ACTIVE**\n"
-                    f"This reservation will be executed in {TEST_MODE_TRIGGER_DELAY_MINUTES} minutes!\n\n"
-                )
-            else:
-                success_message += (
-                    f"Your reservation has been successfully added to the queue. "
-                    f"The bot will automatically attempt to book this court when the booking window opens.\n\n"
-                )
-            
-            success_message += f"You can view your queued reservations anytime using the **'My Reservations'** option."
-            
-            # Show success message
+
             await query.edit_message_text(
                 success_message,
                 parse_mode='Markdown',
@@ -1884,11 +1863,10 @@ class CallbackHandler:
             # Create back to menu keyboard
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
             
+            duplicate_message = format_duplicate_reservation_message(str(e))
+
             await query.edit_message_text(
-                f"⚠️ **Duplicate Reservation**\n\n"
-                f"{str(e)}\n\n"
-                f"You can only have one reservation per time slot. "
-                f"Please check your existing reservations or choose a different time.",
+                duplicate_message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
             )
