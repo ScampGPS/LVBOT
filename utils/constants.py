@@ -1,2 +1,2 @@
-"""Compatibility shim for lvbot.infrastructure.constants."""
-from lvbot.infrastructure.constants import *  # noqa: F401,F403
+"""Compatibility shim for infrastructure.constants."""
+from infrastructure.constants import *  # noqa: F401,F403

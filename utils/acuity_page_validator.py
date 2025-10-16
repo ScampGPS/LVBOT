@@ -1,2 +1,2 @@
-"""Compatibility shim for lvbot.automation.forms.acuity_page_validator."""
-from lvbot.automation.forms.acuity_page_validator import *  # noqa: F401,F403
+"""Compatibility shim for automation.forms.acuity_page_validator."""
+from automation.forms.acuity_page_validator import *  # noqa: F401,F403

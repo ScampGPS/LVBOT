@@ -9,11 +9,12 @@ from typing import Dict, Callable, Any, List
 from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from telegram.ui.telegram_ui import TelegramUI
 from automation.availability import DateTimeHelpers
-from telegram.error_handler import ErrorHandler
-from telegram.booking.immediate_handler import ImmediateBookingHandler
 from infrastructure.constants import COURT_HOURS, get_court_hours
+
+from ..ui.telegram_ui import TelegramUI
+from ..error_handler import ErrorHandler
+from ..booking.immediate_handler import ImmediateBookingHandler
 
 # Read production mode setting
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'

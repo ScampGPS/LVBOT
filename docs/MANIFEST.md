@@ -697,20 +697,19 @@ current queue system no longer imports these helpers.
 
 ## Main Files
 
-### `telegram_tennis_bot.py`
-**Purpose**: Main Telegram bot handling user interactions
+### `botapp/app.py`
+**Purpose**: Async Telegram bot entry point coordinating browser pool, scheduler, and handlers
 
-#### Key Functions:
-- `main()` → None
-  Main entry point - initializes browser pool in main thread before starting bot
-- `TelegramBotHandler.__init__(config, browser_pool=None)` → None
-  Initialize bot handler with optional pre-initialized browser pool
-- `start_command(update, context)` → None
-  Handle /start command
-- `_check_online_availability_48h_window(query, now, context)` → None
-  Check availability using browser pool (direct call, no threading)
-- `handle_callback_query(update, context)` → None
-  Handle all inline keyboard interactions with comprehensive logging
+#### Key Components:
+- `CleanBot`
+  Initializes the browser pool, reservation service, and callback handlers
+- `main()`
+  Launches the bot, registering signal handlers and cleanup hooks
+- `_graceful_shutdown()` / `_post_stop()`
+  Handles orderly shutdown of the scheduler and browser pool
+
+### `run_bot.py`
+**Purpose**: Convenience launcher that invokes `botapp.app.main()`
 
 ### `playwright_bot.py`
 **Purpose**: Core browser automation for tennis court bookings

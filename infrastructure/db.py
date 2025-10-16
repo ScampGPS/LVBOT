@@ -19,8 +19,8 @@ class DatabaseHelpers:
         
         if not profile:
             # Import here to avoid circular imports
-            from telegram_tennis_bot import UserProfile
-            
+            from reservations.models.reservation import UserProfile
+
             profile = UserProfile(
                 user_id=user_id,
                 first_name=telegram_user.first_name or "New",

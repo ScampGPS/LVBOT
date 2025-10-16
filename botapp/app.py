@@ -10,10 +10,9 @@ import asyncio
 import signal
 from pathlib import Path
 
-# Ensure project root is on sys.path when executed as a script
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+if __name__ == "__main__" and __package__ is None:
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    __package__ = "botapp"
 
 # Import logging configuration to initialize proper logging
 import logging_config
@@ -29,9 +28,9 @@ from automation.availability import AvailabilityChecker
 from automation.browser.manager import BrowserManager
 from reservations.services import ReservationService
 from users.manager import UserManager
-from telegram.error_handler import ErrorHandler
-from telegram.handlers.callback_handlers import CallbackHandler
-from telegram.ui.telegram_ui import TelegramUI
+from .error_handler import ErrorHandler
+from .handlers.callback_handlers import CallbackHandler
+from .ui.telegram_ui import TelegramUI
 
 # Simple config
 # NOTE: Hardcoded per ops request; rotate and update here when token changes.
@@ -216,8 +215,8 @@ class CleanBot:
     
     async def check_courts_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /check_courts command - demonstrate async availability checking"""
-        from telegram.ui.telegram_ui import TelegramUI
-        from telegram.messages.message_handlers import MessageHandlers
+        from .ui.telegram_ui import TelegramUI
+        from .messages.message_handlers import MessageHandlers
         from datetime import datetime
         
         try:
@@ -496,28 +495,30 @@ def signal_handler(signum, frame):
     exit(0)
 
 
-if __name__ == '__main__':
+def main() -> None:
+    """Entry point used by both CLI script and module execution."""
+
     import signal
     import atexit
-    
+
     logger = logging.getLogger('Main')
-    logger.info("="*50)
+    logger.info("=" * 50)
     logger.info("Async Telegram Bot - Full AsyncIO Architecture")
-    logger.info("="*50)
-    
+    logger.info("=" * 50)
+
     # Set up signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
     # Register cleanup function to run at exit
     atexit.register(cleanup_browser_processes)
-    
+
     bot = CleanBot(BOT_TOKEN)
-    
+
     # Kill any orphaned Chromium processes from previous runs
     logger.info("🔄 Cleaning up orphaned browser processes...")
     cleanup_browser_processes()
-    
+
     # Run the bot directly, letting app.run_polling() manage the event loop
     # No asyncio.run() here, as app.run_polling() handles it
     try:
@@ -531,3 +532,7 @@ if __name__ == '__main__':
         # Ensure cleanup even on abnormal exit
         logger.info("🔄 Final cleanup...")
         cleanup_browser_processes()
+
+
+if __name__ == '__main__':
+    main()

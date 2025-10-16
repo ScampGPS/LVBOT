@@ -36,7 +36,7 @@ latest structure until the refactor concludes.
 
 ### Core Components
 
-#### 1. **Telegram Bot Interface** (`telegram_tennis_bot.py`)
+#### 1. **Telegram Bot Interface** (`run_bot.py`)
 The main entry point providing user interaction through Telegram:
 - **BotConfig**: Central configuration with hardcoded users and settings
 - **UserProfile**: User data management (name, email, phone, preferences)
@@ -80,7 +80,7 @@ Real-time system health tracking:
 - **telegram_bot_enhanced.py**: Enhanced version with browser pooling
 - **telegram_bot_ultimate.py**: Ultimate performance with all optimizations
 - **telegram_bot_performance.py**: Performance-focused implementation
-- **telegram_tennis_bot_pooled.py**: Pool-enabled version
+- **run_bot.py**: Convenience launcher around the async bot
 
 #### Testing & Performance
 - **performance_test_*.py**: Various performance testing scripts
@@ -97,7 +97,7 @@ Real-time system health tracking:
 ```
 LVBot/
 ├── Core Bot Files
-│   ├── telegram_tennis_bot.py          # Main Telegram bot
+│   ├── run_bot.py                      # Main Telegram bot launcher
 │   ├── playwright_bot.py               # Core web automation
 │   ├── browser_pool.py                 # Browser instance pooling
 │   ├── court_assignment_manager.py     # Court allocation logic
@@ -107,7 +107,7 @@ LVBot/
 │   ├── telegram_bot_enhanced.py        # Enhanced with pooling
 │   ├── telegram_bot_ultimate.py        # All optimizations
 │   ├── telegram_bot_performance.py     # Performance-focused
-│   └── telegram_tennis_bot_pooled.py   # Pool-enabled version
+│   └── botapp/                         # Telegram bot modules
 │
 ├── Configuration & Data
 │   ├── authorized_users.json           # Authorized user IDs
@@ -186,7 +186,7 @@ LVBot/
 
 4. Run the bot:
    ```bash
-   python telegram_tennis_bot.py
+   python run_bot.py
    ```
 
 ## Deployment
@@ -217,24 +217,24 @@ The bot is currently hosted on Google Cloud Compute Engine with the following co
 2. **Managing the Bot Process**:
    ```bash
    # Check if bot is running
-   ps aux | grep telegram_tennis_bot
+   ps aux | grep run_bot
    
    # Stop the bot
    kill [PID]  # Replace [PID] with actual process ID
    
    # Start the bot
    cd ~/  # Or wherever your bot files are located
-   python telegram_tennis_bot.py
+   python run_bot.py
    ```
 
 3. **Running in Background**:
    ```bash
    # Run with nohup to persist after SSH disconnect
-   nohup python telegram_tennis_bot.py > tennis_bot.log 2>&1 &
+   nohup python run_bot.py > tennis_bot.log 2>&1 &
    
    # Or use screen (if installed)
    screen -S tennis-bot
-   python telegram_tennis_bot.py
+   python run_bot.py
    # Press Ctrl+A, then D to detach
    ```
 

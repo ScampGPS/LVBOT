@@ -9,10 +9,14 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import logging
 
-from telegram.callbacks.parser import CallbackParser
-from telegram.ui.telegram_ui import TelegramUI
-from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
 from automation.executors import UnifiedAsyncBookingExecutor
+from automation.executors.tennis import (
+    TennisExecutor,
+    create_tennis_config_from_user_info,
+)
+
+from ..callbacks.parser import CallbackParser
+from ..ui.telegram_ui import TelegramUI
 
 logger = logging.getLogger(__name__)
 

@@ -1,2 +1,2 @@
-"""Compatibility shim for lvbot.users.manager."""
-from lvbot.users.manager import *  # noqa: F401,F403
+"""Compatibility shim for users.manager."""
+from users.manager import *  # noqa: F401,F403
