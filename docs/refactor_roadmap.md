@@ -10,6 +10,7 @@
 - Shared booking contracts are implemented (`automation/shared/booking_contracts.py`) with builders/adapters in bot, queue, and executor layers (`botapp/booking/request_builder.py`, `reservations/queue/request_builder.py`, `automation/executors/request_factory.py`).
 - Immediate booking handler and reservation scheduler now consume those contracts, persisting results via the new helpers and unified notifications (`botapp/booking/persistence.py`, `reservations/queue/persistence.py`, `botapp/notifications.py`).
 - Documentation and tests cover the contract lifecycle and critical flows (`docs/booking_contract_mapping.md`, `docs/booking_flow_contracts.md`, `tests/unit/test_immediate_booking_flow.py`, `tests/unit/test_queue_scheduler_flow.py`).
+- Working/experienced/smart executors collapsed into a single `BookingFlowExecutor`; async orchestration routes through it and the smart flow logic has been removed.
 
 ## Key Targets
 - `botapp/booking/immediate_handler.py` — replace the monolithic `_execute_booking` with helper methods (`fetch_user_profile`, `build_booking_request`, `run_booking_attempts`, `persist_immediate_success`, `send_success_notification`, `send_failure_notification`). Relocate confirmation UI construction to `botapp/ui/confirmation_ui.py` and message formatting to `botapp/notifications.py`.
