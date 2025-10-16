@@ -20,6 +20,10 @@ from ..notifications import (
     format_duplicate_reservation_message,
     format_queue_reservation_added,
 )
+from .booking import build_routes as build_booking_routes
+from .queue import build_routes as build_queue_routes
+from .profile import build_routes as build_profile_routes
+from .admin import build_routes as build_admin_routes
 
 # Read production mode setting (defaults to false for dev-focused UX)
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
@@ -63,38 +67,12 @@ class CallbackHandler:
         from reservations.queue.reservation_tracker import ReservationTracker
         self.reservation_tracker = ReservationTracker()
         
-        # Map callback_data to handler methods
-        self.callback_map: Dict[str, Callable] = {
-            'menu_reserve': self._handle_reserve_menu,
-            'menu_queued': self._handle_my_reservations_menu,  # Maps to My Reservations
-            'menu_profile': self._handle_profile_menu,
-            'edit_profile': self._handle_edit_profile,
-            'edit_name': self._handle_edit_name,
-            'edit_first_name': self._handle_edit_first_name,
-            'edit_last_name': self._handle_edit_last_name,
-            'edit_phone': self._handle_edit_phone,
-            'edit_email': self._handle_edit_email,
-            'cancel_edit': self._handle_cancel_edit,
-            'menu_performance': self._handle_performance_menu,
-            'menu_reservations': self._handle_reservations_menu,
-            'menu_help': self._handle_help_menu,
-            'menu_about': self._handle_about_menu,
-            'menu_queue_booking': self._handle_queue_booking_menu,
-            'menu_admin': self._handle_admin_menu,
-            'back_to_menu': self._handle_back_to_menu,
-            'reserve_48h_immediate': self._handle_48h_immediate_booking,
-            'reserve_48h_future': self._handle_48h_future_booking,
-            'back_to_booking_type': self._handle_reserve_menu,
-            'back_to_year_selection': self._handle_48h_future_booking,
-            'back_to_reserve': self._handle_reserve_menu,
-            'back_to_queue_dates': self._handle_48h_future_booking,
-            'queue_confirm': self._handle_queue_booking_confirm,
-            'queue_cancel': self._handle_queue_booking_cancel,
-            'back_to_queue_courts': self._handle_back_to_queue_courts,
-            'admin_view_my_reservations': self._handle_admin_my_reservations,
-            'admin_view_users_list': self._handle_admin_users_list,
-            'admin_view_all_reservations': self._handle_admin_all_reservations,
-        }
+        # Map callback_data to handler methods via feature routers
+        self.callback_map: Dict[str, Callable] = {}
+        self.callback_map.update(build_booking_routes(self))
+        self.callback_map.update(build_profile_routes(self))
+        self.callback_map.update(build_queue_routes(self))
+        self.callback_map.update(build_admin_routes(self))
     
     async def handle_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
