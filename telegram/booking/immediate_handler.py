@@ -9,8 +9,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import logging
 
-from lvbot.telegram.callbacks.parser import CallbackParser
-from lvbot.telegram.ui.telegram_ui import TelegramUI
+from telegram.callbacks.parser import CallbackParser
+from telegram.ui.telegram_ui import TelegramUI
 from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
 from automation.executors import UnifiedAsyncBookingExecutor
 
@@ -108,7 +108,7 @@ class ImmediateBookingHandler:
             
             # Save successful booking to reservation tracker
             try:
-                from lvbot.domain.queue.reservation_tracker import ReservationTracker
+                from reservations.queue.reservation_tracker import ReservationTracker
                 tracker = ReservationTracker()
                 
                 # Extract confirmation ID from message if available

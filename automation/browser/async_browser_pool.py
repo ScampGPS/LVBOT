@@ -5,7 +5,7 @@ import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
-from lvbot.infrastructure.constants import BrowserTimeouts, BrowserPoolConfig, COURT_CONFIG
+from infrastructure.constants import BrowserTimeouts, BrowserPoolConfig, COURT_CONFIG
 
 # Read production mode setting
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'

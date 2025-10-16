@@ -14,14 +14,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Frame, Playwright
 
-from lvbot.infrastructure.constants import (
+from infrastructure.constants import (
     BOOKING_URL, DEFAULT_BROWSER_POOL_SIZE, MAX_BROWSER_AGE_MINUTES,
     MAX_BROWSER_USES, BROWSER_HEALTH_CHECK_INTERVAL, SCHEDULING_IFRAME_URL_PATTERN,
     court_number_to_index, AVAILABLE_COURT_NUMBERS, DEFAULT_COURT_PREFERENCES,
     FAST_POLL_INTERVAL, DEFAULT_WAIT_INTERVAL, RESERVATION_RETRY_DELAY,
     MAX_SINGLE_COURT_CHECK_TIME, MAX_NAVIGATION_WAIT_TIME, TARGET_AVAILABILITY_CHECK_TIME
 )
-from lvbot.automation.forms.acuity_booking_form import AcuityBookingForm
+from automation.forms.acuity_booking_form import AcuityBookingForm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,11 +86,10 @@ class SpecializedBrowserPool:
         self.browsers: Dict[str, SpecializedBrowser] = {}  # browser_id -> browser
         self.lock = threading.Lock()
         
-        # Court management
-        from lvbot.utils.court_pool_manager import CourtPoolManager
-        from lvbot.utils.browser_court_switcher import BrowserCourtSwitcher
+        from .court_management import CourtPoolManager, BrowserCourtSwitcher
+        # Primary courts drive assignment order; fallback ensures coverage when a court fails
         self.court_manager = CourtPoolManager(primary_courts=courts_needed[:2], fallback_court=2)
-        self.court_switcher = BrowserCourtSwitcher(booking_url)
+        self.court_switcher = BrowserCourtSwitcher()
         
         # Direct Playwright instance for browser creation
         # We manage our own instance to avoid thread-local issues

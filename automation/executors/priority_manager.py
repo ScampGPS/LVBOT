@@ -6,7 +6,7 @@ Handles user priority sorting with two-tier FCFS system
 from typing import List, Tuple, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from lvbot.users.manager import UserTier
+from users.manager import UserTier
 import logging
 
 

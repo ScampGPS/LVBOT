@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional, Iterable
 from pathlib import Path
 from enum import Enum
 
-from lvbot.reservations.models import ReservationRequest, UserProfile
+from reservations.models import ReservationRequest, UserProfile
 
 
 class ReservationStatus(Enum):
@@ -71,7 +71,7 @@ class ReservationQueue:
         """
         from datetime import datetime, timedelta
         import pytz
-        from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
+        from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
         
         # Log detailed reservation request
         self.logger.info(f"""NEW RESERVATION REQUEST

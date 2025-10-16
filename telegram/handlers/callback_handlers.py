@@ -9,11 +9,11 @@ from typing import Dict, Callable, Any, List
 from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from lvbot.telegram.ui.telegram_ui import TelegramUI
+from telegram.ui.telegram_ui import TelegramUI
 from automation.availability import DateTimeHelpers
-from lvbot.telegram.error_handler import ErrorHandler
-from lvbot.telegram.booking.immediate_handler import ImmediateBookingHandler
-from lvbot.infrastructure.constants import COURT_HOURS, get_court_hours
+from telegram.error_handler import ErrorHandler
+from telegram.booking.immediate_handler import ImmediateBookingHandler
+from infrastructure.constants import COURT_HOURS, get_court_hours
 
 # Read production mode setting
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
@@ -53,7 +53,7 @@ class CallbackHandler:
         self.booking_handler = ImmediateBookingHandler(user_manager, browser_pool)
         
         # Initialize reservation tracker for managing all reservations
-        from lvbot.domain.queue.reservation_tracker import ReservationTracker
+        from reservations.queue.reservation_tracker import ReservationTracker
         self.reservation_tracker = ReservationTracker()
         
         # Map callback_data to handler methods
@@ -439,7 +439,7 @@ class CallbackHandler:
             user_profile = self._get_user_profile_data(user_id, query.from_user)
             
             # Check if user is hardcoded
-            from lvbot.infrastructure.constants import HARDCODED_VIP_USERS, HARDCODED_ADMIN_USERS
+            from infrastructure.constants import HARDCODED_VIP_USERS, HARDCODED_ADMIN_USERS
             is_hardcoded = user_id in HARDCODED_VIP_USERS or user_id in HARDCODED_ADMIN_USERS
             
             # Format profile using TelegramUI
@@ -1279,7 +1279,7 @@ class CallbackHandler:
         today = date.today()
         
         # Import court hours from constants and timezone
-        from lvbot.infrastructure.constants import COURT_HOURS, get_court_hours
+        from infrastructure.constants import COURT_HOURS, get_court_hours
         import pytz
         
         # Use Mexico City timezone for accurate calculations
@@ -1488,7 +1488,7 @@ class CallbackHandler:
         all_court_hours = get_court_hours(selected_date)
         
         # In test mode, allow all hours (skip 48h filtering for testing)
-        from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
+        from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
         
         if TEST_MODE_ENABLED and TEST_MODE_ALLOW_WITHIN_48H:
             # Test mode: show all available hours
@@ -1815,7 +1815,7 @@ class CallbackHandler:
             target_date = datetime.strptime(booking_summary['target_date'], '%Y-%m-%d').date()
             
             # Import test mode constants
-            from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
+            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
             
             # Build success message
             success_message = (
@@ -2404,7 +2404,7 @@ class CallbackHandler:
                     return
             
             # Check if date is more than 48h in future
-            from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
+            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
             today = date.today()
             days_ahead = (selected_date - today).days
             
@@ -2504,7 +2504,7 @@ class CallbackHandler:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             # Check if test mode allows within 48h booking
-            from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
+            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
             
             if TEST_MODE_ENABLED and TEST_MODE_ALLOW_WITHIN_48H:
                 # In test mode, allow queue booking for within 48h dates
@@ -2753,7 +2753,7 @@ class CallbackHandler:
             
             # FIXED: Use date-specific extraction instead of generic extraction
             from automation.availability import AcuityTimeParser
-            from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
+            from automation.forms.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction
             frame = await AcuityPageValidator._get_extraction_frame(page)
@@ -2774,7 +2774,7 @@ class CallbackHandler:
                 self.logger.warning(f"Court {court_num}: No times found for specific date {target_date}")
             
             # Convert to TimeSlot objects
-            from lvbot.models.time_slot import TimeSlot
+            from reservations.models.time_slot import TimeSlot
             time_slots = []
             for time_str in available_times:
                 try:
@@ -2813,7 +2813,7 @@ class CallbackHandler:
         """
         import asyncio
         from automation.availability import AcuityTimeParser
-        from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
+        from automation.forms.acuity_page_validator import AcuityPageValidator
         
         try:
             self.logger.info("🏗️ MATRIX BUILDER - Building complete matrix for all available days")
@@ -2876,7 +2876,7 @@ class CallbackHandler:
                 return {}
             
             from automation.availability import AcuityTimeParser
-            from lvbot.automation.forms.acuity_page_validator import AcuityPageValidator
+            from automation.forms.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction
             frame = await AcuityPageValidator._get_extraction_frame(page)
@@ -3050,7 +3050,7 @@ class CallbackHandler:
                 court_str = f"Court: {courts}"
             
             # Check test mode
-            from lvbot.infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
+            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
             
             # Get scheduled execution time if available
             scheduled_time_str = ""

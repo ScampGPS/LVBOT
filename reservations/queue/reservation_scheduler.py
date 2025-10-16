@@ -18,14 +18,14 @@ import pytz
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'
 
 # Use the now-async SpecializedBrowserPool
-from lvbot.automation.browser.pools import SpecializedBrowserPool
+from automation.browser.pools import SpecializedBrowserPool
 from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
 from automation.executors import (
     AsyncExecutorConfig,
     UnifiedAsyncBookingExecutor,
 )
-from lvbot.automation.browser.manager import BrowserManager
+from automation.browser.manager import BrowserManager
 
 
 class ReservationScheduler:
@@ -742,7 +742,7 @@ class ReservationScheduler:
                 self.logger.warning("⚠️ Browser pool unavailable in single booking - using EMERGENCY BROWSER FALLBACK")
                 
                 try:
-                    from lvbot.automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
+                    from automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
                     
                     # Create emergency fallback instance
                     emergency_fallback = EmergencyBrowserFallback()
@@ -940,7 +940,7 @@ class ReservationScheduler:
             self.logger.warning("⚠️ Browser pool unavailable - using EMERGENCY BROWSER FALLBACK")
             
             try:
-                from lvbot.automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
+                from automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
                 
                 # Create emergency fallback instance
                 emergency_fallback = EmergencyBrowserFallback()
@@ -1032,7 +1032,7 @@ class ReservationScheduler:
         self.stats['failed_bookings'] += 1
         
         # In test mode, don't remove failed reservations to allow retry
-        from lvbot.infrastructure.constants import TEST_MODE_ENABLED
+        from infrastructure.constants import TEST_MODE_ENABLED
         if TEST_MODE_ENABLED:
             self.logger.info(f"🧪 TEST MODE: Keeping failed reservation {reservation_id[:8]}... in queue for retry")
         else:
@@ -1305,7 +1305,7 @@ class ReservationScheduler:
         self.logger.info("🔍 Checking for existing reservations at startup...")
         
         # In test mode, get ALL reservations (including failed ones for retry)
-        from lvbot.infrastructure.constants import TEST_MODE_ENABLED
+        from infrastructure.constants import TEST_MODE_ENABLED
         if TEST_MODE_ENABLED:
             # Get all reservations regardless of status
             all_reservations = self.queue.queue  # Direct access to all reservations

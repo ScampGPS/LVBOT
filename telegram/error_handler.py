@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
-from lvbot.telegram.ui.telegram_ui import TelegramUI
+from telegram.ui.telegram_ui import TelegramUI
 
 
 class ErrorHandler:

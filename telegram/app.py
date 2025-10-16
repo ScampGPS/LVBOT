@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 # Import logging configuration to initialize proper logging
-from lvbot import logging_config
+import logging_config
 
 # Now do imports
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
@@ -24,14 +24,14 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 # Import async components
-from lvbot.automation.browser.async_browser_pool import AsyncBrowserPool
+from automation.browser.async_browser_pool import AsyncBrowserPool
 from automation.availability import AvailabilityChecker
-from lvbot.automation.browser.manager import BrowserManager
-from lvbot.telegram.ui.telegram_ui import TelegramUI
-from lvbot.reservations.services import ReservationService
-from lvbot.users.manager import UserManager
-from lvbot.telegram.error_handler import ErrorHandler
-from lvbot.telegram.handlers.callback_handlers import CallbackHandler
+from automation.browser.manager import BrowserManager
+from reservations.services import ReservationService
+from users.manager import UserManager
+from telegram.error_handler import ErrorHandler
+from telegram.handlers.callback_handlers import CallbackHandler
+from telegram.ui.telegram_ui import TelegramUI
 
 # Simple config
 # NOTE: Hardcoded per ops request; rotate and update here when token changes.
@@ -216,8 +216,8 @@ class CleanBot:
     
     async def check_courts_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /check_courts command - demonstrate async availability checking"""
-        from lvbot.telegram.ui.telegram_ui import TelegramUI
-        from lvbot.telegram.messages.message_handlers import MessageHandlers
+        from telegram.ui.telegram_ui import TelegramUI
+        from telegram.messages.message_handlers import MessageHandlers
         from datetime import datetime
         
         try:

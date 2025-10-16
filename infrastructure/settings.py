@@ -18,7 +18,7 @@ try:  # Optional dependency to support .env files during development.
 except ImportError:  # pragma: no cover - library is optional.
     load_dotenv = None  # type: ignore
 
-from lvbot.infrastructure import constants as utils_constants
+from . import constants as utils_constants
 
 
 def _to_bool(value: str, default: bool = False) -> bool:

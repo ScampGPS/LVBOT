@@ -23,9 +23,9 @@ The refactor outlined in `docs/plans/LVBOT_REFACTOR_PLAN.md` is underway.
 Phase 0.5 archiving is complete and Phase 1 (architecture & naming) has
 introduced new scaffolding:
 
-- `lvbot/infrastructure/settings.py` centralises runtime configuration loading.
-- Package placeholders for `lvbot/automation/{browser,executors,availability}`
-  and `lvbot/domain/{queue,models}` support incremental module moves.
+- `infrastructure/settings.py` centralises runtime configuration loading.
+- Packages under `automation/{browser,executors,availability}` and
+  `domain/{queue,models}` support incremental module moves.
 - `docs/plans/LVBOT_MODULE_MIGRATION_MAP.md` tracks the target location for each
   existing module alongside deduplication progress.
 

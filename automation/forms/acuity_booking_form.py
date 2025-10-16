@@ -146,7 +146,7 @@ class AcuityBookingForm:
                 # Stop and save trace
                 if trace_enabled:
                     try:
-                        trace_path = f"/mnt/c/Documents/code/python/lvbot/debugging/form_fill_trace_{int(time.time())}.zip"
+                        trace_path = f"/mnt/c/Documents/code/python/LVBot/debugging/form_fill_trace_{int(time.time())}.zip"
                         await context.tracing.stop(path=trace_path)
                         self.logger.info(f"💾 Saved form filling trace to: {trace_path}")
                     except Exception as trace_error:

@@ -8,7 +8,7 @@ from typing import Optional
 
 from playwright.async_api import Frame, Page
 
-from lvbot.infrastructure.constants import (
+from infrastructure.constants import (
     SCHEDULING_IFRAME_URL_PATTERN,
     DEFAULT_TIMEOUT_SECONDS,
     FAST_POLL_INTERVAL,

@@ -1,5 +1,5 @@
-"""Compatibility package forwarding to lvbot.telegram."""
+"""Expose the Telegram bot entrypoint."""
 
-from lvbot.telegram.app import CleanBot
+from telegram.app import CleanBot
 
 __all__ = ["CleanBot"]

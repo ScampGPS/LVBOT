@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime
 import math
-from lvbot.infrastructure.constants import COURT_HOURS, get_court_hours
+from infrastructure.constants import COURT_HOURS, get_court_hours
 
 
 class TelegramUI:
@@ -307,7 +307,7 @@ class TelegramUI:
         Create the 48h booking type selection keyboard
         Returns two options: immediate (within 48h) or future (after 48h)
         """
-        from lvbot.infrastructure.constants import TEST_MODE_ENABLED
+        from infrastructure.constants import TEST_MODE_ENABLED
         
         # Build button text based on test mode
         future_text = "📅 Reserve after 48h"
@@ -401,7 +401,7 @@ class TelegramUI:
         
         # For queue bookings, we need timezone-aware checking
         if flow_type == 'queue_booking':
-            from lvbot.infrastructure.constants import COURT_HOURS, get_court_hours
+            from infrastructure.constants import COURT_HOURS, get_court_hours
             mexico_tz = pytz.timezone('America/Mexico_City')
             current_time = datetime.now(mexico_tz)
             

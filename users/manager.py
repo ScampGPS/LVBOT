@@ -8,7 +8,7 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 from enum import Enum
-from lvbot.infrastructure.constants import HARDCODED_VIP_USERS, HARDCODED_ADMIN_USERS
+from infrastructure.constants import HARDCODED_VIP_USERS, HARDCODED_ADMIN_USERS
 
 
 class UserTier(Enum):

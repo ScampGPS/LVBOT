@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from .priority_manager import PriorityManager, PriorityUser
-from lvbot.users.manager import UserTier
+from users.manager import UserTier
 
 
 class BookingStatus(Enum):
