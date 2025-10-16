@@ -1,6 +1,7 @@
 """Compatibility package forwarding to lvbot.reservations."""
 from importlib import import_module
 from typing import Any
+import sys
 
 __all__ = [
     "queue",
@@ -11,5 +12,7 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     if name in {"queue", "models", "services"}:
-        return import_module(f"lvbot.reservations.{name}")
+        module = import_module(f"lvbot.reservations.{name}")
+        sys.modules.setdefault(f"{__name__}.{name}", module)
+        return module
     raise AttributeError(name)
