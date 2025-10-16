@@ -21,14 +21,11 @@ PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 # Use the now-async SpecializedBrowserPool
 from automation.browser.pools import SpecializedBrowserPool
 from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
-from automation.executors.tennis import TennisExecutor, create_tennis_config_from_user_info
-from automation.executors import (
-    AsyncExecutorConfig,
-    UnifiedAsyncBookingExecutor,
-)
+from automation.executors import AsyncExecutorConfig
 from automation.browser.manager import BrowserManager
 from automation.browser.browser_health_checker import BrowserHealthChecker
 from automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
+from botapp.booking.immediate_handler import ImmediateBookingHandler
 
 
 class ReservationScheduler:
@@ -79,11 +76,9 @@ class ReservationScheduler:
         self._pool_initialized = browser_pool is not None
         
         # Recursion prevention
-        self._fallback_attempts = {}
-        self.MAX_FALLBACK_ATTEMPTS = 3
         self._pool_init_attempts = 0
         self.MAX_POOL_INIT_ATTEMPTS = 3
-        
+
         if self.browser_pool:
             self.logger.info("Using pre-initialized browser pool from main thread")
             # Set global browser pool for smart executor
@@ -92,7 +87,18 @@ class ReservationScheduler:
         # Browser lifecycle helpers provided by the manager
         self.health_checker = None
         self.recovery_service = None
-        
+
+        # Immediate booking handler reused for queued executions
+        self.immediate_booking_handler: Optional[ImmediateBookingHandler] = None
+        if self.user_db is not None:
+            try:
+                self.immediate_booking_handler = ImmediateBookingHandler(
+                    self.user_db,
+                    browser_pool=self.browser_pool,
+                )
+            except Exception as exc:  # pragma: no cover - defensive guard
+                self.logger.error(f"Failed to initialize ImmediateBookingHandler: {exc}")
+
         # Performance tracking
         self.stats = {
             'total_attempts': 0,
@@ -631,8 +637,7 @@ class ReservationScheduler:
                 try:
                     result = task.result()
                     results[reservation_id] = result
-                    
-                    # Handle result
+
                     if result['success']:
                         self.orchestrator.handle_booking_result(
                             reservation_id,
@@ -641,20 +646,13 @@ class ReservationScheduler:
                         )
                         self._update_reservation_success(reservation_id, result)
                     else:
-                        # Try fallback
-                        fallback_plan = self.orchestrator.handle_booking_result(
+                        self.orchestrator.handle_booking_result(
                             reservation_id,
                             success=False
                         )
-                        
-                        if fallback_plan:
-                            self.logger.info(f"Attempting fallback for {reservation_id[:8]}...")
-                            await self._execute_fallback(fallback_plan)
-                        else:
-                            # No more fallbacks, mark as failed
-                            error_msg = result.get('error', 'Unknown error')
-                            self._update_reservation_failed(reservation_id, error_msg)
-                            
+                        error_msg = result.get('error', 'Unknown error')
+                        self._update_reservation_failed(reservation_id, error_msg)
+
                 except asyncio.CancelledError:
                     self.logger.warning(f"Task was cancelled for reservation {reservation_id[:8]}...")
                     results[reservation_id] = {'success': False, 'error': 'Task was cancelled'}
@@ -684,356 +682,128 @@ class ReservationScheduler:
     
     
     async def _execute_single_booking(self, assignment: Dict, reservation: Dict, target_date: datetime, index: int, total: int) -> Dict:
-        """
-        Execute a single booking asynchronously
-        
-        Args:
-            assignment: Browser assignment info
-            reservation: Reservation details
-            target_date: Target date for booking
-            index: Current booking index
-            total: Total number of bookings
-            
-        Returns:
-            Dict with booking results
-        """
+        """Execute a single queued booking using the immediate booking flow."""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_single_booking')
         import time
+
         execution_start = time.time()
-        
         attempt = assignment['attempt']
         reservation_id = attempt.reservation_id
-        
-        self.logger.info(f"""🔄 PROCESSING QUEUE BOOKING {index}/{total}
-        Reservation ID: {reservation_id[:8]}...
-        Assigned browser: {assignment.get('browser_id', 'Unknown')}
-        Target court: {attempt.target_court}
-        """)
-        
-        self.logger.info(f"🎯 QUEUE BOOKING: Reservation {reservation_id[:8]}..., Court {attempt.target_court}, Time {self._get_reservation_field(reservation, 'target_time')}")
+
+        self.logger.info(
+            """🔄 PROCESSING QUEUE BOOKING {index}/{total}
+        Reservation ID: {reservation_id_short}...
+        Assigned browser: {browser_id}
+        Target court: {target_court}
+        """.format(
+                index=index,
+                total=total,
+                reservation_id_short=reservation_id[:8],
+                browser_id=assignment.get('browser_id', 'Unknown'),
+                target_court=attempt.target_court,
+            )
+        )
+
+        if not self.immediate_booking_handler:
+            self.logger.error("Immediate booking handler not initialized; cannot execute queued booking")
+            return {'success': False, 'error': 'Booking handler unavailable'}
+
         user_id = self._get_reservation_field(reservation, 'user_id')
         self.logger.info(f"👤 User: {user_id}")
-        
-        try:
-            # Get user info
-            user_id = self._get_reservation_field(reservation, 'user_id')
-            user = self.user_db.get_user(user_id)
-            if not user:
-                self.logger.error(f"❌ User {user_id} not found for reservation {reservation_id[:8]}...")
-                return {'success': False, 'error': 'User not found'}
-            
-            self.logger.info(f"User: {user.get('first_name', 'Unknown')} {user.get('last_name', 'Unknown')}")
-            
-            target_time = self._get_reservation_field(reservation, 'target_time')
-            fallback_times = self._get_reservation_field(reservation, 'fallback_times', [])
-            courts = self._get_reservation_field(reservation, 'court_preferences')
-            
-            user_info = {
-                'email': user.get('email'),
-                'first_name': user.get('first_name'),
-                'last_name': user.get('last_name'),
-                'phone': user.get('phone'),
-                'user_id': user.get('user_id'),
-                'preferred_time': target_time,
-                'target_time': target_time,
-                'fallback_times': fallback_times,
-                'court_preference': courts
-            }
-            
-            # Check if browser pool is available
-            if self.browser_pool:
-                # Execute booking using persistent pool
-                executor = TennisExecutor(browser_pool=self.browser_pool)
-                tennis_config = create_tennis_config_from_user_info(user_info)
-                
-                self.logger.info(f"""EXECUTING BOOKING
-                User: {user.get('first_name', 'Unknown')} ({user_id})
-                Target time: {target_time}
-                Courts: {courts}
-                """)
-                
-                # QUEUE BOOKING - Use traditional click method (natural flow too slow)
-                self.logger.info("🎯 QUEUE BOOKING - Using traditional click method")
-                result = None
-            else:
-                # Browser pool not available - use emergency fallback
-                self.logger.warning("⚠️ Browser pool unavailable in single booking - using EMERGENCY BROWSER FALLBACK")
-                
-                try:
-                    from automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
-                    
-                    # Create emergency fallback instance
-                    emergency_fallback = EmergencyBrowserFallback()
-                    
-                    # Execute emergency booking
-                    result = await emergency_fallback.book_reservation(
-                        user_info=user_info,
-                        target_date=target_date,
-                        target_time=target_time,
-                        court_preferences=courts
-                    )
-                    
-                    # Clean up emergency browser
-                    await emergency_fallback.cleanup()
-                    
-                    self.logger.info(f"Emergency booking completed - Success: {result.success}")
-                    
-                    # Convert emergency result to dictionary format
-                    return {
-                        'success': result.success,
-                        'error': result.error_message,
-                        'court': result.court_reserved,
-                        'time': result.time_reserved,
-                        'confirmation_code': result.confirmation_id,
-                        'confirmation_id': result.confirmation_id,
-                        'user_name': result.user_name
-                    }
-                    
-                except Exception as e:
-                    self.logger.error(f"Emergency fallback failed in single booking: {e}")
-                    return {'success': False, 'error': f'Emergency fallback error: {str(e)}'}
-            async_executor_completed = False
-            
-            if self.browser_pool:
-                try:
-                    async_executor = UnifiedAsyncBookingExecutor(
-                        self.browser_pool,
-                        config=self.executor_config,
-                    )
-                    
-                    # Execute booking with proper user data mapping
-                    result = await async_executor.execute_booking(
-                        court_number=courts[0] if courts else 1,
-                        time_slot=target_time,
-                        user_info={
-                            'first_name': user.get('first_name', ''),
-                            'last_name': user.get('last_name', ''),
-                            'email': user.get('email', ''),
-                            'phone': user.get('phone', '')
-                        },
-                        target_date=target_date
-                    )
-                    
-                    if result.success:
-                        self.logger.info(f"✅ Natural flow queue booking successful for Court {courts[0] if courts else 1}")
-                        async_executor_completed = True
-                    else:
-                        self.logger.warning(f"❌ Natural flow queue booking failed: {result.error_message}")
-                        async_executor_completed = True
-                        
-                except Exception as e:
-                    self.logger.error(f"❌ Natural flow queue booking exception: {e}")
-                    async_executor_completed = True
-            
-            # CRITICAL: Only try pool execution fallback AFTER async executor fully completes
-            # This prevents resource conflicts and ensures sequential execution
-            if async_executor_completed and (not result or not result.success):
-                self.logger.info("Async booking executor completed unsuccessfully, trying pool execution as fallback")
-                result = await executor.execute(
-                    tennis_config,
-                    target_date,
-                    check_availability_48h=False,
-                    get_dates=False
-                )
-            
-            # Convert result to dictionary
-            result_dict = {
-                'success': result.success,
-                'error': result.error_message,
-                'court': result.court_reserved,
-                'time': result.time_reserved,
-                'confirmation_code': getattr(result, 'confirmation_code', None)
-            }
-            
-            # Log execution result with performance metrics
-            execution_time = time.time() - execution_start
-            if result.success:
-                self.logger.info(f"""✅ QUEUE BOOKING SUCCESSFUL
-                Reservation ID: {reservation_id[:8]}...
-                Court booked: {result.court_reserved or 'Unknown'}
-                Confirmation: {getattr(result, 'confirmation_code', 'N/A')}
-                Execution time: {execution_time:.2f}s (Natural Flow)
-                """)
-            else:
-                self.logger.warning(f"""❌ QUEUE BOOKING FAILED
-                Reservation ID: {reservation_id[:8]}...
-                Error: {result.error_message or 'Unknown error'}
-                Execution time: {execution_time:.2f}s (Natural Flow)
-                """)
-            
-            return result_dict
-            
-        except Exception as e:
-            execution_time = time.time() - execution_start
-            self.logger.error(f"❌ QUEUE BOOKING execution error for {reservation_id}: {e} (execution time: {execution_time:.2f}s)")
-            return {'success': False, 'error': str(e)}
-    
-    async def _execute_fallback(self, fallback_plan: Dict):
-        """Execute a fallback booking attempt using persistent pool"""
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_fallback')
-        reservation_id = fallback_plan['reservation_id']
-        fallback_court = fallback_plan['fallback_court']
-        
-        # Check if we've exceeded max fallback attempts
-        fallback_count = self._fallback_attempts.get(reservation_id, 0)
-        if fallback_count >= self.MAX_FALLBACK_ATTEMPTS:
-            self.logger.error(f"Exceeded max fallback attempts ({self.MAX_FALLBACK_ATTEMPTS}) for reservation {reservation_id[:8]}...")
-            # Clear the attempt counter and mark as failed
-            self._fallback_attempts.pop(reservation_id, None)
-            self._update_reservation_failed(reservation_id, f"Exceeded max fallback attempts ({self.MAX_FALLBACK_ATTEMPTS})")
-            return
-        
-        # Increment fallback attempt counter
-        self._fallback_attempts[reservation_id] = fallback_count + 1
-        self.logger.info(f"Executing fallback for {reservation_id} on court {fallback_court} (attempt {self._fallback_attempts[reservation_id]}/{self.MAX_FALLBACK_ATTEMPTS})")
-        
-        # Get reservation and user info
-        reservation = self._get_reservation_by_id(reservation_id)
-        if not reservation:
-            self._fallback_attempts.pop(reservation_id, None)
-            return
-        
-        user_id = self._get_reservation_field(reservation, 'user_id')
-        user = self.user_db.get_user(user_id)
-        if not user:
-            self._fallback_attempts.pop(reservation_id, None)
-            return
-        
-        # Prepare user info
-        target_time = self._get_reservation_field(reservation, 'target_time')
-        fallback_times = self._get_reservation_field(reservation, 'fallback_times', [])
-        
-        user_info = {
-            'email': user.get('email'),
-            'first_name': user.get('first_name'),
-            'last_name': user.get('last_name'),
-            'phone': user.get('phone'),
-            'user_id': user.get('user_id'),
-            'preferred_time': target_time,
-            'target_time': target_time,
-            'fallback_times': fallback_times
-        }
-        
-        # Attempt booking on fallback court
-        attempt = self.orchestrator.active_attempts.get(reservation_id)
-        target_date_str = self._get_reservation_field(reservation, 'target_date')
-        target_date = self._parse_datetime_field(reservation, 'target_date', as_date=True)
-        
-        # Check if browser pool is available
-        if attempt and self.browser_pool:
-            self.logger.info("Using browser pool for fallback attempt")
-            # Update attempt's target court
-            attempt.target_court = fallback_court
-            
-            # Execute using browser pool
-            executor = TennisExecutor(browser_pool=self.browser_pool)
-            # Prepare user_info for create_tennis_config_from_user_info
-            user_info['court_preference'] = fallback_plan.get('remaining_fallbacks', [])
-            user_info['preferred_times'] = [target_time]
-            tennis_config = create_tennis_config_from_user_info(user_info)
 
-            # Create task for non-blocking execution with timeout
-            booking_task = asyncio.create_task(
-                executor.execute(
-                    tennis_config,
-                    target_date,
-                    check_availability_48h=False,
-                    get_dates=False
-                )
-            )
-            
-            try:
-                # Execute fallback without timeout - let executor's retry logic control timing
-                result = await booking_task
-            except Exception as e:
-                self.logger.error(f"Fallback booking failed for reservation {reservation_id[:8]}...: {e}")
-                # Create a failed result
-                class FailedResult:
-                    success = False
-                    error_message = str(e)
-                    court_reserved = None
-                    time_reserved = None
-                result = FailedResult()
-        else:
-            # Browser pool not available - use emergency fallback
-            self.logger.warning("⚠️ Browser pool unavailable - using EMERGENCY BROWSER FALLBACK")
-            
-            try:
-                from automation.browser.emergency_browser_fallback import EmergencyBrowserFallback
-                
-                # Create emergency fallback instance
-                emergency_fallback = EmergencyBrowserFallback()
-                
-                # Execute emergency booking
-                result = await emergency_fallback.book_reservation(
-                    user_info=user_info,
-                    target_date=target_date,
-                    target_time=target_time,
-                    court_preferences=[fallback_court] + fallback_plan.get('remaining_fallbacks', [])
-                )
-                
-                # Clean up emergency browser
-                await emergency_fallback.cleanup()
-                
-                self.logger.info(f"Emergency fallback completed - Success: {result.success}")
-                
-            except Exception as e:
-                self.logger.error(f"Emergency fallback failed: {e}")
-                # Create a failed result
-                class FailedResult:
-                    success = False
-                    error_message = f"Emergency fallback error: {str(e)}"
-                    court_reserved = None
-                    time_reserved = None
-                    confirmation_id = None
-                    user_name = None
-                result = FailedResult()
-        
-        # Process result (same for both pool and emergency)
-        if result.success:
-            # Clear fallback attempts on success
-            self._fallback_attempts.pop(reservation_id, None)
-            self.orchestrator.handle_booking_result(
+        user = self.user_db.get_user(user_id) if self.user_db else None
+        if not user:
+            self.logger.error(f"❌ User {user_id} not found for reservation {reservation_id[:8]}...")
+            return {'success': False, 'error': 'User not found'}
+
+        target_time = self._get_reservation_field(reservation, 'target_time')
+        courts = self._get_reservation_field(reservation, 'court_preferences') or []
+        target_court = attempt.target_court or (courts[0] if courts else 1)
+        booking_date = self._parse_datetime_field(reservation, 'target_date', as_date=True)
+
+        booking_data = {
+            'court_number': target_court,
+            'time': target_time,
+            'date': booking_date,
+        }
+
+        self.logger.info(
+            "Using immediate booking flow for reservation %s (Court %s at %s)",
+            reservation_id[:8],
+            booking_data['court_number'],
+            booking_data['time'],
+        )
+
+        try:
+            handler_result = await self.immediate_booking_handler._execute_booking(user_id, booking_data)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            execution_time = time.time() - execution_start
+            self.logger.error(
+                "❌ Immediate booking execution error for %s: %s (execution time: %.2fs)",
                 reservation_id,
-                success=True,
-                court_booked=result.court_reserved
+                exc,
+                execution_time,
             )
-            # Convert to dict for _update_reservation_success
-            result_dict = {
-                'success': result.success,
-                'court': result.court_reserved,
-                'time': result.time_reserved,
-                'confirmation_code': getattr(result, 'confirmation_id', None),
-                'confirmation_id': getattr(result, 'confirmation_id', None),
-                'user_name': getattr(result, 'user_name', None)
+            return {'success': False, 'error': str(exc)}
+
+        execution_time = time.time() - execution_start
+        success = handler_result.get('success', False)
+
+        if success:
+            self.logger.info(
+                """✅ QUEUE BOOKING SUCCESSFUL
+                Reservation ID: {reservation_id}
+                Court booked: {court}
+                Confirmation: {confirmation}
+                Execution time: {elapsed:.2f}s (Immediate flow)
+                """.format(
+                    reservation_id=reservation_id[:8],
+                    court=handler_result.get('court', target_court) or 'Unknown',
+                    confirmation=handler_result.get('confirmation_code', 'Pending'),
+                    elapsed=execution_time,
+                )
+            )
+            return {
+                'success': True,
+                'court': handler_result.get('court', target_court),
+                'time': handler_result.get('time', booking_data['time']),
+                'confirmation_code': handler_result.get('confirmation_code'),
+                'confirmation_url': handler_result.get('confirmation_url'),
+                'message': handler_result.get('message'),
             }
-            self._update_reservation_success(reservation_id, result_dict)
-        else:
-            # CRITICAL FIX: Don't call handle_booking_result recursively here
-            # Just mark as failed if we've exhausted attempts
-            error_msg = getattr(result, 'error_message', None) or 'Unknown error'
-            self.logger.warning(f"Fallback attempt failed for {reservation_id[:8]}...: {error_msg}")
-            
-            # Clear fallback attempts and mark as failed
-            self._fallback_attempts.pop(reservation_id, None)
-            self._update_reservation_failed(reservation_id, error_msg)
+
+        error_message = handler_result.get('message', 'Unknown error')
+        self.logger.warning(
+            """❌ QUEUE BOOKING FAILED
+            Reservation ID: {reservation_id}
+            Error: {error}
+            Execution time: {elapsed:.2f}s (Immediate flow)
+            """.format(
+                reservation_id=reservation_id[:8],
+                error=error_message,
+                elapsed=execution_time,
+            )
+        )
+
+        return {
+            'success': False,
+            'error': error_message,
+            'court': handler_result.get('court', target_court),
+            'time': handler_result.get('time', booking_data['time']),
+            'confirmation_code': handler_result.get('confirmation_code'),
+        }
+    
     
     def _update_reservation_success(self, reservation_id: str, result: Dict):
         """Update reservation status to completed"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._update_reservation_success')
-        # Clear any fallback attempts for this reservation
-        self._fallback_attempts.pop(reservation_id, None)
-        
         self.queue.update_reservation_status(reservation_id, 'completed')
         self.stats['successful_bookings'] += 1
         self.logger.info(f"Reservation {reservation_id} completed successfully")
-    
+
     def _update_reservation_failed(self, reservation_id: str, error: str):
         """Update reservation status to failed and remove from queue"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._update_reservation_failed')
-        # Clear any fallback attempts for this reservation
-        self._fallback_attempts.pop(reservation_id, None)
-        
         # Get reservation details for logging
         reservation = self._get_reservation_by_id(reservation_id)
         if reservation:
