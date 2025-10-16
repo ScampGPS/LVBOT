@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from playwright.async_api import Page
 
+from automation.shared.booking_contracts import BookingRequest
+
 from .core import AsyncExecutorConfig, DEFAULT_EXECUTOR_CONFIG, ExecutionResult
 from .flows.fast_flow import execute_fast_flow
 from .flows.natural_flow import execute_natural_flow
@@ -50,6 +52,40 @@ class BookingFlowExecutor:
         except Exception as exc:  # pragma: no cover - defensive guard
             self.logger.error("Booking execution error: %s", exc)
             return ExecutionResult(success=False, error_message=str(exc), court_number=court_number)
+
+    async def execute_request(
+        self,
+        booking_request: BookingRequest,
+        *,
+        court_number: Optional[int] = None,
+        time_slot: Optional[str] = None,
+    ) -> ExecutionResult:
+        """Execute a shared `BookingRequest` using this flow executor."""
+
+        t('automation.executors.booking.BookingFlowExecutor.execute_request')
+
+        target_court = court_number or booking_request.court_preference.primary
+        target_slot = time_slot or booking_request.target_time
+        target_datetime = datetime.combine(booking_request.target_date, datetime.min.time())
+
+        user = booking_request.user
+        user_info = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone": user.phone,
+        }
+
+        if getattr(user, "tier", None):
+            user_info["tier"] = user.tier  # Preserve tier for downstream logging
+        user_info["user_id"] = str(user.user_id)
+
+        return await self.execute_booking(
+            court_number=target_court,
+            target_date=target_datetime,
+            time_slot=target_slot,
+            user_info=user_info,
+        )
 
     async def _execute_booking_internal(
         self,

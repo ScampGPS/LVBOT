@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from .booking import AsyncBookingExecutor
+from .booking import BookingFlowExecutor
 from .core import ExecutionResult
+from .request_factory import build_tennis_booking_request
 
 
 @dataclass
@@ -73,7 +74,7 @@ class TennisExecutor:
 
     def _build_pooled_executor(self) -> None:
         t('automation.executors.tennis.TennisExecutor._build_pooled_executor')
-        self.pooled_executor = AsyncBookingExecutor(self.browser_pool, use_natural_flow=True) if self.browser_pool else None
+        self.flow_executor = BookingFlowExecutor(self.browser_pool, mode="natural") if self.browser_pool else None
 
     def set_browser_pool(self, browser_pool: Optional[Any]) -> None:
         t('automation.executors.tennis.TennisExecutor.set_browser_pool')
@@ -94,26 +95,42 @@ class TennisExecutor:
         get_dates: bool = False,
     ) -> ExecutionResult:
         t('automation.executors.tennis.TennisExecutor.execute')
-        if self.is_pool_available() and self.pooled_executor:
-            self.logger.info("Using ASYNC BOOKING EXECUTOR with natural flow for optimized booking")
-            user_info = getattr(tennis_config, "_original_user_info", None) or {
-                "email": tennis_config.email,
-                "first_name": tennis_config.first_name,
-                "last_name": tennis_config.last_name,
-                "phone": tennis_config.phone,
-            }
-            target_court = tennis_config.court_preference[0] if tennis_config.court_preference else 1
-            target_time = tennis_config.preferred_times[0] if tennis_config.preferred_times else "08:00"
+        request_date = target_date.date() if isinstance(target_date, datetime) else target_date
+        booking_request = build_tennis_booking_request(
+            tennis_config=tennis_config,
+            target_date=request_date,
+            metadata={
+                "check_availability_48h": check_availability_48h,
+                "get_dates": get_dates,
+            },
+        )
 
-            try:
-                return await self.pooled_executor.execute_booking(
-                    court_number=target_court,
-                    time_slot=target_time,
-                    user_info=user_info,
-                    target_date=target_date,
-                )
-            except Exception as exc:
-                self.logger.warning("Async booking executor failed, falling back to direct: %s", exc)
+        preferred_times = list(tennis_config.preferred_times or [tennis_config.preferred_time])
+        fallback_times = [time for time in tennis_config.fallback_times if time not in preferred_times]
+        time_candidates = preferred_times + fallback_times
+        court_candidates = booking_request.court_preference.as_list()
+
+        if self.is_pool_available() and getattr(self, "flow_executor", None):
+            self.logger.info("Using BookingFlowExecutor natural flow for tennis booking")
+            last_failure: Optional[ExecutionResult] = None
+
+            for time_slot in time_candidates or [booking_request.target_time]:
+                for court in court_candidates:
+                    self.logger.info("Attempting booking for Court %s at %s", court, time_slot)
+                    try:
+                        execution = await self.flow_executor.execute_request(
+                            booking_request,
+                            court_number=court,
+                            time_slot=time_slot,
+                        )
+                        if execution.success:
+                            return execution
+                        last_failure = execution
+                    except Exception as exc:  # pragma: no cover - defensive guard
+                        self.logger.warning("Booking attempt failed for Court %s at %s: %s", court, time_slot, exc)
+
+            if last_failure:
+                return last_failure
 
         self.logger.info("Using direct execution (pool not available or failed)")
         return await self._execute_direct(tennis_config, target_date, check_availability_48h, get_dates)

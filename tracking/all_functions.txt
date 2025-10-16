@@ -457,6 +457,7 @@ automation.executors.booking.BookingFlowExecutor._execute_booking_internal
 automation.executors.booking.BookingFlowExecutor._execute_fast
 automation.executors.booking.BookingFlowExecutor._execute_natural
 automation.executors.booking.BookingFlowExecutor.execute_booking
+automation.executors.booking.BookingFlowExecutor.execute_request
 automation.executors.booking.UnifiedAsyncBookingExecutor.__getattr__
 automation.executors.booking.UnifiedAsyncBookingExecutor.__init__
 automation.executors.booking.UnifiedAsyncBookingExecutor._build_executor
