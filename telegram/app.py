@@ -28,7 +28,8 @@ from lvbot.telegram.error_handler import ErrorHandler
 from lvbot.telegram.handlers.callback_handlers import CallbackHandler
 
 # Simple config
-BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', "7768823561:AAHxxvzil7lKsdf64ZuDF3Cch2KYoPJx2AY")
+# NOTE: Hardcoded per ops request; rotate and update here when token changes.
+BOT_TOKEN = "7768823561:AAHxxvzil7lKsdf64ZuDF3Cch2KYoPJx2AY"
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'true').lower() == 'true'  # Set to true for production
 
 
