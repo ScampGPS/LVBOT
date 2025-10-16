@@ -5,6 +5,7 @@ from .booking import (
     BookingFlowExecutor,
     UnifiedAsyncBookingExecutor,
 )
+from .flows import execute_fast_flow, execute_natural_flow
 from .booking_orchestrator import DynamicBookingOrchestrator
 from .priority_manager import PriorityManager, PriorityUser
 from .core import AsyncExecutorConfig, DEFAULT_EXECUTOR_CONFIG, ExecutionResult
@@ -26,4 +27,6 @@ __all__ = [
     "AsyncExecutorConfig",
     "DEFAULT_EXECUTOR_CONFIG",
     "ExecutionResult",
+    "execute_fast_flow",
+    "execute_natural_flow",
 ]
