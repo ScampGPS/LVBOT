@@ -26,6 +26,8 @@ from automation.executors import (
     UnifiedAsyncBookingExecutor,
 )
 from automation.browser.manager import BrowserManager
+from automation.browser.browser_health_checker import BrowserHealthChecker
+from automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
 
 
 class ReservationScheduler:

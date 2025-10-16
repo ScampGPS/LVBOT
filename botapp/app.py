@@ -467,22 +467,36 @@ def cleanup_browser_processes():
     system = platform.system()
     
     try:
+        force_kill = os.getenv("FORCE_PLAYWRIGHT_KILL") == "1"
         if system == "Windows":
-            # Windows-specific cleanup
-            processes = ['chrome.exe', 'chromium.exe', 'msedge.exe']
-            for process in processes:
-                try:
-                    subprocess.run(['taskkill', '/F', '/IM', process], 
-                                 capture_output=True, check=False)
-                except:
-                    pass
-            logger.info("💥 Force killed browser processes on Windows")
+            if force_kill:
+                processes = ['chrome.exe', 'chromium.exe', 'msedge.exe']
+                for process in processes:
+                    try:
+                        subprocess.run(
+                            ['taskkill', '/F', '/IM', process],
+                            capture_output=True,
+                            check=False,
+                        )
+                    except Exception:
+                        pass
+                logger.info("💥 Force killed browser processes on Windows (forced mode)")
+            else:
+                logger.info(
+                    "Skipping global browser termination on Windows. "
+                    "Set FORCE_PLAYWRIGHT_KILL=1 to enable forced cleanup."
+                )
         else:
-            # Linux/Mac cleanup
-            subprocess.run(['pkill', '-9', '-f', 'chromium'], capture_output=True)
-            subprocess.run(['pkill', '-9', '-f', 'chrome-linux'], capture_output=True)
-            subprocess.run(['pkill', '-9', '-f', 'playwright'], capture_output=True)
-            logger.info("💥 Force killed browser processes on Unix")
+            if force_kill:
+                subprocess.run(['pkill', '-9', '-f', 'chromium'], capture_output=True)
+                subprocess.run(['pkill', '-9', '-f', 'chrome-linux'], capture_output=True)
+                subprocess.run(['pkill', '-9', '-f', 'playwright'], capture_output=True)
+                logger.info("💥 Force killed Playwright browser processes on Unix")
+            else:
+                logger.info(
+                    "Skipping Playwright process kill on Unix. "
+                    "Set FORCE_PLAYWRIGHT_KILL=1 to enable."
+                )
     except Exception as e:
         logger.warning(f"Could not force kill browser processes: {e}")
 

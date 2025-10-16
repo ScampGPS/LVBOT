@@ -70,10 +70,10 @@ Conversation state management.
 ## Usage Example
 
 ```python
-from lvbot.utils.datetime_helpers import DateTimeHelpers
-from lvbot.utils.telegram_ui import TelegramUI
-from lvbot.utils.validation import ValidationHelpers
-from lvbot.utils.message_handlers import MessageHandlers
+from utils.datetime_helpers import DateTimeHelpers
+from utils.telegram_ui import TelegramUI
+from utils.validation import ValidationHelpers
+from utils.message_handlers import MessageHandlers
 
 # Format a date
 formatted = DateTimeHelpers.format_date_for_display(datetime.now())
