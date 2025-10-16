@@ -6,6 +6,11 @@
 - Keep orchestration surfaces consistent between bot triggers, queued execution, and automation flows.
 - Maintain operational stability through staged extraction, logging parity, and targeted verification.
 
+## Progress
+- Shared booking contracts are implemented (`automation/shared/booking_contracts.py`) with builders/adapters in bot, queue, and executor layers (`botapp/booking/request_builder.py`, `reservations/queue/request_builder.py`, `automation/executors/request_factory.py`).
+- Immediate booking handler and reservation scheduler now consume those contracts, persisting results via the new helpers and unified notifications (`botapp/booking/persistence.py`, `reservations/queue/persistence.py`, `botapp/notifications.py`).
+- Documentation and tests cover the contract lifecycle and critical flows (`docs/booking_contract_mapping.md`, `docs/booking_flow_contracts.md`, `tests/unit/test_immediate_booking_flow.py`, `tests/unit/test_queue_scheduler_flow.py`).
+
 ## Key Targets
 - `botapp/booking/immediate_handler.py` — replace the monolithic `_execute_booking` with helper methods (`fetch_user_profile`, `build_booking_request`, `run_booking_attempts`, `persist_immediate_success`, `send_success_notification`, `send_failure_notification`). Relocate confirmation UI construction to `botapp/ui/confirmation_ui.py` and message formatting to `botapp/notifications.py`.
 - `automation/executors/booking.py` — introduce shared value objects (`BookingRequest`, `BookingResult`), move `_execute_booking_internal` into `automation/executors/flows/working_flow.py`, and split fast/experienced logic into `flows/experienced_flow.py` with smart routines in `flows/smart_flow.py`. Provide `automation/executors/helpers.py` for cross-flow utilities (`locate_time_button`, `fill_booking_form`, `wait_for_confirmation`).
@@ -24,7 +29,7 @@
 - `automation/availability/support.py` — split DOM extraction into `availability/dom_extraction.py`, parsing into `availability/slot_parsing.py`, and timezone logic into `availability/time_conversion.py`. Provide a unified `fetch_available_slots(request)` entrypoint for executors.
 
 ## Execution Strategy
-1. **Establish shared contracts**
+1. **Establish shared contracts** *(completed)*
    - Create `automation/shared/booking_contracts.py` containing `BookingRequest` and `BookingResult` dataclasses with explicit field annotations, defaults, and helper constructors (`from_immediate_payload`, `from_reservation_record`).
    - Produce an integration matrix (`docs/booking_contract_mapping.md`) mapping every current payload source (immediate handler, callback handlers, reservation scheduler, tennis executor, tests) to the new dataclass fields, including transformation steps and ownership.
    - Add adapter helpers: `botapp/booking/request_builder.py` for bot-driven inputs, `reservations/queue/request_builder.py` for queued jobs, and `automation/executors/request_factory.py` for executor-side needs.
@@ -67,7 +72,7 @@
    - Provide logging parity checks to ensure new modules emit comparable telemetry to the legacy implementation during rollout.
 
 ## Delivery Sequence
-1. Build shared booking contracts, adapters, and documentation artefacts described in Execution Strategy step 1.
+1. ✅ Build shared booking contracts, adapters, and documentation artefacts described in Execution Strategy step 1.
 2. Refactor the immediate booking handler and related UI/notification modules to use the shared contracts.
 3. Split automation executors into flow modules, adjust tennis executor, and reintroduce orchestrator helpers around the new value objects.
 4. Decompose bot orchestration (`botapp/app.py`, callback routers, Telegram UI modules) while keeping behavioural parity.
