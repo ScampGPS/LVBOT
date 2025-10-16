@@ -1,6 +1,7 @@
 """Court assignment and switching utilities for specialized browser pools."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import logging
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ class CourtPoolManager:
     """Track browser-to-court assignments with simple heuristics."""
 
     def __init__(self, primary_courts: Iterable[int], fallback_court: Optional[int] = None) -> None:
+        t('automation.browser.pools.court_management.CourtPoolManager.__init__')
         self.logger = logging.getLogger("CourtPoolManager")
         primary = list(dict.fromkeys(primary_courts))
         extra = [fallback_court] if fallback_court else []
@@ -31,6 +33,7 @@ class CourtPoolManager:
         self._stats: Dict[int, CourtStats] = {court: CourtStats() for court in self.all_courts}
 
     def reset(self) -> None:
+        t('automation.browser.pools.court_management.CourtPoolManager.reset')
         self._court_to_browser.clear()
         self._browser_to_court.clear()
         for stats in self._stats.values():
@@ -38,6 +41,7 @@ class CourtPoolManager:
             stats.successes = 0
 
     def assign_browser_to_court(self, browser_id: str, court: int) -> None:
+        t('automation.browser.pools.court_management.CourtPoolManager.assign_browser_to_court')
         previous = self._browser_to_court.get(browser_id)
         if previous == court:
             return
@@ -47,12 +51,15 @@ class CourtPoolManager:
         self._court_to_browser[court] = browser_id
 
     def get_browser_for_court(self, court: int) -> Optional[str]:
+        t('automation.browser.pools.court_management.CourtPoolManager.get_browser_for_court')
         return self._court_to_browser.get(court)
 
     def get_court_for_browser(self, browser_id: str) -> Optional[int]:
+        t('automation.browser.pools.court_management.CourtPoolManager.get_court_for_browser')
         return self._browser_to_court.get(browser_id)
 
     def get_court_assignment_strategy(self, preferences: Iterable[int]) -> List[int]:
+        t('automation.browser.pools.court_management.CourtPoolManager.get_court_assignment_strategy')
         ordered: List[int] = []
         seen = set()
         for court in preferences:
@@ -66,6 +73,7 @@ class CourtPoolManager:
         return ordered
 
     def record_booking_result(self, browser_id: str, court: int, success: bool, user_id: Optional[int] = None) -> None:
+        t('automation.browser.pools.court_management.CourtPoolManager.record_booking_result')
         stats = self._stats.setdefault(court, CourtStats())
         stats.attempts += 1
         if success:
@@ -75,6 +83,7 @@ class CourtPoolManager:
             self.assign_browser_to_court(browser_id, court)
 
     def get_next_court_assignment(self, booked_court: int, browser_id: str) -> Optional[int]:
+        t('automation.browser.pools.court_management.CourtPoolManager.get_next_court_assignment')
         candidates = [c for c in self.all_courts if c != booked_court]
         for court in candidates:
             if self.get_browser_for_court(court) is None:
@@ -82,6 +91,7 @@ class CourtPoolManager:
         return candidates[0] if candidates else None
 
     def get_status_summary(self) -> Dict[int, Dict[str, int]]:
+        t('automation.browser.pools.court_management.CourtPoolManager.get_status_summary')
         summary: Dict[int, Dict[str, int]] = {}
         for court in self.all_courts:
             stats = self._stats[court]
@@ -97,10 +107,12 @@ class BrowserCourtSwitcher:
     """Lightweight helper to reposition Playwright pages between courts."""
 
     def __init__(self, navigation_timeout: int = BrowserTimeouts.SLOW_NAVIGATION) -> None:
+        t('automation.browser.pools.court_management.BrowserCourtSwitcher.__init__')
         self.logger = logging.getLogger("BrowserCourtSwitcher")
         self.navigation_timeout = navigation_timeout
 
     async def switch_court(self, page, current_court: int, target_court: int, browser_id: str) -> Dict[str, object]:
+        t('automation.browser.pools.court_management.BrowserCourtSwitcher.switch_court')
         target = COURT_CONFIG.get(target_court, {})
         url = target.get("direct_url")
         if not url:
@@ -113,6 +125,7 @@ class BrowserCourtSwitcher:
             return {"success": False, "error": str(exc)}
 
     async def verify_browser_health(self, page, court: int) -> Dict[str, object]:
+        t('automation.browser.pools.court_management.BrowserCourtSwitcher.verify_browser_health')
         expected = COURT_CONFIG.get(court, {}).get("direct_url")
         try:
             current_url = page.url

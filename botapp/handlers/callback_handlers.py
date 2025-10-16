@@ -2,6 +2,7 @@
 Callback handlers for telegram bot
 Handles all inline keyboard button callbacks in a modular way
 """
+from utils.tracking import t
 
 import os
 import logging
@@ -44,6 +45,7 @@ class CallbackHandler:
         
         Sets up logging and creates the callback routing map
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler.__init__')
         self.logger = logging.getLogger('CallbackHandler')
         self.availability_checker = availability_checker
         self.reservation_queue = reservation_queue
@@ -101,6 +103,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler.handle_callback')
         query = update.callback_query
         
         # Safely answer the callback query with timeout handling
@@ -279,6 +282,7 @@ class CallbackHandler:
             query: The callback query to answer
             text: Optional text to show to user
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._safe_answer_callback')
         try:
             if text:
                 await query.answer(text)
@@ -300,6 +304,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_reserve_menu')
         # Debug: Log method entry with user context
         user_id = update.callback_query.from_user.id if update.callback_query and update.callback_query.from_user else "Unknown"
         self.logger.debug(f"_handle_reserve_menu: Method entry for user_id={user_id}")
@@ -331,6 +336,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_my_reservations_menu')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -432,6 +438,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_profile_menu')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -470,6 +477,7 @@ class CallbackHandler:
         Returns:
             Dict containing user profile data
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._get_user_profile_data')
         # Try to retrieve existing user profile
         user_profile = self.user_manager.get_user(user_id)
         
@@ -512,6 +520,7 @@ class CallbackHandler:
         """
         Handle Edit Profile menu - shows options to edit profile fields
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_profile')
         query = update.callback_query
         
         try:
@@ -531,6 +540,7 @@ class CallbackHandler:
         """
         Handle Edit Name - show name type selection
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_name')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -564,6 +574,7 @@ class CallbackHandler:
         """
         Handle Edit First Name - show letter keyboard
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_first_name')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -595,6 +606,7 @@ class CallbackHandler:
         """
         Handle Edit Last Name - show letter keyboard
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_last_name')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -622,6 +634,7 @@ class CallbackHandler:
         """
         Handle Edit Phone - show numeric keypad for phone input
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_phone')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -654,6 +667,7 @@ class CallbackHandler:
         """
         Handle Edit Email - show email character keyboard
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_edit_email')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -685,6 +699,7 @@ class CallbackHandler:
         """
         Handle cancel edit - return to profile view
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_edit')
         query = update.callback_query
         
         try:
@@ -702,6 +717,7 @@ class CallbackHandler:
         """
         Handle phone keypad input
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_phone_keypad')
         query = update.callback_query
         user_id = query.from_user.id
         callback_data = query.data
@@ -787,6 +803,7 @@ class CallbackHandler:
         """
         Handle all name-related callbacks
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_name_callbacks')
         query = update.callback_query
         user_id = query.from_user.id
         callback_data = query.data
@@ -826,6 +843,7 @@ class CallbackHandler:
         """
         Handle letter-by-letter name input
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_letter_input')
         query = update.callback_query
         user_id = query.from_user.id
         callback_data = query.data
@@ -886,6 +904,7 @@ class CallbackHandler:
         """
         Handle all email-related callbacks
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_email_callbacks')
         query = update.callback_query
         user_id = query.from_user.id
         callback_data = query.data
@@ -966,6 +985,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_performance_menu')
         query = update.callback_query
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
         
@@ -996,6 +1016,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_reservations_menu')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -1111,6 +1132,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_help_menu')
         query = update.callback_query
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
         
@@ -1158,6 +1180,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_about_menu')
         query = update.callback_query
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
         
@@ -1202,6 +1225,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_menu')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -1264,6 +1288,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1381,6 +1406,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_date_selection')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1483,6 +1509,7 @@ class CallbackHandler:
             context: Callback context
             selected_date: The selected date object
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._show_queue_time_selection')
         query = update.callback_query
         
         # Use centralized court hours from constants
@@ -1556,6 +1583,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_selection')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1654,6 +1682,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_court_selection')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1778,6 +1807,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_confirm')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1883,6 +1913,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_cancel')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1920,6 +1951,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_courts')
         query = update.callback_query
         
         # Safely answer the callback query
@@ -1959,6 +1991,7 @@ class CallbackHandler:
         Args:
             context: The callback context containing user data
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._clear_queue_booking_state')
         # Clear queue booking specific state
         self._clear_user_flow_state(context, 'queue_booking')
     
@@ -1972,6 +2005,7 @@ class CallbackHandler:
             context: The callback context containing user data
             flow_prefix: The prefix of the flow to clear (e.g., 'queue_booking')
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._clear_user_flow_state')
         # Define flow-specific keys based on prefix
         flow_keys = [
             f'{flow_prefix}_date',
@@ -1997,6 +2031,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_menu')
         query = update.callback_query
         user_id = query.from_user.id
         is_admin = self.user_manager.is_admin(user_id)
@@ -2024,6 +2059,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_48h_immediate_booking')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -2157,6 +2193,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_48h_future_booking')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -2185,6 +2222,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_date_selection')
         query = update.callback_query
         callback_data = query.data
         
@@ -2290,6 +2328,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_year_selection')
         query = update.callback_query
         callback_data = query.data
         
@@ -2319,6 +2358,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_month_selection')
         query = update.callback_query
         callback_data = query.data
         
@@ -2359,6 +2399,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_future_date_selection')
         query = update.callback_query
         callback_data = query.data
         
@@ -2494,6 +2535,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_blocked_date_selection')
         query = update.callback_query
         callback_data = query.data
         
@@ -2567,6 +2609,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_month')
         query = update.callback_query
         callback_data = query.data
         
@@ -2593,6 +2636,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_day_cycling')
         query = update.callback_query
         callback_data = query.data
         
@@ -2705,6 +2749,7 @@ class CallbackHandler:
         Returns:
             Dictionary mapping court numbers to lists of TimeSlots
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._extract_availability_for_date_cached')
         import asyncio
         
         try:
@@ -2735,6 +2780,7 @@ class CallbackHandler:
         """
         DEPRECATED: This method is no longer used with AvailabilityCheckerV3.
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._extract_court_times_for_date_cached')
         """
         Extract times for specific court and date without page refresh
         
@@ -2812,6 +2858,7 @@ class CallbackHandler:
                 '2025-07-23': {3: ['09:00', '10:00', '11:00']}
             }
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._build_complete_matrix_for_all_days')
         import asyncio
         from automation.availability import AcuityTimeParser
         from automation.forms.acuity_page_validator import AcuityPageValidator
@@ -2860,6 +2907,7 @@ class CallbackHandler:
         """
         DEPRECATED: This method is no longer used with AvailabilityCheckerV3.
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._extract_all_days_for_court')
         """
         Extract times for all available days for a specific court.
         
@@ -2906,6 +2954,7 @@ class CallbackHandler:
             update: The telegram update containing the callback query
             context: The callback context
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_manage_reservation')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -3015,6 +3064,7 @@ class CallbackHandler:
             update: The telegram update
             context: The callback context
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_manage_queue_reservation')
         query = update.callback_query
         await self._safe_answer_callback(query)
         
@@ -3114,6 +3164,7 @@ class CallbackHandler:
             update: The telegram update containing the callback query
             context: The callback context
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_reservation_action')
         query = update.callback_query
         user_id = query.from_user.id
         callback_data = query.data
@@ -3141,6 +3192,7 @@ class CallbackHandler:
     async def _handle_cancel_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE, 
                                         reservation_id: str) -> None:
         """Cancel a reservation"""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -3179,6 +3231,7 @@ class CallbackHandler:
     async def _handle_modify_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE, 
                                        reservation_id: str) -> None:
         """Modify a reservation"""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_modify_reservation')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -3240,6 +3293,7 @@ class CallbackHandler:
     async def _handle_share_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE, 
                                       reservation_id: str) -> None:
         """Share reservation details"""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_share_reservation')
         query = update.callback_query
         user_id = query.from_user.id
         
@@ -3293,6 +3347,7 @@ class CallbackHandler:
     
     async def _handle_modify_option(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle modification options for queued reservations"""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_modify_option')
         query = update.callback_query
         await self._safe_answer_callback(query)
         callback_data = query.data
@@ -3350,6 +3405,7 @@ class CallbackHandler:
     
     async def _handle_time_modification(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle time modification from the modify menu"""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_time_modification')
         query = update.callback_query
         await self._safe_answer_callback(query)
         
@@ -3396,6 +3452,7 @@ class CallbackHandler:
         Returns:
             None
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_unknown_menu')
         query = update.callback_query
         self.logger.warning(f"Unknown callback data: {query.data}")
         await query.edit_message_text(
@@ -3408,6 +3465,7 @@ class CallbackHandler:
         
         Reuses the existing user reservations display logic
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_my_reservations')
         # Simply show the regular user view for the admin's own reservations
         await self._display_user_reservations(update, context, update.callback_query.from_user.id)
     
@@ -3415,6 +3473,7 @@ class CallbackHandler:
         """
         Show list of users for admin to select from
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_users_list')
         query = update.callback_query
         
         try:
@@ -3469,6 +3528,7 @@ class CallbackHandler:
         """
         Show all reservations from all users
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_all_reservations')
         query = update.callback_query
         
         try:
@@ -3532,6 +3592,7 @@ class CallbackHandler:
             context: The callback context
             target_user_id: The user whose reservations to display
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._display_user_reservations')
         query = update.callback_query
         
         try:
@@ -3638,6 +3699,7 @@ class CallbackHandler:
             query: The callback query
             all_reservations: List of all reservations with user info
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations')
         # Group by date for better organization
         reservations_by_date = {}
         for res in all_reservations:
@@ -3707,6 +3769,7 @@ class CallbackHandler:
         Returns:
             Formatted user name or "User {id}" if not found
         """
+        t('botapp.handlers.callback_handlers.CallbackHandler._get_user_name')
         user_data = self.user_manager.get_user(user_id)
         if user_data:
             name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()

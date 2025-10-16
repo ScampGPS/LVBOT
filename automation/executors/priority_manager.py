@@ -2,6 +2,7 @@
 Priority Management System for Tennis Bot
 Handles user priority sorting with two-tier FCFS system
 """
+from utils.tracking import t
 
 from typing import List, Tuple, Dict, Any
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ class PriorityUser:
     @classmethod
     def from_reservation(cls, reservation: Dict[str, Any], user_tier: UserTier) -> 'PriorityUser':
         """Create PriorityUser from reservation data"""
+        t('automation.executors.priority_manager.PriorityUser.from_reservation')
         return cls(
             user_id=reservation['user_id'],
             tier=user_tier,
@@ -36,6 +38,7 @@ class PriorityManager:
     
     def __init__(self):
         """Initialize the priority manager"""
+        t('automation.executors.priority_manager.PriorityManager.__init__')
         self.logger = logging.getLogger('PriorityManager')
         self.logger.info("Priority Manager initialized with two-tier FCFS system")
     
@@ -49,6 +52,7 @@ class PriorityManager:
         Returns:
             Sorted list with highest priority first
         """
+        t('automation.executors.priority_manager.PriorityManager.sort_by_priority')
         self.logger.debug(f"Sorting {len(users)} users by priority")
         
         # Count by tier
@@ -79,6 +83,7 @@ class PriorityManager:
         Returns:
             Dictionary mapping tier to list of users in that tier
         """
+        t('automation.executors.priority_manager.PriorityManager.split_into_tiers')
         tiers = {
             UserTier.ADMIN: [],
             UserTier.VIP: [],
@@ -105,6 +110,7 @@ class PriorityManager:
         Returns:
             1-based position in queue (1 is first)
         """
+        t('automation.executors.priority_manager.PriorityManager.get_user_position')
         sorted_users = self.sort_by_priority(all_users)
         
         for i, user in enumerate(sorted_users):
@@ -124,6 +130,7 @@ class PriorityManager:
         Returns:
             Tuple of (confirmed_users, waitlisted_users)
         """
+        t('automation.executors.priority_manager.PriorityManager.allocate_to_browsers')
         self.logger.info(f"""BROWSER ALLOCATION START
         Total users: {len(users)}
         Available browsers: {num_browsers}
@@ -167,6 +174,7 @@ class PriorityManager:
         Returns:
             Dict with bump_info including who gets bumped
         """
+        t('automation.executors.priority_manager.PriorityManager.handle_vip_bump')
         self.logger.info(f"""VIP BUMP HANDLER
         VIP User: {new_vip.user_id} ({new_vip.tier.name})
         Current queue size: {len(current_users)}

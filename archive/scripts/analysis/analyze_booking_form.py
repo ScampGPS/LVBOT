@@ -3,6 +3,7 @@
 Script to analyze the Acuity booking form that appears after clicking a time slot.
 This follows LVBOT principles: modular, reusable, and focused on one task.
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -27,6 +28,7 @@ class AcuityFormAnalyzer:
     
     def __init__(self):
         """Initialize the analyzer with logging"""
+        t('archive.scripts.analysis.analyze_booking_form.AcuityFormAnalyzer.__init__')
         setup_logging()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.screenshots_dir = Path("debugging/booking_form_analysis")
@@ -39,6 +41,7 @@ class AcuityFormAnalyzer:
         Args:
             court_number: Which court to test (default 3 as it usually has availability)
         """
+        t('archive.scripts.analysis.analyze_booking_form.AcuityFormAnalyzer.analyze_booking_flow')
         self.logger.info(f"🔍 Starting booking form analysis for Court {court_number}")
         
         async with async_playwright() as playwright:
@@ -122,6 +125,7 @@ class AcuityFormAnalyzer:
     
     async def _find_first_time_button(self, frame: Frame):
         """Find the first available time button"""
+        t('archive.scripts.analysis.analyze_booking_form.AcuityFormAnalyzer._find_first_time_button')
         selectors = [
             'button.css-tq4fs9',  # Acuity time button class
             'button:has-text(":")',  # Any button with time format
@@ -138,6 +142,7 @@ class AcuityFormAnalyzer:
     
     async def _analyze_form_structure(self, page: Page, frame: Frame) -> None:
         """Analyze the structure of the booking form"""
+        t('archive.scripts.analysis.analyze_booking_form.AcuityFormAnalyzer._analyze_form_structure')
         self.logger.info("📋 Analyzing form structure...")
         
         # Check for modal/popup
@@ -193,6 +198,7 @@ class AcuityFormAnalyzer:
     
     async def _find_label_for_input(self, page: Page, input_elem) -> str:
         """Find label text for an input element"""
+        t('archive.scripts.analysis.analyze_booking_form.AcuityFormAnalyzer._find_label_for_input')
         try:
             # Get input id
             input_id = await input_elem.get_attribute('id')
@@ -214,6 +220,7 @@ class AcuityFormAnalyzer:
 
 async def main():
     """Run the booking form analysis"""
+    t('archive.scripts.analysis.analyze_booking_form.main')
     analyzer = AcuityFormAnalyzer()
     await analyzer.analyze_booking_flow(court_number=3)
 

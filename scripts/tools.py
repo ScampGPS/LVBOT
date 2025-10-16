@@ -4,6 +4,7 @@ Provides quick CLI hooks into reservation services for manual inspection.
 """
 
 from __future__ import annotations
+from utils.tracking import t
 
 import argparse
 from users.manager import UserManager
@@ -11,6 +12,7 @@ from reservations.services import ReservationService
 
 
 def _build_service() -> ReservationService:
+    t('scripts.tools._build_service')
     user_manager = UserManager()
     service = ReservationService(
         config=None,
@@ -22,6 +24,7 @@ def _build_service() -> ReservationService:
 
 
 def list_queue() -> None:
+    t('scripts.tools.list_queue')
     service = _build_service()
     requests = service.list_requests()
     if not requests:
@@ -35,6 +38,7 @@ def list_queue() -> None:
 
 
 def main() -> None:
+    t('scripts.tools.main')
     parser = argparse.ArgumentParser(description="LVBot utility helpers")
     parser.add_argument("command", choices=["list-queue"], help="Command to execute")
     args = parser.parse_args()

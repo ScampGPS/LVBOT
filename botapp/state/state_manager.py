@@ -2,6 +2,7 @@
 State management for conversation handling
 Manages user states and temporary data during conversations
 """
+from utils.tracking import t
 
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
@@ -12,6 +13,7 @@ class UserStateManager:
     """Manage user conversation states and temporary data"""
     
     def __init__(self, timeout_minutes: int = 30):
+        t('botapp.state.state_manager.UserStateManager.__init__')
         self.user_states: Dict[int, str] = {}
         self.temp_data: Dict[int, Dict[str, Any]] = {}
         self.last_activity: Dict[int, datetime] = {}
@@ -20,6 +22,7 @@ class UserStateManager:
     
     def set_state(self, user_id: int, state: str) -> None:
         """Set user's conversation state"""
+        t('botapp.state.state_manager.UserStateManager.set_state')
         old_state = self.user_states.get(user_id)
         self.user_states[user_id] = state
         self.last_activity[user_id] = datetime.now()
@@ -32,11 +35,13 @@ class UserStateManager:
     
     def get_state(self, user_id: int) -> Optional[str]:
         """Get user's current state"""
+        t('botapp.state.state_manager.UserStateManager.get_state')
         self._check_timeout(user_id)
         return self.user_states.get(user_id)
     
     def clear_state(self, user_id: int) -> None:
         """Clear user's state and temporary data"""
+        t('botapp.state.state_manager.UserStateManager.clear_state')
         self.user_states.pop(user_id, None)
         self.temp_data.pop(user_id, None)
         self.last_activity.pop(user_id, None)
@@ -44,6 +49,7 @@ class UserStateManager:
     
     def set_temp_data(self, user_id: int, key: str, value: Any) -> None:
         """Store temporary data for user"""
+        t('botapp.state.state_manager.UserStateManager.set_temp_data')
         if user_id not in self.temp_data:
             self.temp_data[user_id] = {}
         
@@ -52,6 +58,7 @@ class UserStateManager:
     
     def get_temp_data(self, user_id: int, key: Optional[str] = None) -> Any:
         """Get temporary data for user"""
+        t('botapp.state.state_manager.UserStateManager.get_temp_data')
         self._check_timeout(user_id)
         
         if key:
@@ -60,6 +67,7 @@ class UserStateManager:
     
     def append_temp_data(self, user_id: int, key: str, value: Any) -> None:
         """Append to a list in temporary data"""
+        t('botapp.state.state_manager.UserStateManager.append_temp_data')
         if user_id not in self.temp_data:
             self.temp_data[user_id] = {}
         
@@ -76,6 +84,7 @@ class UserStateManager:
     
     def update_temp_data(self, user_id: int, data: Dict[str, Any]) -> None:
         """Update multiple temporary data fields at once"""
+        t('botapp.state.state_manager.UserStateManager.update_temp_data')
         if user_id not in self.temp_data:
             self.temp_data[user_id] = {}
         
@@ -84,14 +93,17 @@ class UserStateManager:
     
     def has_state(self, user_id: int, state: str) -> bool:
         """Check if user is in specific state"""
+        t('botapp.state.state_manager.UserStateManager.has_state')
         return self.get_state(user_id) == state
     
     def is_in_conversation(self, user_id: int) -> bool:
         """Check if user is in any conversation state"""
+        t('botapp.state.state_manager.UserStateManager.is_in_conversation')
         return self.get_state(user_id) is not None
     
     def on_state_change(self, from_state: str, to_state: str, callback: callable) -> None:
         """Register callback for state transitions"""
+        t('botapp.state.state_manager.UserStateManager.on_state_change')
         key = f"{from_state}->{to_state}"
         if key not in self.state_callbacks:
             self.state_callbacks[key] = []
@@ -99,16 +111,19 @@ class UserStateManager:
     
     def get_active_users(self) -> List[int]:
         """Get list of users with active states"""
+        t('botapp.state.state_manager.UserStateManager.get_active_users')
         self._cleanup_expired()
         return list(self.user_states.keys())
     
     def get_users_in_state(self, state: str) -> List[int]:
         """Get all users in a specific state"""
+        t('botapp.state.state_manager.UserStateManager.get_users_in_state')
         self._cleanup_expired()
         return [uid for uid, s in self.user_states.items() if s == state]
     
     def _check_timeout(self, user_id: int) -> None:
         """Check if user's session has timed out"""
+        t('botapp.state.state_manager.UserStateManager._check_timeout')
         if user_id in self.last_activity:
             time_passed = datetime.now() - self.last_activity[user_id]
             if time_passed > timedelta(minutes=self.timeout_minutes):
@@ -117,6 +132,7 @@ class UserStateManager:
     
     def _cleanup_expired(self) -> None:
         """Clean up all expired sessions"""
+        t('botapp.state.state_manager.UserStateManager._cleanup_expired')
         expired_users = []
         cutoff_time = datetime.now() - timedelta(minutes=self.timeout_minutes)
         
@@ -130,6 +146,7 @@ class UserStateManager:
     def _trigger_state_change(self, user_id: int, from_state: Optional[str], 
                             to_state: str) -> None:
         """Trigger callbacks for state change"""
+        t('botapp.state.state_manager.UserStateManager._trigger_state_change')
         # Specific transition
         key = f"{from_state}->{to_state}"
         if key in self.state_callbacks:
@@ -183,14 +200,17 @@ class ConversationStates:
     @classmethod
     def is_reservation_flow(cls, state: str) -> bool:
         """Check if state is part of reservation flow"""
+        t('botapp.state.state_manager.ConversationStates.is_reservation_flow')
         return state and state.startswith("reserve_")
     
     @classmethod
     def is_profile_flow(cls, state: str) -> bool:
         """Check if state is part of profile flow"""
+        t('botapp.state.state_manager.ConversationStates.is_profile_flow')
         return state and state.startswith("profile_")
     
     @classmethod
     def is_admin_flow(cls, state: str) -> bool:
         """Check if state is part of admin flow"""
+        t('botapp.state.state_manager.ConversationStates.is_admin_flow')
         return state and state.startswith("admin_")

@@ -1,6 +1,7 @@
 """Queue and scheduling domain services."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 from importlib import import_module
 from typing import TYPE_CHECKING
@@ -19,6 +20,7 @@ __all__ = [
 
 
 def __getattr__(name: str):
+    t('reservations.queue.__getattr__')
     if name in {"ReservationQueue", "ReservationStatus"}:
         module = import_module("reservations.queue.reservation_queue")
     elif name in {"ReservationScheduler"}:

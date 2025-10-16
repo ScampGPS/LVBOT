@@ -3,6 +3,7 @@
 Test experienced user pattern with minimal delays
 Simulating a frequent user who knows exactly where everything is
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -222,6 +223,7 @@ class ExperiencedUserExecutor:
 
 async def test_experienced_user():
     """Test with experienced user timing"""
+    t('archive.testing.tests.test_experienced_user_only.test_experienced_user')
     logger = logging.getLogger('ExperiencedUserTest')
     
     print("\n" + "="*80)
@@ -364,6 +366,7 @@ async def test_experienced_user():
 
 async def main():
     """Run experienced user test"""
+    t('archive.testing.tests.test_experienced_user_only.main')
     await test_experienced_user()
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 Test booking with actual court availability checking
 This simulates the Telegram flow and books the first available slot
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -18,6 +19,7 @@ logging.basicConfig(
 
 async def test_booking_with_availability():
     """Test booking using actual court availability"""
+    t('archive.testing.tests.test_booking_with_availability.test_booking_with_availability')
     logger = logging.getLogger('TestBooking')
     
     print("\n" + "="*80)
@@ -167,6 +169,7 @@ async def test_booking_with_availability():
 
 async def quick_availability_check():
     """Quick check of available times without booking"""
+    t('archive.testing.tests.test_booking_with_availability.quick_availability_check')
     logger = logging.getLogger('QuickCheck')
     
     print("\n" + "="*80)

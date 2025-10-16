@@ -2,6 +2,7 @@
 """
 Clear any webhooks set for the bot to ensure polling works correctly
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -21,6 +22,7 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 async def clear_webhook():
     """Clear webhook and get bot info"""
+    t('archive.scripts.maintenance.clear_webhook.clear_webhook')
     bot = Bot(token=BOT_TOKEN)
     
     # Get current webhook info

@@ -2,6 +2,7 @@
 Immediate booking handler for direct court reservations
 Manages the flow from availability display to booking execution
 """
+from utils.tracking import t
 
 from typing import Dict, Any, Optional
 from datetime import datetime, date
@@ -41,6 +42,7 @@ class ImmediateBookingHandler:
             user_manager: User management interface for retrieving user data
             browser_pool: Optional browser pool for optimized execution
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler.__init__')
         self.user_manager = user_manager
         self.browser_pool = browser_pool
         self.parser = CallbackParser()
@@ -56,6 +58,7 @@ class ImmediateBookingHandler:
             update: Telegram update with callback query
             context: Callback context
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler.handle_booking_request')
         query = update.callback_query
         await query.answer()
         
@@ -91,6 +94,7 @@ class ImmediateBookingHandler:
             update: Telegram update with callback query
             context: Callback context
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler.handle_booking_confirmation')
         query = update.callback_query
         await query.answer()
         
@@ -159,6 +163,7 @@ class ImmediateBookingHandler:
             update: Telegram update with callback query
             context: Callback context
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler.handle_booking_cancellation')
         query = update.callback_query
         await query.answer("Booking cancelled")
         
@@ -189,6 +194,7 @@ class ImmediateBookingHandler:
         Returns:
             User dict if valid, None otherwise
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._get_validated_user')
         user = self.user_manager.get_user(user_id)
         
         if not user:
@@ -215,6 +221,7 @@ class ImmediateBookingHandler:
         Returns:
             Dict with 'message' and 'keyboard' keys
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._create_confirmation_ui')
         # Format confirmation message
         message = (
             f"🎾 **Confirm Immediate Booking**\n\n"
@@ -263,6 +270,7 @@ class ImmediateBookingHandler:
         Returns:
             Result dict with 'success' and other fields
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._execute_booking')
         try:
             # Get user data
             user = self.user_manager.get_user(user_id)
@@ -357,6 +365,7 @@ class ImmediateBookingHandler:
         Returns:
             Formatted success message
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._format_success_message')
         return (
             f"✅ **Booking Successful!**\n\n"
             f"🎾 Court {booking_data['court_number']} has been booked\n"
@@ -378,6 +387,7 @@ class ImmediateBookingHandler:
         Returns:
             Formatted failure message
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._format_failure_message')
         # Escape the error message to prevent Telegram parsing errors
         error_message = result.get('message', 'Unknown error')
         # Replace characters that might break Markdown
@@ -398,6 +408,7 @@ class ImmediateBookingHandler:
             query: Callback query
             message: Error message
         """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._send_error')
         await query.edit_message_text(
             f"❌ {message}",
             reply_markup=TelegramUI.create_back_to_menu_keyboard()

@@ -1,6 +1,7 @@
 """
 Fix for the rules overlay blocking the calendar page
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def fix_rules_overlay():
     """Test methods to bypass or close the rules overlay"""
+    t('archive.scripts.maintenance.fix_rules_overlay.fix_rules_overlay')
     
     async with async_playwright() as p:
         # Launch browser

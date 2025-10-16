@@ -2,6 +2,7 @@
 """
 Async telegram bot - Full asyncio architecture
 """
+from utils.tracking import t
 
 import os
 import sys
@@ -64,6 +65,7 @@ class CleanBot:
     """Minimal clean bot with async browser components"""
     
     def __init__(self, token):
+        t('botapp.app.CleanBot.__init__')
         self.token = token
         self.logger = logging.getLogger('CleanBot')
         self.config = BotConfig()
@@ -91,6 +93,7 @@ class CleanBot:
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
+        t('botapp.app.CleanBot.start_command')
         # Check if user is admin
         user_id = update.effective_user.id
         is_admin = self.user_manager.is_admin(user_id)
@@ -109,6 +112,7 @@ class CleanBot:
     
     async def stop_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /stop command for graceful shutdown (admin only)"""
+        t('botapp.app.CleanBot.stop_command')
         user_id = update.effective_user.id
         
         # Check if user is admin
@@ -140,6 +144,7 @@ class CleanBot:
     
     async def _graceful_shutdown(self):
         """Perform graceful shutdown"""
+        t('botapp.app.CleanBot._graceful_shutdown')
         try:
             # Wait a bit for the stop message to be sent
             await asyncio.sleep(1)
@@ -165,6 +170,7 @@ class CleanBot:
         Returns:
             None
         """
+        t('botapp.app.CleanBot.send_notification')
         try:
             # Check if we have application context
             if not hasattr(self, 'application') or not self.application:
@@ -215,6 +221,7 @@ class CleanBot:
     
     async def check_courts_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /check_courts command - demonstrate async availability checking"""
+        t('botapp.app.CleanBot.check_courts_command')
         from .ui.telegram_ui import TelegramUI
         from .messages.message_handlers import MessageHandlers
         from datetime import datetime
@@ -266,6 +273,7 @@ class CleanBot:
         Returns:
             None
         """
+        t('botapp.app.CleanBot.error_handler')
         # Extract the actual error from context
         error = context.error
         
@@ -282,6 +290,7 @@ class CleanBot:
         Returns:
             None
         """
+        t('botapp.app.CleanBot.log_bot_metrics')
         try:
             # Collect user metrics
             all_users = self.user_manager.get_all_users()
@@ -355,6 +364,7 @@ class CleanBot:
         Returns:
             None
         """
+        t('botapp.app.CleanBot._metrics_loop')
         try:
             while True:
                 await self.log_bot_metrics()
@@ -367,6 +377,7 @@ class CleanBot:
     
     def run(self):
         """Run bot with full async architecture - synchronous entry point"""
+        t('botapp.app.CleanBot.run')
         # Create application with specific configuration to prevent polling conflicts
         app = Application.builder().token(self.token).build()
         
@@ -393,6 +404,7 @@ class CleanBot:
     
     async def _post_init(self, application):
         """Initialize async components after app starts"""
+        t('botapp.app.CleanBot._post_init')
         # Store application reference for notifications
         self.application = application
         
@@ -419,6 +431,7 @@ class CleanBot:
     
     async def _post_stop(self, application):
         """Clean up async components after app stops"""
+        t('botapp.app.CleanBot._post_stop')
         self.logger.info("🔴 Starting bot shutdown sequence...")
         
         # Cancel metrics monitoring task
@@ -460,6 +473,7 @@ class CleanBot:
 
 def cleanup_browser_processes():
     """Force kill all browser processes"""
+    t('botapp.app.cleanup_browser_processes')
     import subprocess
     import platform
     
@@ -503,6 +517,7 @@ def cleanup_browser_processes():
 
 def signal_handler(signum, frame):
     """Handle SIGINT/SIGTERM signals for graceful shutdown"""
+    t('botapp.app.signal_handler')
     logger = logging.getLogger('Main')
     logger.info(f"🚨 Received signal {signum}, initiating graceful shutdown...")
     cleanup_browser_processes()
@@ -511,6 +526,7 @@ def signal_handler(signum, frame):
 
 def main() -> None:
     """Entry point used by both CLI script and module execution."""
+    t('botapp.app.main')
 
     import signal
     import atexit

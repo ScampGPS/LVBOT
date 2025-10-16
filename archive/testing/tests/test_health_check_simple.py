@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Simple test to verify health checker is working"""
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -14,6 +15,7 @@ logging.basicConfig(
 
 async def test_health_check():
     """Test the browser health checker"""
+    t('archive.testing.tests.test_health_check_simple.test_health_check')
     browser_pool = AsyncBrowserPool()
     
     try:

@@ -2,6 +2,7 @@
 Reservation helper functions
 Handles reservation-specific operations and calculations
 """
+from utils.tracking import t
 
 from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ class ReservationHelpers:
     def create_tennis_config(user_info: Dict[str, Any], courts: List[int], 
                            time: str, speed_multiplier: float = 1.0) -> Any:
         """Create TennisConfig object from reservation data"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.create_tennis_config')
         # Import here to avoid circular imports
         from playwright_bot import TennisConfig
         
@@ -38,6 +40,7 @@ class ReservationHelpers:
         Calculate if should retry and delay based on timing
         Returns: (should_retry, delay_seconds, status_message)
         """
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.calculate_retry_delay')
         max_retries = getattr(config, 'max_retries', 3)
         
         if retry_count >= max_retries:
@@ -69,6 +72,7 @@ class ReservationHelpers:
         Format court assignments to avoid conflicts
         Returns: {user_id: [assigned_courts]}
         """
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.format_court_assignments')
         assignments = {}
         used_courts = set()
         
@@ -108,6 +112,7 @@ class ReservationHelpers:
     def calculate_booking_priority(user_profile: Any, reservation: Any, 
                                  config: Any) -> int:
         """Calculate booking priority score (lower is higher priority)"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.calculate_booking_priority')
         priority = 0
         
         # Admin gets highest priority
@@ -147,6 +152,7 @@ class ReservationHelpers:
     @staticmethod
     def group_reservations_by_time(reservations: List[Any]) -> Dict[str, List[Any]]:
         """Group reservations by date and time"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.group_reservations_by_time')
         groups = {}
         
         for res in reservations:
@@ -160,6 +166,7 @@ class ReservationHelpers:
     @staticmethod
     def get_next_retry_time(reservation: Any, config: Any) -> Optional[datetime]:
         """Calculate next retry time for a reservation"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.get_next_retry_time')
         if reservation.status != 'pending' or reservation.attempts >= config.max_retries:
             return None
         
@@ -181,6 +188,7 @@ class ReservationHelpers:
     @staticmethod
     def format_reservation_summary(reservation: Any, include_user: bool = True) -> str:
         """Format a reservation into a summary string"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.format_reservation_summary')
         courts = ', '.join([f"Court {c}" for c in reservation.courts])
         
         summary = f"📅 {reservation.date} at {reservation.time}\n"
@@ -200,6 +208,7 @@ class ReservationHelpers:
     def check_reservation_conflicts(new_reservation: Any, 
                                   existing_reservations: List[Any]) -> List[str]:
         """Check for conflicts with existing reservations"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.check_reservation_conflicts')
         conflicts = []
         
         for existing in existing_reservations:
@@ -226,6 +235,7 @@ class ReservationHelpers:
     @staticmethod
     def estimate_execution_time(num_reservations: int, parallel_browsers: int = 3) -> str:
         """Estimate how long reservations will take to execute"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.estimate_execution_time')
         # Base time per reservation
         time_per_reservation = 15  # seconds
         
@@ -243,6 +253,7 @@ class ReservationHelpers:
     @staticmethod
     def should_use_extreme_mode(reservation: Any, config: Any) -> bool:
         """Determine if extreme speed mode should be used"""
+        t('archive.legacy_modules.reservations_queue.reservation_helpers.ReservationHelpers.should_use_extreme_mode')
         # Check if within critical window (e.g., first 2 minutes)
         tz = pytz.timezone(config.timezone)
         now = datetime.now(tz)

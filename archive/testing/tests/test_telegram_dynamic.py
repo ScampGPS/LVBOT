@@ -3,6 +3,7 @@
 Test Telegram bot booking flow with dynamic time selection
 Simulates user clicking through the Book Now flow and selecting from available times
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -21,6 +22,7 @@ class TelegramBotTester:
     """Simulates Telegram user interactions with the bot"""
     
     def __init__(self):
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.__init__')
         self.logger = logging.getLogger('TelegramBotTester')
         self.bot = None
         self.user_id = 125763357  # Saul's user ID
@@ -30,6 +32,7 @@ class TelegramBotTester:
         
     async def setup(self):
         """Initialize the bot"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.setup')
         from telegram_tennis_bot import CleanBot
         
         self.logger.info("Initializing Telegram bot...")
@@ -40,8 +43,10 @@ class TelegramBotTester:
         
     async def create_mock_update(self, callback_data: str = None, message_text: str = None):
         """Create a mock Telegram update"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update')
         class MockUser:
             def __init__(self, user_id, name):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockUser.__init__')
                 self.id = user_id
                 self.first_name = name
                 self.username = name.lower()
@@ -49,11 +54,13 @@ class TelegramBotTester:
                 
         class MockChat:
             def __init__(self, chat_id):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockChat.__init__')
                 self.id = chat_id
                 self.type = 'private'
                 
         class MockMessage:
             def __init__(self, chat, user, text=None):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockMessage.__init__')
                 self.chat = chat
                 self.from_user = user
                 self.text = text
@@ -63,6 +70,7 @@ class TelegramBotTester:
                 self.captured_text = []
                 
             async def reply_text(self, text, **kwargs):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockMessage.reply_text')
                 self.captured_text.append(text)
                 print(f"\n[BOT REPLY] {text}")
                 if 'reply_markup' in kwargs and kwargs['reply_markup']:
@@ -74,6 +82,7 @@ class TelegramBotTester:
                 return self
                 
             async def edit_text(self, text, **kwargs):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockMessage.edit_text')
                 self.captured_text.append(text)
                 print(f"\n[BOT EDIT] {text}")
                 if 'reply_markup' in kwargs and kwargs['reply_markup']:
@@ -85,21 +94,25 @@ class TelegramBotTester:
                 return self
                 
             async def delete(self):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockMessage.delete')
                 print("[MESSAGE DELETED]")
                 
         class MockCallbackQuery:
             def __init__(self, user, data, message):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockCallbackQuery.__init__')
                 self.id = '12345'
                 self.from_user = user
                 self.data = data
                 self.message = message
                 
             async def answer(self, text=""):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockCallbackQuery.answer')
                 if text:
                     print(f"[CALLBACK ANSWER] {text}")
                     
         class MockUpdate:
             def __init__(self):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_update.MockUpdate.__init__')
                 self.callback_query = None
                 self.message = None
                 
@@ -119,11 +132,13 @@ class TelegramBotTester:
         
     async def create_mock_context(self):
         """Create a mock context"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_context')
         class MockBot:
             username = 'test_bot'
             
         class MockContext:
             def __init__(self):
+                t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.create_mock_context.MockContext.__init__')
                 self.bot = MockBot()
                 self.user_data = {}
                 self.chat_data = {}
@@ -132,6 +147,7 @@ class TelegramBotTester:
         
     async def send_command(self, command: str):
         """Send a command to the bot"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.send_command')
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"SENDING COMMAND: {command}")
         self.logger.info(f"{'='*60}")
@@ -148,6 +164,7 @@ class TelegramBotTester:
         
     async def click_button(self, callback_data: str, description: str = ""):
         """Simulate clicking a button"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.click_button')
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"CLICKING: {description or callback_data}")
         self.logger.info(f"{'='*60}")
@@ -161,6 +178,7 @@ class TelegramBotTester:
         
     def extract_available_times(self, buttons) -> List[str]:
         """Extract available time slots from buttons"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.extract_available_times')
         times = []
         for row in buttons:
             for button in row:
@@ -174,6 +192,7 @@ class TelegramBotTester:
         
     async def test_book_now_flow(self):
         """Test the complete Book Now flow with dynamic time selection"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.test_book_now_flow')
         print("\n" + "="*80)
         print("TESTING TELEGRAM BOT - BOOK NOW FLOW")
         print("="*80)
@@ -254,12 +273,14 @@ class TelegramBotTester:
         
     async def cleanup(self):
         """Clean up resources"""
+        t('archive.testing.tests.test_telegram_dynamic.TelegramBotTester.cleanup')
         if self.bot and self.bot.browser_pool:
             await self.bot.browser_pool.cleanup()
         self.logger.info("Cleanup complete")
 
 async def main():
     """Main test function"""
+    t('archive.testing.tests.test_telegram_dynamic.main')
     tester = TelegramBotTester()
     
     try:

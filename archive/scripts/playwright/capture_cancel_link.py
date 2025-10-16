@@ -2,6 +2,7 @@
 """
 Enhanced script to capture cancel/modify links from confirmation page
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def capture_cancel_link():
     """Navigate to booking form and capture cancel/modify action details"""
+    t('archive.scripts.playwright.capture_cancel_link.capture_cancel_link')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,  # Show browser
@@ -154,6 +156,7 @@ async def capture_cancel_link():
                         # Set up request monitoring
                         api_calls = []
                         def capture_request(request):
+                            t('archive.scripts.playwright.capture_cancel_link.capture_cancel_link.capture_request')
                             if 'api' in request.url or 'cancel' in request.url or 'modify' in request.url:
                                 api_calls.append({
                                     'url': request.url,

@@ -1,6 +1,7 @@
 """Core availability checker built on consolidated helpers."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -19,10 +20,12 @@ class AvailabilityChecker:
     """Fetch and format court availability using Playwright pages."""
 
     def __init__(self, browser_pool) -> None:
+        t('automation.availability.checker.AvailabilityChecker.__init__')
         self.browser_pool = browser_pool
         self.acuity_parser = AcuityTimeParser()
 
     async def check_all_courts_parallel(self) -> Dict[int, List[str]]:
+        t('automation.availability.checker.AvailabilityChecker.check_all_courts_parallel')
         structured = await self.check_availability()
         flattened: Dict[int, List[str]] = {}
 
@@ -44,6 +47,7 @@ class AvailabilityChecker:
         max_concurrent: int = 3,
         timeout_per_court: float = 30.0,
     ) -> Dict[int, Dict[str, List[str]]]:
+        t('automation.availability.checker.AvailabilityChecker.check_availability')
         targets = court_numbers or list(COURT_CONFIG.keys())
         valid_courts = [c for c in targets if c in COURT_CONFIG]
         if len(valid_courts) < len(targets):
@@ -70,6 +74,7 @@ class AvailabilityChecker:
         semaphore: asyncio.Semaphore,
         timeout: float,
     ) -> Dict[str, List[str]]:
+        t('automation.availability.checker.AvailabilityChecker._check_with_semaphore')
         async with semaphore:
             try:
                 return await asyncio.wait_for(self.check_single_court(court_num), timeout=timeout)
@@ -78,6 +83,7 @@ class AvailabilityChecker:
                 return {"error": str(exc)}
 
     async def check_single_court(self, court_num: int) -> Dict[str, List[str]]:
+        t('automation.availability.checker.AvailabilityChecker.check_single_court')
         if court_num not in COURT_CONFIG:
             raise ValueError(f"Invalid court number: {court_num}")
 
@@ -112,6 +118,7 @@ class AvailabilityChecker:
             raise
 
     async def _has_no_availability_message(self, page: Page) -> bool:
+        t('automation.availability.checker.AvailabilityChecker._has_no_availability_message')
         try:
             for pattern in NO_AVAILABILITY_PATTERNS.get("es", []):
                 if await page.query_selector(f'*:has-text("{pattern}")'):
@@ -129,6 +136,7 @@ class AvailabilityChecker:
         min_time: Optional[str] = None,
         max_time: Optional[str] = None,
     ) -> Optional[Tuple[int, date, str]]:
+        t('automation.availability.checker.AvailabilityChecker.get_next_available_slot')
         availability = await self.check_availability(court_numbers)
 
         earliest: Optional[Tuple[int, date, str]] = None
@@ -156,6 +164,7 @@ class AvailabilityChecker:
 
     @staticmethod
     def format_availability_message(availability: Dict[int, Dict[str, List[str]]]) -> str:
+        t('automation.availability.checker.AvailabilityChecker.format_availability_message')
         if not availability:
             return "No hay disponibilidad en ninguna cancha"
 

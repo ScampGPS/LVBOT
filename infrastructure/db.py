@@ -2,6 +2,7 @@
 Database operation helpers
 Handles common database operations and queries
 """
+from utils.tracking import t
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -15,6 +16,7 @@ class DatabaseHelpers:
     @staticmethod
     def get_or_create_user_profile(user_db, user_id: int, telegram_user) -> Any:
         """Get existing or create new user profile"""
+        t('infrastructure.db.DatabaseHelpers.get_or_create_user_profile')
         profile = user_db.get_user(user_id)
         
         if not profile:
@@ -40,6 +42,7 @@ class DatabaseHelpers:
     @staticmethod
     def update_user_field(user_db, user_id: int, field: str, value: Any) -> bool:
         """Update a single user field"""
+        t('infrastructure.db.DatabaseHelpers.update_user_field')
         user = user_db.get_user(user_id)
         if user:
             setattr(user, field, value)
@@ -50,6 +53,7 @@ class DatabaseHelpers:
     @staticmethod
     def update_user_fields(user_db, user_id: int, fields: Dict[str, Any]) -> bool:
         """Update multiple user fields at once"""
+        t('infrastructure.db.DatabaseHelpers.update_user_fields')
         user = user_db.get_user(user_id)
         if user:
             for field, value in fields.items():
@@ -62,6 +66,7 @@ class DatabaseHelpers:
     @staticmethod
     def get_user_reservations_summary(queue, user_id: int, timezone_str: str = 'America/Guatemala') -> str:
         """Get formatted summary of user's reservations"""
+        t('infrastructure.db.DatabaseHelpers.get_user_reservations_summary')
         tz = pytz.timezone(timezone_str)
         reservations = queue.get_user_reservations_48h(user_id, tz)
         
@@ -95,12 +100,14 @@ class DatabaseHelpers:
     @staticmethod
     def get_active_users_count(user_db) -> int:
         """Get count of active users"""
+        t('infrastructure.db.DatabaseHelpers.get_active_users_count')
         all_users = user_db.get_all_users()
         return sum(1 for user in all_users.values() if user.is_active)
     
     @staticmethod
     def get_pending_users(user_db) -> List[Any]:
         """Get list of users pending approval"""
+        t('infrastructure.db.DatabaseHelpers.get_pending_users')
         all_users = user_db.get_all_users()
         pending = []
         
@@ -115,6 +122,7 @@ class DatabaseHelpers:
     @staticmethod
     def search_users(user_db, query: str) -> List[Any]:
         """Search users by name, phone, email, or username"""
+        t('infrastructure.db.DatabaseHelpers.search_users')
         query = query.lower().strip()
         all_users = user_db.get_all_users()
         results = []
@@ -138,6 +146,7 @@ class DatabaseHelpers:
     @staticmethod
     def get_reservation_stats(queue, timezone_str: str = 'America/Guatemala') -> Dict[str, Any]:
         """Get reservation statistics"""
+        t('infrastructure.db.DatabaseHelpers.get_reservation_stats')
         tz = pytz.timezone(timezone_str)
         all_reservations = queue.get_all_active_reservations(tz)
         
@@ -169,6 +178,7 @@ class DatabaseHelpers:
     @staticmethod
     def cleanup_old_reservations(queue, days_to_keep: int = 7) -> int:
         """Remove reservations older than specified days"""
+        t('infrastructure.db.DatabaseHelpers.cleanup_old_reservations')
         cutoff_date = datetime.now(pytz.UTC) - timedelta(days=days_to_keep)
         removed_count = 0
         
@@ -179,6 +189,7 @@ class DatabaseHelpers:
     @staticmethod
     def export_user_data(user_db, user_id: int) -> Dict[str, Any]:
         """Export all user data for GDPR compliance"""
+        t('infrastructure.db.DatabaseHelpers.export_user_data')
         user = user_db.get_user(user_id)
         if not user:
             return {}
@@ -202,6 +213,7 @@ class DatabaseHelpers:
     @staticmethod
     def get_user_activity_summary(queue, user_id: int, days: int = 30) -> Dict[str, Any]:
         """Get user activity summary for specified period"""
+        t('infrastructure.db.DatabaseHelpers.get_user_activity_summary')
         # This would analyze reservation history
         # For now, return basic structure
         return {
@@ -216,6 +228,7 @@ class DatabaseHelpers:
     @staticmethod
     def batch_update_users(user_db, user_ids: List[int], field: str, value: Any) -> int:
         """Update multiple users with the same field value"""
+        t('infrastructure.db.DatabaseHelpers.batch_update_users')
         updated_count = 0
         
         for user_id in user_ids:

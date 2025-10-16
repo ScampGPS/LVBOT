@@ -3,6 +3,7 @@
 Test booking with screenshots at every step
 This will show EXACTLY what happens during and after booking
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -18,6 +19,7 @@ logging.basicConfig(
 
 async def book_with_screenshots():
     """Book a slot and take screenshots at every critical step"""
+    t('archive.testing.tests.test_booking_with_screenshots.book_with_screenshots')
     logger = logging.getLogger('BookingWithScreenshots')
     
     print("\n" + "="*80)

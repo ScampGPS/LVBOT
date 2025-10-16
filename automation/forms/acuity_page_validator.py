@@ -2,6 +2,7 @@
 Acuity Page Validator - Validates Acuity scheduling pages for extraction
 Implements modular page readiness validation following DRY principles
 """
+from utils.tracking import t
 
 import logging
 from typing import Optional
@@ -34,6 +35,7 @@ class AcuityPageValidator:
         Returns:
             True if page has extractable scheduling content, False otherwise
         """
+        t('automation.forms.acuity_page_validator.AcuityPageValidator.is_page_ready_for_extraction')
         try:
             current_url = page.url
             logger.debug(f"Court {court_num}: Validating page readiness on URL: {current_url}")
@@ -69,6 +71,7 @@ class AcuityPageValidator:
         Returns:
             True if on Acuity domain, False otherwise
         """
+        t('automation.forms.acuity_page_validator.AcuityPageValidator._is_acuity_domain')
         try:
             current_url = page.url.lower()
             
@@ -103,6 +106,7 @@ class AcuityPageValidator:
         Returns:
             True if scheduling structure is present, False otherwise
         """
+        t('automation.forms.acuity_page_validator.AcuityPageValidator.has_acuity_scheduling_structure')
         try:
             # Get the appropriate frame (iframe or page itself)
             extraction_frame = await cls._get_extraction_frame(page)
@@ -170,6 +174,7 @@ class AcuityPageValidator:
         Returns:
             Frame for extraction or None if page is unusable
         """
+        t('automation.forms.acuity_page_validator.AcuityPageValidator._get_extraction_frame')
         try:
             # First try the page directly (most common case for modern Acuity)
             logger.debug("Using page directly for extraction")
@@ -201,6 +206,7 @@ class AcuityPageValidator:
             page: The browser page to analyze
             court_num: Court number for context
         """
+        t('automation.forms.acuity_page_validator.AcuityPageValidator.log_page_analysis')
         try:
             current_url = page.url
             title = await page.title()

@@ -2,12 +2,14 @@
 """
 Quick test to verify the correct selectors for time buttons
 """
+from utils.tracking import t
 
 import asyncio
 from playwright.async_api import async_playwright
 
 async def test_selectors():
     """Test different selectors to find time buttons"""
+    t('archive.testing.tools.verify_selectors.test_selectors')
     print("Testing time button selectors...")
     
     async with async_playwright() as p:

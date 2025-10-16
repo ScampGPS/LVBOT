@@ -3,6 +3,7 @@
 Comprehensive Logging Configuration for LVBOT
 Provides detailed logging for debugging the tennis reservation bot
 """
+from utils.tracking import t
 
 import os
 import logging
@@ -24,6 +25,7 @@ def setup_logging() -> None:
     Set up comprehensive logging configuration with multiple handlers and detailed formatting.
     This version clears previous logs in the 'latest_log' directory before starting a new session.
     """
+    t('logging_config.setup_logging')
     # Clear previous logs in the directory
     if os.path.exists(LOG_DIR):
         for filename in os.listdir(LOG_DIR):
@@ -198,6 +200,7 @@ def get_logger(name: str) -> logging.Logger:
     Returns:
         logging.Logger instance
     """
+    t('logging_config.get_logger')
     return logging.getLogger(name)
 
 # Utility function to log function entry/exit
@@ -219,9 +222,12 @@ def log_function_call(logger: logging.Logger) -> Callable:
         def my_function(arg1, arg2):
             return result
     """
+    t('logging_config.log_function_call')
     def decorator(func):
+        t('logging_config.log_function_call.decorator')
         def wrapper(*args, **kwargs):
             # Construct a unique identifier for the function (module.class.function)
+            t('logging_config.log_function_call.decorator.wrapper')
             function_identifier = f"{func.__module__}.{func.__qualname__}"
             _tracked_functions.add(function_identifier)
             
@@ -256,6 +262,7 @@ def save_tracked_functions() -> None:
     Returns:
         None
     """
+    t('logging_config.save_tracked_functions')
     if not _tracked_functions:
         return
 

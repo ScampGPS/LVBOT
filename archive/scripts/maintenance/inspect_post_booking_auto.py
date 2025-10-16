@@ -2,6 +2,7 @@
 """
 Script to inspect what happens after booking form submission (automatic version)
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def inspect_post_booking():
     """Navigate to booking form and capture what happens after submission"""
+    t('archive.scripts.maintenance.inspect_post_booking_auto.inspect_post_booking')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,  # Run headless

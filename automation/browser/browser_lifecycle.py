@@ -2,6 +2,7 @@
 Browser lifecycle management utilities
 Centralizes browser pool initialization and shutdown
 """
+from utils.tracking import t
 
 import logging
 from typing import Optional
@@ -22,6 +23,7 @@ class BrowserLifecycle:
         Returns:
             bool: True if successful, False otherwise
         """
+        t('automation.browser.browser_lifecycle.BrowserLifecycle.start_pool')
         if not logger:
             logger = logging.getLogger('BrowserLifecycle')
             
@@ -46,6 +48,7 @@ class BrowserLifecycle:
         Returns:
             bool: True if successful, False otherwise
         """
+        t('automation.browser.browser_lifecycle.BrowserLifecycle.stop_pool')
         if not logger:
             logger = logging.getLogger('BrowserLifecycle')
             

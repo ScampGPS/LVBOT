@@ -2,6 +2,7 @@
 """
 Integration test to verify the updated CourtAvailability works without breaking existing functionality
 """
+from utils.tracking import t
 
 import sys
 import os
@@ -12,6 +13,7 @@ from lvbot.utils.court_availability import CourtAvailability
 
 def test_backward_compatibility():
     """Test that existing methods still work"""
+    t('archive.testing.tests.test_integration.test_backward_compatibility')
     print("=== Testing Backward Compatibility ===")
     
     # Test static methods that don't require Playwright
@@ -27,6 +29,7 @@ def test_backward_compatibility():
 
 def test_time_validation():
     """Test time text validation"""
+    t('archive.testing.tests.test_integration.test_time_validation')
     print("\n=== Testing Time Validation ===")
     
     test_cases = [
@@ -48,6 +51,7 @@ def test_time_validation():
 
 def test_day_feasibility():
     """Test day feasibility checks"""
+    t('archive.testing.tests.test_integration.test_day_feasibility')
     print("\n=== Testing Day Feasibility ===")
     
     # Today should be feasible if we're before 9 PM
@@ -69,6 +73,7 @@ def test_day_feasibility():
 
 def test_navigation_selectors():
     """Test navigation selector lists"""
+    t('archive.testing.tests.test_integration.test_navigation_selectors')
     print("\n=== Testing Navigation Selectors ===")
     
     next_selectors = CourtAvailability.get_next_navigation_selectors()
@@ -88,6 +93,7 @@ def test_navigation_selectors():
 
 def test_day_names_mapping():
     """Test day names mapping"""
+    t('archive.testing.tests.test_integration.test_day_names_mapping')
     print("\n=== Testing Day Names Mapping ===")
     
     day_names = CourtAvailability.get_day_names()
@@ -104,6 +110,7 @@ def test_day_names_mapping():
 
 def test_imports():
     """Test that all imports work correctly"""
+    t('archive.testing.tests.test_integration.test_imports')
     print("\n=== Testing Imports ===")
     
     try:

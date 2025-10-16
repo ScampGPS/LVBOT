@@ -3,6 +3,7 @@
 Check available slots for tomorrow WITHOUT booking
 This is safe to run - it only checks availability
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -25,6 +26,7 @@ logging.basicConfig(
 
 async def check_tomorrow_availability():
     """Check what slots are available tomorrow"""
+    t('archive.scripts.monitoring.check_tomorrow_slots.check_tomorrow_availability')
     logger = logging.getLogger('SlotChecker')
     
     print("\n" + "="*80)

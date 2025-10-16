@@ -7,6 +7,7 @@ Fixes:
 2. Force kills all browser processes
 3. Provides clean restart instructions
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -31,6 +32,7 @@ logger = logging.getLogger('BotFixer')
 
 def kill_bot_processes():
     """Kill all bot processes"""
+    t('archive.scripts.maintenance.fix_bot_issues.kill_bot_processes')
     logger.info("🔴 Killing all bot processes...")
     try:
         # Kill Python bot processes
@@ -52,6 +54,7 @@ def kill_bot_processes():
 
 def kill_browser_processes():
     """Force kill all browser processes"""
+    t('archive.scripts.maintenance.fix_bot_issues.kill_browser_processes')
     logger.info("🔴 Force killing all browser processes...")
     try:
         # Kill with SIGKILL (-9) for immediate termination
@@ -74,6 +77,7 @@ def kill_browser_processes():
 
 def verify_cleanup():
     """Verify all processes are cleaned up"""
+    t('archive.scripts.maintenance.fix_bot_issues.verify_cleanup')
     logger.info("🔍 Verifying cleanup...")
     
     # Check for remaining bot processes
@@ -102,6 +106,7 @@ def verify_cleanup():
     return True
 
 def main():
+    t('archive.scripts.maintenance.fix_bot_issues.main')
     logger.info("="*60)
     logger.info("LVBOT CRITICAL ISSUES FIX SCRIPT")
     logger.info("="*60)

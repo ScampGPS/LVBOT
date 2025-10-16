@@ -1,6 +1,7 @@
 """Navigation helpers shared across booking executors."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -21,6 +22,7 @@ class OptimizedNavigation:
         url: str,
         max_timeout: int = 30000,
     ) -> Tuple[bool, float]:
+        t('automation.executors.navigation.OptimizedNavigation.navigate_with_progressive_fallback')
         import time as _time
 
         start_time = _time.time()
@@ -75,6 +77,7 @@ class OptimizedNavigation:
 
     @staticmethod
     async def ensure_page_ready(page: Page, timeout: int = 10000) -> bool:
+        t('automation.executors.navigation.OptimizedNavigation.ensure_page_ready')
         try:
             loading_selectors = [
                 ".loading",
@@ -116,6 +119,7 @@ class OptimizedNavigation:
         url: str,
         expected_form_fields: Optional[list] = None,
     ) -> Tuple[bool, str]:
+        t('automation.executors.navigation.OptimizedNavigation.navigate_and_validate')
         success, nav_time = await OptimizedNavigation.navigate_with_progressive_fallback(page, url)
         if not success:
             return False, "Navigation failed"
@@ -140,6 +144,7 @@ class ReliableNavigation:
         timeout_seconds: int = 10,
         enable_network_logging: bool = False,
     ) -> Dict[str, Any]:
+        t('automation.executors.navigation.ReliableNavigation.navigate_to_url')
         start_time = time.time()
         dom_ready = asyncio.Event()
         navigation_response = None
@@ -147,11 +152,13 @@ class ReliableNavigation:
         response_count = 0
 
         def on_dom_ready() -> None:
+            t('automation.executors.navigation.ReliableNavigation.navigate_to_url.on_dom_ready')
             dom_time = time.time() - start_time
             logger.info("[RELIABLE NAV] DOM ready at %.2fs", dom_time)
             dom_ready.set()
 
         def on_request(request) -> None:
+            t('automation.executors.navigation.ReliableNavigation.navigate_to_url.on_request')
             nonlocal request_count
             request_count += 1
             if enable_network_logging:
@@ -159,6 +166,7 @@ class ReliableNavigation:
                 logger.debug("[RELIABLE NAV %.1fs] REQ #%s: %s", elapsed, request_count, request.url[:80])
 
         def on_response(response) -> None:
+            t('automation.executors.navigation.ReliableNavigation.navigate_to_url.on_response')
             nonlocal response_count, navigation_response
             response_count += 1
             if enable_network_logging:
@@ -240,6 +248,7 @@ class ReliableNavigation:
         form_selectors: Optional[list] = None,
         timeout_seconds: int = 15,
     ) -> Dict[str, Any]:
+        t('automation.executors.navigation.ReliableNavigation.navigate_with_form_check')
         result = await ReliableNavigation.navigate_to_url(page, url, timeout_seconds)
         if not result.get("success"):
             return result

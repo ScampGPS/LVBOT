@@ -3,6 +3,7 @@
 Reservation Scheduler with Dynamic Booking Orchestration
 Manages the execution of queued reservations with 3 browsers and staggered refresh
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -47,6 +48,7 @@ class ReservationScheduler:
         user_manager: Optional[Any] = None,
     ):
         # Support both old and new initialization patterns
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.__init__')
         if bot_handler:
             self.bot = bot_handler
             self.config = bot_handler.config
@@ -117,6 +119,7 @@ class ReservationScheduler:
         Returns:
             Field value or default
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._get_reservation_field')
         return reservation.get(field, default)
     
     @staticmethod
@@ -132,6 +135,7 @@ class ReservationScheduler:
         Returns:
             Parsed datetime/date or current datetime/date as fallback
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._parse_datetime_field')
         value = ReservationScheduler._get_reservation_field(reservation, field)
         
         if isinstance(value, str):
@@ -151,6 +155,7 @@ class ReservationScheduler:
     
     async def _ensure_browser_pool(self):
         """Ensure browser pool is initialized (lazy initialization)."""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._ensure_browser_pool')
 
         if not self._pool_initialized:
             if self._pool_init_attempts >= self.MAX_POOL_INIT_ATTEMPTS:
@@ -173,6 +178,7 @@ class ReservationScheduler:
             
     async def _initialize_browser_pool(self):
         """Initialize persistent browser pool with 3 browsers"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._initialize_browser_pool')
         try:
             pool = await self.browser_manager.ensure_pool()
             self.browser_pool = pool
@@ -187,6 +193,7 @@ class ReservationScheduler:
     
     async def _create_and_initialize_browser_pool_async(self):
         """Create and initialize browser pool in async context"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._create_and_initialize_browser_pool_async')
         try:
             # Create pool
             browser_pool = await self._create_browser_pool_async()
@@ -212,6 +219,7 @@ class ReservationScheduler:
     
     async def _create_browser_pool_async(self):
         """Create browser pool in async context"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._create_browser_pool_async')
         try:
             self.logger.info("="*60)
             self.logger.info("INITIALIZING SPECIALIZED BROWSER POOL (ASYNC)")
@@ -247,6 +255,7 @@ class ReservationScheduler:
     
     async def run_async(self):
         """Run the scheduler in the current event loop (new method)"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.run_async')
         self.logger.info("Starting reservation scheduler in main event loop")
         self.running = True
         
@@ -276,6 +285,7 @@ class ReservationScheduler:
     
     async def start(self):
         """Start the reservation scheduler (legacy method - creates separate thread)"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.start')
         self.logger.info("Starting reservation scheduler")
         self.running = True
         
@@ -310,6 +320,7 @@ class ReservationScheduler:
     
     async def stop(self):
         """Stop the scheduler"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.stop')
         self.logger.info("Stopping reservation scheduler")
         self.running = False
         
@@ -324,6 +335,7 @@ class ReservationScheduler:
     
     async def _scheduler_loop(self):
         """Main scheduler loop that checks for reservations to execute"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._scheduler_loop')
         while self.running:
             try:
                 # Get reservations that need to be executed
@@ -419,6 +431,7 @@ class ReservationScheduler:
         Execute a group of reservations for the same time slot
         Uses persistent browser pool with dynamic court assignment
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_reservation_group')
         if not reservations:
             return
         
@@ -482,6 +495,7 @@ class ReservationScheduler:
         # Create a simple class to hold reservation data as attributes
         class ReservationData:
             def __init__(self, data):
+                t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_reservation_group.ReservationData.__init__')
                 self.__dict__.update(data)
         
         enriched_reservations = []
@@ -538,6 +552,7 @@ class ReservationScheduler:
         """
         Execute bookings using persistent browser pool with smart court assignment
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_with_persistent_pool')
         browser_assignments = booking_plan['browser_assignments']
         results = {}
         
@@ -682,6 +697,7 @@ class ReservationScheduler:
         Returns:
             Dict with booking results
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_single_booking')
         import time
         execution_start = time.time()
         
@@ -854,6 +870,7 @@ class ReservationScheduler:
     
     async def _execute_fallback(self, fallback_plan: Dict):
         """Execute a fallback booking attempt using persistent pool"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_fallback')
         reservation_id = fallback_plan['reservation_id']
         fallback_court = fallback_plan['fallback_court']
         
@@ -1003,6 +1020,7 @@ class ReservationScheduler:
     
     def _update_reservation_success(self, reservation_id: str, result: Dict):
         """Update reservation status to completed"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._update_reservation_success')
         # Clear any fallback attempts for this reservation
         self._fallback_attempts.pop(reservation_id, None)
         
@@ -1012,6 +1030,7 @@ class ReservationScheduler:
     
     def _update_reservation_failed(self, reservation_id: str, error: str):
         """Update reservation status to failed and remove from queue"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._update_reservation_failed')
         # Clear any fallback attempts for this reservation
         self._fallback_attempts.pop(reservation_id, None)
         
@@ -1048,6 +1067,7 @@ class ReservationScheduler:
     
     async def _notify_booking_results(self, results: Dict[str, Any]):
         """Send notifications to users about booking results"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._notify_booking_results')
         self.logger.info(f"📢 _notify_booking_results called with {len(results)} results")
         for reservation_id, result in results.items():
             self.logger.info(f"Processing notification for reservation {reservation_id[:8]}...: {result}")
@@ -1094,6 +1114,7 @@ class ReservationScheduler:
     
     def _get_reservation_by_id(self, reservation_id: str):
         """Get reservation by ID from queue (checks all reservations including completed)"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._get_reservation_by_id')
         # Use the queue's get_reservation method which searches all reservations
         reservation = self.queue.get_reservation(reservation_id)
         if reservation:
@@ -1104,6 +1125,7 @@ class ReservationScheduler:
     
     async def _handle_waitlisted_users(self, waitlisted_users, target_date: str, target_time: str):
         """Handle users who were waitlisted due to capacity"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._handle_waitlisted_users')
         self.logger.info(f"Processing {len(waitlisted_users)} waitlisted users for {target_date} {target_time}")
         
         # Update reservation status to waitlisted
@@ -1128,6 +1150,7 @@ class ReservationScheduler:
         Args:
             reservation_id: ID of cancelled reservation
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.handle_cancellation')
         self.logger.info(f"HANDLING CANCELLATION for reservation {reservation_id}")
         
         # Get the cancelled reservation
@@ -1209,6 +1232,7 @@ class ReservationScheduler:
         Returns:
             Dict[str, bool]: browser_id -> success status
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.force_browser_refresh')
         self.logger.info("🔄 MANUAL BROWSER REFRESH: Force refresh requested")
         
         if not self.browser_pool:
@@ -1234,6 +1258,7 @@ class ReservationScheduler:
     
     def get_performance_report(self) -> str:
         """Get scheduler performance statistics"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler.get_performance_report')
         success_rate = (
             (self.stats['successful_bookings'] / self.stats['total_attempts'] * 100)
             if self.stats['total_attempts'] > 0 else 0
@@ -1304,6 +1329,7 @@ class ReservationScheduler:
     
     async def _check_startup_reservations(self):
         """Check for existing reservations at startup and attempt to book ready ones"""
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._check_startup_reservations')
         self.logger.info("🔍 Checking for existing reservations at startup...")
         
         # In test mode, get ALL reservations (including failed ones for retry)
@@ -1389,6 +1415,7 @@ class ReservationScheduler:
         Returns:
             True if system is healthy or recovery successful, False otherwise
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._perform_pre_execution_health_check')
         if not self.health_checker:
             self.logger.warning("Health checker not initialized - skipping health check")
             return True
@@ -1498,6 +1525,7 @@ class ReservationScheduler:
         """
         Send health warning to user
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._send_health_warning')
         try:
             message = (
                 f"⚠️ **System Notice**\n\n"
@@ -1513,6 +1541,7 @@ class ReservationScheduler:
         """
         Send recovery notification to user
         """
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._send_recovery_notification')
         try:
             if recovery_result.strategy_used.value == 'emergency_fallback':
                 message = (

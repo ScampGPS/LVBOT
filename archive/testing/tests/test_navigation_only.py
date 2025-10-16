@@ -2,6 +2,7 @@
 """
 Test navigation timing in isolation to verify the optimization
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def test_navigation_strategies():
     """Test different navigation strategies"""
+    t('archive.testing.tests.test_navigation_only.test_navigation_strategies')
     
     # Test URL (tomorrow at 10:00)
     target_date = datetime.now() + timedelta(days=1)

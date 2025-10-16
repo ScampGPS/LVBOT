@@ -2,6 +2,7 @@
 """
 Multi-browser safe booking - optimized for environments with 3+ concurrent browsers.
 """
+from utils.tracking import t
 
 import asyncio
 import random
@@ -17,6 +18,7 @@ class BrowserResourceManager:
     @staticmethod
     def get_system_load():
         """Check current system resource usage."""
+        t('archive.experiments.working_booking_solution.multi_browser_booking.BrowserResourceManager.get_system_load')
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
         return {
@@ -28,6 +30,7 @@ class BrowserResourceManager:
     @staticmethod
     def should_delay_for_resources():
         """Determine if we should delay due to high resource usage."""
+        t('archive.experiments.working_booking_solution.multi_browser_booking.BrowserResourceManager.should_delay_for_resources')
         load = BrowserResourceManager.get_system_load()
         
         # Delay if system is under heavy load
@@ -39,6 +42,7 @@ class BrowserResourceManager:
 
 async def staggered_delay(min_seconds=3, max_seconds=8):
     """Create staggered delays to avoid simultaneous actions."""
+    t('archive.experiments.working_booking_solution.multi_browser_booking.staggered_delay')
     # Add extra randomization for multi-browser environments
     base_delay = random.uniform(min_seconds, max_seconds)
     
@@ -51,6 +55,7 @@ async def staggered_delay(min_seconds=3, max_seconds=8):
 
 async def cautious_navigation(page, url, wait_time=None):
     """Navigate with extra caution for multi-browser environments."""
+    t('archive.experiments.working_booking_solution.multi_browser_booking.cautious_navigation')
     print(f"   Navigating to: {url[:50]}...")
     
     # Check system resources before navigation
@@ -82,6 +87,7 @@ async def cautious_navigation(page, url, wait_time=None):
 
 async def multi_browser_safe_booking():
     """Booking optimized for multi-browser environments."""
+    t('archive.experiments.working_booking_solution.multi_browser_booking.multi_browser_safe_booking')
     
     tomorrow = datetime.now() + timedelta(days=1)
     target_time = "09:00"

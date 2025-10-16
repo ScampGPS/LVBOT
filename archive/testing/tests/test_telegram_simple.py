@@ -3,6 +3,7 @@
 Simple test of Telegram immediate booking
 Tests if the bot can execute a booking for tomorrow
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def test_booking():
     """Test immediate booking directly"""
+    t('archive.testing.tests.test_telegram_simple.test_booking')
     logger = logging.getLogger('TestBooking')
     
     print("\n" + "="*80)

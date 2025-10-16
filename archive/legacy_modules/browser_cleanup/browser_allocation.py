@@ -2,6 +2,7 @@
 Smart Browser Allocation Helper
 Determines which courts need browsers based on queued reservations
 """
+from utils.tracking import t
 
 from typing import List, Dict, Set, Tuple
 from collections import defaultdict
@@ -23,6 +24,7 @@ class BrowserAllocationHelper:
             Dict mapping time slots to set of courts that need browsers
             Example: {'09:00': {1, 3}, '10:00': {2, 3}}
         """
+        t('archive.legacy_modules.browser_cleanup.browser_allocation.BrowserAllocationHelper.analyze_court_needs')
         court_needs = defaultdict(set)
         
         # Group reservations by time
@@ -78,6 +80,7 @@ class BrowserAllocationHelper:
             Dict mapping court numbers to list of time slots
             Example: {1: ['09:00', '10:00'], 3: ['09:00']}
         """
+        t('archive.legacy_modules.browser_cleanup.browser_allocation.BrowserAllocationHelper.get_browser_requirements')
         browser_requirements = defaultdict(list)
         
         for time_slot, courts in court_needs.items():
@@ -94,6 +97,7 @@ class BrowserAllocationHelper:
         Returns:
             Number of browsers needed (max courts at any time slot)
         """
+        t('archive.legacy_modules.browser_cleanup.browser_allocation.BrowserAllocationHelper.optimize_browser_pool_size')
         if not court_needs:
             return 0
             
@@ -111,6 +115,7 @@ class BrowserAllocationHelper:
         Returns:
             True if refresh strategy is recommended
         """
+        t('archive.legacy_modules.browser_cleanup.browser_allocation.BrowserAllocationHelper.should_use_refresh_strategy')
         # If monitoring many different time slots, refresh is better
         # If focused on 1-2 slots, pre-positioning is better
         return len(set(time_slots)) > 2
@@ -118,6 +123,7 @@ class BrowserAllocationHelper:
     @staticmethod
     def log_allocation_plan(court_needs: Dict[str, Set[int]], logger: logging.Logger):
         """Log the browser allocation plan for debugging"""
+        t('archive.legacy_modules.browser_cleanup.browser_allocation.BrowserAllocationHelper.log_allocation_plan')
         
         if not court_needs:
             logger.info("No browsers needed - no queued reservations")

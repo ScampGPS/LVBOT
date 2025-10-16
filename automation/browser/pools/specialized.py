@@ -3,6 +3,7 @@
 Specialized Browser Pool - One Browser Per Court
 Each browser is pre-positioned on a specific court for instant booking
 """
+from utils.tracking import t
 
 import threading
 import time
@@ -44,6 +45,7 @@ class SpecializedBrowser:
     id: str = None
     
     def __post_init__(self):
+        t('automation.browser.pools.specialized.SpecializedBrowser.__post_init__')
         if self.created_at is None:
             self.created_at = datetime.now()
         if self.last_used is None:
@@ -68,6 +70,7 @@ class SpecializedBrowserPool:
                  persistent: bool = True,  # Keep browsers alive between bookings
                  max_browsers: int = 2):  # Maximum concurrent browsers (GCE optimized)
         
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.__init__')
         self.logger = logging.getLogger('SpecializedBrowserPool')
         self.logger.debug(f"Initializing SpecializedBrowserPool with: courts_needed={courts_needed}, "
                          f"headless={headless}, low_resource_mode={low_resource_mode}, "
@@ -173,6 +176,7 @@ class SpecializedBrowserPool:
     
     async def start(self):
         """Start the specialized browser pool"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.start')
         self.logger.info(f"Starting specialized browser pool for courts: {self.courts_needed}")
         self.running = True
         
@@ -192,6 +196,7 @@ class SpecializedBrowserPool:
     
     async def stop(self):
         """Stop the pool and clean up"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.stop')
         self.logger.info("Stopping specialized browser pool")
         self.running = False
         
@@ -224,10 +229,12 @@ class SpecializedBrowserPool:
     
     def is_ready(self) -> bool:
         """Check if browser pool is ready for use"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.is_ready')
         return self._ready_event.is_set() and bool(self.browsers)
     
     def get_browser_count(self) -> int:
         """Get the number of active browsers in the pool"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.get_browser_count')
         with self.lock:
             return len(self.browsers)
     
@@ -241,6 +248,7 @@ class SpecializedBrowserPool:
         Returns:
             True if ready, False if timeout or error
         """
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.wait_until_ready')
         try:
             await asyncio.wait_for(self._ready_event.wait(), timeout=timeout)
             if self._initialization_error:
@@ -256,10 +264,12 @@ class SpecializedBrowserPool:
     
     def get_initialization_error(self) -> Optional[str]:
         """Get initialization error if any"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.get_initialization_error')
         return self._initialization_error
     
     async def _initialize_court_browsers(self):
         """Create and position browsers for needed courts only (max 2 browsers)"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._initialize_court_browsers')
         courts_to_init = self.courts_needed[:self.max_browsers]  # Limit to max_browsers
         self.logger.info(f"Creating {len(courts_to_init)} browsers for courts: {courts_to_init}")
         
@@ -312,6 +322,7 @@ class SpecializedBrowserPool:
     
     async def _create_and_position_browser(self, court_number: int) -> Optional[SpecializedBrowser]:
         """Create a browser and pre-position it on a specific court"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._create_and_position_browser')
         try:
             start_time = time.time()
             self.logger.info(f"Creating browser for court {court_number}...")
@@ -362,6 +373,7 @@ class SpecializedBrowserPool:
     
     async def _position_on_court(self, browser: SpecializedBrowser) -> bool:
         """Navigate to booking page and position on specific court"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._position_on_court')
         try:
             # Navigate to booking page
             self.logger.debug(f"Navigating to {self.booking_url}")
@@ -489,6 +501,7 @@ class SpecializedBrowserPool:
         Returns:
             Dict with success status and details
         """
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.execute_parallel_booking')
         # Check if browsers are ready
         if not self.is_ready():
             return {
@@ -571,6 +584,7 @@ class SpecializedBrowserPool:
     async def _attempt_booking_on_court(self, browser: SpecializedBrowser, 
                                   target_time: str, user_info: Dict[str, str]) -> Tuple[bool, str]:
         """Attempt to book a specific time on a pre-positioned court"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._attempt_booking_on_court')
         try:
             self.logger.info(f"Attempting booking on court {browser.court_number} for {target_time}")
             
@@ -654,6 +668,7 @@ class SpecializedBrowserPool:
     
     async def _get_available_times(self, frame: Frame) -> List[str]:
         """Extract available time slots from current page"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._get_available_times')
         try:
             js_code = """
             () => {
@@ -676,6 +691,7 @@ class SpecializedBrowserPool:
     
     async def _handle_post_booking_reassignment(self, browser_id: str, booked_court: int):
         """Handle browser reassignment after successful booking"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._handle_post_booking_reassignment')
         try:
             # Get next court assignment from manager
             next_court = self.court_manager.get_next_court_assignment(booked_court, browser_id)
@@ -715,6 +731,7 @@ class SpecializedBrowserPool:
     
     async def _close_browser(self, browser: SpecializedBrowser):
         """Close a browser instance"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._close_browser')
         try:
             if browser.page:
                 await browser.page.close()
@@ -728,6 +745,7 @@ class SpecializedBrowserPool:
     
     async def _maintenance_loop(self):
         """Maintain browser health and positioning"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._maintenance_loop')
         self.logger.info("Maintenance thread started")
         
         while self.running:
@@ -772,6 +790,7 @@ class SpecializedBrowserPool:
     
     async def _recycle_browser(self, browser_id: str):
         """Recycle a specific browser"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._recycle_browser')
         try:
             with self.lock:
                 browser = self.browsers.get(browser_id)
@@ -798,6 +817,7 @@ class SpecializedBrowserPool:
     
     async def _ensure_browser_coverage(self):
         """Ensure we have browsers on primary courts"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._ensure_browser_coverage')
         try:
             current_browser_count = len(self.browsers)
             
@@ -830,6 +850,7 @@ class SpecializedBrowserPool:
         Returns:
             Dict[str, bool]: browser_id -> success status
         """
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.refresh_browser_pages')
         refresh_results = {}
         
         self.logger.info("🔄 Starting browser page refresh cycle")
@@ -872,6 +893,7 @@ class SpecializedBrowserPool:
     
     def get_stats(self) -> Dict:
         """Get pool statistics"""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool.get_stats')
         with self.lock:
             # Get court manager status
             court_summary = self.court_manager.get_status_summary()

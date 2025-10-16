@@ -2,6 +2,7 @@
 """
 Analyze all phases of the booking process to identify optimization opportunities
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -28,6 +29,7 @@ class BookingPhaseAnalyzer:
     """Analyze timing of each booking phase"""
     
     def __init__(self):
+        t('archive.scripts.analysis.analyze_booking_phases.BookingPhaseAnalyzer.__init__')
         self.logger = logging.getLogger('PhaseAnalyzer')
         self.phase_times = {}
         self.user_info = {
@@ -40,16 +42,19 @@ class BookingPhaseAnalyzer:
         
     def start_phase(self, phase_name: str):
         """Mark the start of a phase"""
+        t('archive.scripts.analysis.analyze_booking_phases.BookingPhaseAnalyzer.start_phase')
         self.phase_times[phase_name] = {'start': time.time()}
         
     def end_phase(self, phase_name: str):
         """Mark the end of a phase"""
+        t('archive.scripts.analysis.analyze_booking_phases.BookingPhaseAnalyzer.end_phase')
         if phase_name in self.phase_times:
             self.phase_times[phase_name]['end'] = time.time()
             self.phase_times[phase_name]['duration'] = self.phase_times[phase_name]['end'] - self.phase_times[phase_name]['start']
     
     async def analyze_booking_process(self):
         """Analyze the entire booking process with detailed timing"""
+        t('archive.scripts.analysis.analyze_booking_phases.BookingPhaseAnalyzer.analyze_booking_process')
         
         print("\n" + "="*80)
         print("BOOKING PHASE ANALYSIS")
@@ -219,6 +224,7 @@ class BookingPhaseAnalyzer:
     
     def display_results(self):
         """Display timing analysis results"""
+        t('archive.scripts.analysis.analyze_booking_phases.BookingPhaseAnalyzer.display_results')
         print("\n" + "="*80)
         print("PHASE TIMING ANALYSIS")
         print("="*80)
@@ -260,6 +266,7 @@ class BookingPhaseAnalyzer:
 
 async def main():
     """Run the phase analysis"""
+    t('archive.scripts.analysis.analyze_booking_phases.main')
     analyzer = BookingPhaseAnalyzer()
     await analyzer.analyze_booking_process()
 

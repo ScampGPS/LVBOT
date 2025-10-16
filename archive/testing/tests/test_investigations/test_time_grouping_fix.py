@@ -1,6 +1,7 @@
 """
 Test the time grouping fix to ensure times are properly associated with their days
 """
+from utils.tracking import t
 
 import asyncio
 import sys
@@ -16,6 +17,7 @@ logging.basicConfig(
 
 async def test_time_grouping():
     """Test that times are properly grouped by day using time-order logic"""
+    t('archive.testing.tests.test_investigations.test_time_grouping_fix.test_time_grouping')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.availability_checker_v3 import AvailabilityCheckerV3
     

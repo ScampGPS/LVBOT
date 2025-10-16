@@ -2,6 +2,7 @@
 Message handling helper functions
 Common patterns for handling Telegram messages and updates
 """
+from utils.tracking import t
 
 from typing import Optional, Union, List, Dict, Any
 from telegram import Update, Message, CallbackQuery
@@ -16,6 +17,7 @@ class MessageHandlers:
     @staticmethod
     async def handle_unauthorized_user(update: Update) -> None:
         """Standard response for unauthorized users"""
+        t('botapp.messages.message_handlers.MessageHandlers.handle_unauthorized_user')
         message = (
             "🔐 You are not authorized to use this bot.\n"
             "Please send /start to request access."
@@ -33,6 +35,7 @@ class MessageHandlers:
     async def handle_invalid_command(update: Update, error_msg: str, 
                                    help_text: Optional[str] = None) -> None:
         """Standard response for invalid commands"""
+        t('botapp.messages.message_handlers.MessageHandlers.handle_invalid_command')
         msg = f"❌ {error_msg}"
         if help_text:
             msg += f"\n\n💡 {help_text}"
@@ -46,6 +49,7 @@ class MessageHandlers:
     async def send_loading_message(update: Update, 
                                  text: str = "Processing...") -> Optional[Message]:
         """Send a loading message that can be edited later"""
+        t('botapp.messages.message_handlers.MessageHandlers.send_loading_message')
         loading_text = f"⏳ {text}"
         
         if update.message:
@@ -59,6 +63,7 @@ class MessageHandlers:
     @staticmethod
     async def edit_or_reply(update: Update, text: str, **kwargs) -> None:
         """Edit message if it's a callback query, otherwise reply"""
+        t('botapp.messages.message_handlers.MessageHandlers.edit_or_reply')
         # Set default parse mode
         if 'parse_mode' not in kwargs:
             kwargs['parse_mode'] = ParseMode.MARKDOWN
@@ -87,6 +92,7 @@ class MessageHandlers:
                                  text: Optional[str] = None, 
                                  show_alert: bool = False) -> None:
         """Safely answer a callback query"""
+        t('botapp.messages.message_handlers.MessageHandlers.safe_answer_callback')
         try:
             await callback_query.answer(text, show_alert=show_alert)
         except Exception as e:
@@ -96,6 +102,7 @@ class MessageHandlers:
     async def send_chunked_message(update: Update, text: str, 
                                  chunk_size: int = 4000) -> List[Message]:
         """Send long messages in chunks to avoid Telegram limits"""
+        t('botapp.messages.message_handlers.MessageHandlers.send_chunked_message')
         messages = []
         chunks = MessageHandlers.split_message(text, chunk_size)
         
@@ -126,6 +133,7 @@ class MessageHandlers:
     @staticmethod
     def split_message(text: str, max_length: int = 4000) -> List[str]:
         """Split long message into chunks"""
+        t('botapp.messages.message_handlers.MessageHandlers.split_message')
         if len(text) <= max_length:
             return [text]
         
@@ -169,6 +177,7 @@ class MessageHandlers:
     @staticmethod
     async def delete_message_safe(message: Message) -> bool:
         """Safely delete a message"""
+        t('botapp.messages.message_handlers.MessageHandlers.delete_message_safe')
         try:
             await message.delete()
             return True
@@ -180,6 +189,7 @@ class MessageHandlers:
     async def send_error_message(update: Update, error: Exception, 
                                user_friendly: bool = True) -> None:
         """Send error message to user"""
+        t('botapp.messages.message_handlers.MessageHandlers.send_error_message')
         if user_friendly:
             # Don't expose internal errors to users
             message = (
@@ -196,6 +206,7 @@ class MessageHandlers:
     def format_command_list(commands: Dict[str, str], 
                           is_admin: bool = False) -> str:
         """Format command list for help message"""
+        t('botapp.messages.message_handlers.MessageHandlers.format_command_list')
         message = "📋 **Available Commands**\n\n"
         
         # Regular commands
@@ -211,6 +222,7 @@ class MessageHandlers:
     async def confirm_action(update: Update, question: str, 
                            callback_yes: str, callback_no: str) -> None:
         """Ask user to confirm an action"""
+        t('botapp.messages.message_handlers.MessageHandlers.confirm_action')
         from telegram import InlineKeyboardButton, InlineKeyboardMarkup
         
         keyboard = InlineKeyboardMarkup([
@@ -229,6 +241,7 @@ class MessageHandlers:
     @staticmethod
     def get_user_info(update: Update) -> Dict[str, Any]:
         """Extract user information from update"""
+        t('botapp.messages.message_handlers.MessageHandlers.get_user_info')
         user = update.effective_user
         
         return {
@@ -248,6 +261,7 @@ class MessageHandlers:
         Check if user is rate limited for an action
         Returns True if action is allowed, False if rate limited
         """
+        t('botapp.messages.message_handlers.MessageHandlers.rate_limit_check')
         if storage is None:
             return True  # No storage provided, allow action
         

@@ -3,6 +3,7 @@
 Focused test for email typing speed limits
 Tests only the email field typing speed in isolation
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -19,6 +20,7 @@ logging.basicConfig(
 
 async def test_email_typing_speed(speed_multiplier: float, email_text: str = "msaulcampos@gmail.com"):
     """Test email typing at a specific speed on a test form"""
+    t('archive.testing.tests.test_email_speed_focused.test_email_typing_speed')
     logger = logging.getLogger('EmailSpeedTest')
     
     async with async_playwright() as p:
@@ -126,6 +128,7 @@ async def test_email_typing_speed(speed_multiplier: float, email_text: str = "ms
 
 async def main():
     """Test multiple email typing speeds"""
+    t('archive.testing.tests.test_email_speed_focused.main')
     
     print("\n" + "="*80)
     print("EMAIL TYPING SPEED ANALYSIS")

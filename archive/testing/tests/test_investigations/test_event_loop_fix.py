@@ -1,6 +1,7 @@
 """
 Test that the scheduler now runs in the main event loop and bookings work
 """
+from utils.tracking import t
 
 import asyncio
 import sys
@@ -16,6 +17,7 @@ logging.basicConfig(
 
 async def test_scheduler_in_main_loop():
     """Test scheduler running in main event loop"""
+    t('archive.testing.tests.test_investigations.test_event_loop_fix.test_scheduler_in_main_loop')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.reservation_scheduler import ReservationScheduler
     from lvbot.utils.reservation_queue import ReservationQueue
@@ -38,6 +40,7 @@ async def test_scheduler_in_main_loop():
         
         # Mock notification callback
         async def mock_notification(user_id, message):
+            t('archive.testing.tests.test_investigations.test_event_loop_fix.test_scheduler_in_main_loop.mock_notification')
             print(f"[NOTIFICATION] User {user_id}: {message}")
         
         # Create scheduler with required parameters

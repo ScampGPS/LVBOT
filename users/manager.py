@@ -2,6 +2,7 @@
 User Management System for Tennis Bot
 Handles persistent storage and retrieval of user profiles
 """
+from utils.tracking import t
 
 import json
 import logging
@@ -35,6 +36,7 @@ class UserManager:
             
         Sets up logging and loads existing user data from file
         """
+        t('users.manager.UserManager.__init__')
         self.file_path = Path(file_path)
         self.logger = logging.getLogger('UserManager')
         self.users: Dict[int, Dict[str, Any]] = self._load_users()
@@ -51,6 +53,7 @@ class UserManager:
         Returns:
             Dict containing user profile data if found, None otherwise
         """
+        t('users.manager.UserManager.get_user')
         user_profile = self.users.get(user_id)
         if user_profile:
             self.logger.debug(f"Retrieved user profile for user_id: {user_id}")
@@ -70,6 +73,7 @@ class UserManager:
         Raises:
             ValueError: If user_profile lacks required 'user_id' key
         """
+        t('users.manager.UserManager.save_user')
         if 'user_id' not in user_profile:
             raise ValueError("User profile must contain 'user_id' key")
         
@@ -90,6 +94,7 @@ class UserManager:
         Returns:
             Dictionary where keys are user_ids and values are user profile dictionaries
         """
+        t('users.manager.UserManager.get_all_users')
         self.logger.debug(f"Retrieved all users: {len(self.users)} profiles")
         return self.users.copy()
     
@@ -105,6 +110,7 @@ class UserManager:
         Returns:
             True if user is an admin, False otherwise
         """
+        t('users.manager.UserManager.is_admin')
         # Check hardcoded list first
         if user_id in HARDCODED_ADMIN_USERS:
             return True
@@ -128,6 +134,7 @@ class UserManager:
         Returns:
             True if user is a VIP, False otherwise
         """
+        t('users.manager.UserManager.is_vip')
         # Check hardcoded list first
         if user_id in HARDCODED_VIP_USERS:
             return True
@@ -146,6 +153,7 @@ class UserManager:
         Returns:
             UserTier enum value (ADMIN, VIP, or REGULAR)
         """
+        t('users.manager.UserManager.get_user_tier')
         if self.is_admin(user_id):
             return UserTier.ADMIN
         elif self.is_vip(user_id):
@@ -161,6 +169,7 @@ class UserManager:
             user_id: Telegram user ID
             tier: UserTier enum value to set
         """
+        t('users.manager.UserManager.set_user_tier')
         user_profile = self.get_user(user_id)
         if not user_profile:
             user_profile = {'user_id': user_id}
@@ -189,6 +198,7 @@ class UserManager:
         
         Handles file operations with proper error handling and logging
         """
+        t('users.manager.UserManager._save_users')
         try:
             # Ensure parent directory exists
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -211,6 +221,7 @@ class UserManager:
             Dictionary of user profiles loaded from file
             Returns empty dictionary if file doesn't exist or is invalid
         """
+        t('users.manager.UserManager._load_users')
         try:
             if not self.file_path.exists():
                 self.logger.info(f"User file {self.file_path} does not exist, starting with empty user database")

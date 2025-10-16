@@ -1,6 +1,7 @@
 """
 Debug script to investigate DOM query performance issues on Acuity booking page
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def test_dom_queries():
     """Test various DOM query methods and measure their performance"""
+    t('archive.scripts.diagnostics.debug_dom_performance.test_dom_queries')
     
     async with async_playwright() as p:
         # Launch browser

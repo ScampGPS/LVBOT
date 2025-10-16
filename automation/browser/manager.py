@@ -1,6 +1,7 @@
 """Browser manager facade consolidating pool/health utilities."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -20,6 +21,7 @@ class BrowserManager:
         settings: Optional[BrowserSettings] = None,
         pool: Optional[AsyncBrowserPool] = None,
     ) -> None:
+        t('automation.browser.manager.BrowserManager.__init__')
         self.settings = settings or load_browser_settings()
         self._pool: Optional[AsyncBrowserPool] = pool
         self._health_checker: Optional[BrowserHealthChecker] = None
@@ -28,6 +30,7 @@ class BrowserManager:
 
     async def ensure_pool(self) -> AsyncBrowserPool:
         """Ensure the underlying browser pool is started."""
+        t('automation.browser.manager.BrowserManager.ensure_pool')
 
         async with self._pool_lock:
             if self._pool is None:
@@ -42,19 +45,23 @@ class BrowserManager:
     @property
     def pool(self) -> Optional[AsyncBrowserPool]:
         """Return the current browser pool (may be ``None`` until started)."""
+        t('automation.browser.manager.BrowserManager.pool')
 
         return self._pool
 
     @property
     def health_checker(self) -> Optional[BrowserHealthChecker]:
+        t('automation.browser.manager.BrowserManager.health_checker')
         return self._health_checker
 
     @property
     def recovery_service(self) -> Optional[BrowserPoolRecoveryService]:
+        t('automation.browser.manager.BrowserManager.recovery_service')
         return self._recovery_service
 
     async def start_pool(self, logger: Optional[logging.Logger] = None) -> bool:
         """Start the browser pool with logging."""
+        t('automation.browser.manager.BrowserManager.start_pool')
 
         pool = self._pool or await self.ensure_pool()
 
@@ -70,6 +77,7 @@ class BrowserManager:
 
     async def stop_pool(self, logger: Optional[logging.Logger] = None) -> bool:
         """Stop the browser pool with logging."""
+        t('automation.browser.manager.BrowserManager.stop_pool')
 
         if not self._pool:
             return True
@@ -90,6 +98,7 @@ class BrowserManager:
 
     async def perform_health_check(self) -> Optional[HealthStatus]:
         """Run a health check if the service is initialised."""
+        t('automation.browser.manager.BrowserManager.perform_health_check')
 
         if not self._health_checker:
             return None

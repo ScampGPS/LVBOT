@@ -6,6 +6,7 @@ Helper modules for the Tennis Reservation Bot
 # Only import modules that exist and are safe to import
 
 from __future__ import annotations
+from utils.tracking import t
 
 from importlib import import_module
 from typing import TYPE_CHECKING
@@ -22,6 +23,7 @@ __all__ = [
 
 
 def __getattr__(name: str):
+    t('utils.__getattr__')
     if name == 'BrowserHelpers':
         module = import_module('automation.browser')
     elif name == 'DynamicBookingOrchestrator':

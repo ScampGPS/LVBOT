@@ -2,6 +2,7 @@
 """
 Simple log viewer to analyze bot logs
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -27,6 +28,7 @@ def view_logs(log_type='debug', lines=100, filter_text=None):
         lines: Number of recent lines to show
         filter_text: Optional text to filter lines
     """
+    t('archive.scripts.diagnostics.view_logs.view_logs')
     log_files = {
         'main': 'bot.log',
         'debug': 'bot_debug.log',
@@ -67,6 +69,7 @@ def view_logs(log_type='debug', lines=100, filter_text=None):
 
 def search_errors():
     """Search for errors in all logs"""
+    t('archive.scripts.diagnostics.view_logs.search_errors')
     print("\n" + "="*80)
     print("SEARCHING FOR ERRORS IN ALL LOGS")
     print("="*80 + "\n")

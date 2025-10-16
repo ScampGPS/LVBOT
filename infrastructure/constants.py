@@ -8,6 +8,7 @@ SCOPE: Application-wide configuration values
 
 This module eliminates hardcoded values and provides easy configuration.
 """
+from utils.tracking import t
 
 # Browser and Frame Constants
 SCHEDULING_IFRAME_URL_PATTERN = 'squarespacescheduling'
@@ -24,10 +25,12 @@ DEFAULT_COURT_PREFERENCES = [1, 3, 2]  # Default priority order
 
 def court_index_to_number(index: int) -> int:
     """Convert 0-based court index to human-readable court number"""
+    t('infrastructure.constants.court_index_to_number')
     return index + 1
 
 def court_number_to_index(number: int) -> int:
     """Convert human-readable court number to 0-based index"""
+    t('infrastructure.constants.court_number_to_index')
     return number - 1
 
 # Time Slot Selectors (Updated for current website structure)
@@ -90,6 +93,7 @@ NO_AVAILABILITY_PATTERNS = {
 
 def get_no_availability_patterns() -> list:
     """Get all no availability patterns for all languages"""
+    t('infrastructure.constants.get_no_availability_patterns')
     patterns = []
     for lang_patterns in NO_AVAILABILITY_PATTERNS.values():
         patterns.extend(lang_patterns)
@@ -222,6 +226,7 @@ def get_court_hours(date=None):
     Returns:
         List of available court hours for that day
     """
+    t('infrastructure.constants.get_court_hours')
     from datetime import datetime
     if date is None:
         date = datetime.now()

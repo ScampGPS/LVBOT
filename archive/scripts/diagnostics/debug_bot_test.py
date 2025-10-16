@@ -7,6 +7,7 @@ Tests:
 2. Browser cleanup verification
 3. Process cleanup validation
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -30,6 +31,7 @@ logger = logging.getLogger('DebugTest')
 
 def get_python_processes():
     """Get all Python processes running telegram bot"""
+    t('archive.scripts.diagnostics.debug_bot_test.get_python_processes')
     try:
         result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
         processes = []
@@ -42,6 +44,7 @@ def get_python_processes():
 
 def get_browser_processes():
     """Get all browser-related processes"""
+    t('archive.scripts.diagnostics.debug_bot_test.get_browser_processes')
     try:
         result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
         processes = []
@@ -54,6 +57,7 @@ def get_browser_processes():
 
 def check_bot_errors():
     """Check recent bot errors"""
+    t('archive.scripts.diagnostics.debug_bot_test.check_bot_errors')
     try:
         testing_root = Path(__file__).resolve().parent.parent
         error_log = testing_root / "logs" / "archive" / "latest_log" / "bot_errors.log"
@@ -67,6 +71,7 @@ def check_bot_errors():
         return []
 
 def main():
+    t('archive.scripts.diagnostics.debug_bot_test.main')
     logger.info("="*60)
     logger.info("LVBOT DEBUGGING TEST")
     logger.info("="*60)

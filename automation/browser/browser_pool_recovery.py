@@ -9,6 +9,7 @@ SCOPE: Browser pool recovery and emergency fallback mechanisms
 This module provides resilient recovery from browser failures while maintaining
 thread safety and async compatibility.
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -71,6 +72,7 @@ class BrowserPoolRecoveryService:
         Args:
             browser_pool: AsyncBrowserPool instance to manage
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.__init__')
         self.browser_pool = browser_pool
         self.recovery_history: List[RecoveryAttempt] = []
         self.emergency_browser = None
@@ -90,6 +92,7 @@ class BrowserPoolRecoveryService:
         Returns:
             RecoveryResult with recovery outcome details
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.recover_browser_pool')
         async with self.recovery_lock:
             start_time = datetime.now()
             all_attempts = []
@@ -172,6 +175,7 @@ class BrowserPoolRecoveryService:
         Returns:
             RecoveryResult with recovery outcome
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.recover_individual_court')
         start_time = datetime.now()
         attempt = RecoveryAttempt(
             strategy=RecoveryStrategy.INDIVIDUAL_COURT,
@@ -247,6 +251,7 @@ class BrowserPoolRecoveryService:
         Returns:
             RecoveryResult with recovery outcome
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.recover_partial_pool')
         start_time = datetime.now()
         attempt = RecoveryAttempt(
             strategy=RecoveryStrategy.PARTIAL_POOL,
@@ -332,6 +337,7 @@ class BrowserPoolRecoveryService:
         Returns:
             RecoveryResult with recovery outcome
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.perform_full_pool_restart')
         start_time = datetime.now()
         attempt = RecoveryAttempt(
             strategy=RecoveryStrategy.FULL_RESTART,
@@ -399,6 +405,7 @@ class BrowserPoolRecoveryService:
         Returns:
             RecoveryResult with recovery outcome
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.activate_emergency_fallback')
         start_time = datetime.now()
         attempt = RecoveryAttempt(
             strategy=RecoveryStrategy.EMERGENCY_FALLBACK,
@@ -476,6 +483,7 @@ class BrowserPoolRecoveryService:
         Returns:
             Tuple of (needs_recovery, list_of_failed_courts)
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.is_recovery_needed')
         failed_courts = []
         
         # Check if browser pool is initialized
@@ -503,6 +511,7 @@ class BrowserPoolRecoveryService:
         Returns:
             Dict with recovery history and statistics
         """
+        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.get_recovery_stats')
         total_attempts = len(self.recovery_history)
         successful_attempts = sum(1 for a in self.recovery_history if a.success)
         

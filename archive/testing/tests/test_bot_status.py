@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Test script to check LVBOT system status and take diagnostic screenshots."""
+from utils.tracking import t
 
 import asyncio
 import os
@@ -17,6 +18,7 @@ from lvbot.utils.constants import COURT_CONFIG
 
 async def test_browser_pool():
     """Test browser pool initialization and take screenshots."""
+    t('archive.testing.tests.test_bot_status.test_browser_pool')
     print("🔍 Testing LVBOT System Status\n")
     
     status_report = {

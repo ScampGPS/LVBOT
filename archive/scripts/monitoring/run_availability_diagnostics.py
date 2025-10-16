@@ -6,6 +6,7 @@ Run LVBOT Availability Diagnostics
 Purpose: Run all debugging tools to diagnose availability detection issues.
 This script coordinates all three debugging tools and provides a summary.
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -23,6 +24,7 @@ import json
 
 def print_header(text: str):
     """Print a formatted header"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.print_header')
     print(f"\n{'='*60}")
     print(f"🔍 {text}")
     print(f"{'='*60}\n")
@@ -30,6 +32,7 @@ def print_header(text: str):
 
 def print_summary(title: str, content: str):
     """Print a formatted summary box"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.print_summary')
     print(f"\n┌─ {title} {'─' * (55 - len(title))}┐")
     for line in content.split('\n'):
         if line:
@@ -39,6 +42,7 @@ def print_summary(title: str, content: str):
 
 async def run_debug_court_availability():
     """Run the comprehensive court availability debugger"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.run_debug_court_availability')
     print_header("Running Court Availability Debugger")
     print("This will navigate to each court, take screenshots, and compare")
     print("what's displayed vs what the bot detects...")
@@ -88,6 +92,7 @@ async def run_debug_court_availability():
 
 async def run_visual_comparison():
     """Run the visual slot comparison tool"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.run_visual_comparison')
     print_header("Running Visual Slot Comparison")
     print("This will create annotated screenshots showing detected vs missed slots...")
     
@@ -134,6 +139,7 @@ async def run_visual_comparison():
 
 async def run_realtime_monitor(duration_seconds: int = 30):
     """Run the real-time monitor for a short duration"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.run_realtime_monitor')
     print_header("Running Real-time Monitor")
     print(f"This will monitor availability for {duration_seconds} seconds...")
     
@@ -188,6 +194,7 @@ async def run_realtime_monitor(duration_seconds: int = 30):
 
 def create_final_report(debug_dir: Path, visual_dir: Path, monitor_dir: Path):
     """Create a consolidated final report"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.create_final_report')
     print_header("Creating Consolidated Report")
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -277,6 +284,7 @@ def create_final_report(debug_dir: Path, visual_dir: Path, monitor_dir: Path):
 
 async def main():
     """Main diagnostic coordinator"""
+    t('archive.scripts.monitoring.run_availability_diagnostics.main')
     print("\n" + "="*60)
     print("🏥 LVBOT AVAILABILITY DIAGNOSTICS")
     print("="*60)

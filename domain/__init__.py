@@ -1,4 +1,5 @@
 """Compatibility package forwarding to reservations modules."""
+from utils.tracking import t
 from importlib import import_module
 from typing import Any
 import sys
@@ -11,6 +12,7 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    t('domain.__getattr__')
     if name in {"queue", "models", "services"}:
         module = import_module(f"reservations.{name}")
         sys.modules.setdefault(f"{__name__}.{name}", module)

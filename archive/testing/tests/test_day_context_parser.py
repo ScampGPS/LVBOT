@@ -2,6 +2,7 @@
 """
 Test the day context parser functions
 """
+from utils.tracking import t
 
 import sys
 import os
@@ -16,6 +17,7 @@ from lvbot.utils.day_context_parser import (
 
 def test_day_label_to_date_conversion():
     """Test converting Spanish day labels to actual dates"""
+    t('archive.testing.tests.test_day_context_parser.test_day_label_to_date_conversion')
     print("=== Testing Day Label to Date Conversion ===")
     
     # Test with a known reference date: Monday July 21, 2025
@@ -46,6 +48,7 @@ def test_day_label_to_date_conversion():
 
 def test_unknown_day_labels():
     """Test handling of unknown day labels"""
+    t('archive.testing.tests.test_day_context_parser.test_unknown_day_labels')
     print("\n=== Testing Unknown Day Labels ===")
     
     reference_date = date(2025, 7, 21)
@@ -69,6 +72,7 @@ def test_unknown_day_labels():
 
 def test_empty_input():
     """Test handling of empty input"""
+    t('archive.testing.tests.test_day_context_parser.test_empty_input')
     print("\n=== Testing Empty Input ===")
     
     result = convert_day_labels_to_dates({})
@@ -79,6 +83,7 @@ def test_empty_input():
 
 def test_default_reference_date():
     """Test default reference date (today)"""
+    t('archive.testing.tests.test_day_context_parser.test_default_reference_date')
     print("\n=== Testing Default Reference Date ===")
     
     times_by_day = {'HOY': ['10:00']}
@@ -94,6 +99,7 @@ def test_default_reference_date():
 
 def test_weekend_edge_case():
     """Test day conversion over weekend"""
+    t('archive.testing.tests.test_day_context_parser.test_weekend_edge_case')
     print("\n=== Testing Weekend Edge Case ===")
     
     # Friday July 25, 2025

@@ -1,6 +1,7 @@
 """
 Debug why mouse movement is taking 3.4 seconds instead of 0.7s
 """
+from utils.tracking import t
 
 import asyncio
 import time
@@ -11,6 +12,7 @@ from playwright.async_api import async_playwright
 
 async def test_slow_mouse():
     """Test mouse move timing on different pages"""
+    t('archive.testing.tests.test_investigations.debug_slow_mouse.test_slow_mouse')
     browser_pool = None
     
     try:

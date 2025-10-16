@@ -2,6 +2,7 @@
 """
 Test script for AvailabilityCheckerV3
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -16,6 +17,7 @@ logging.basicConfig(
 
 async def test_availability():
     """Test the availability checker with all features"""
+    t('archive.testing.tests.test_availability_v3.test_availability')
     browser_pool = AsyncBrowserPool()
     
     try:

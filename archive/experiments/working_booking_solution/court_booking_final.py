@@ -2,6 +2,7 @@
 """
 Final court booking - successful approach with time slot clicking and form filling.
 """
+from utils.tracking import t
 
 import asyncio
 import random
@@ -11,6 +12,7 @@ from playwright.async_api import async_playwright
 
 async def human_type_with_mistakes(element, text, mistake_prob=0.10):
     """Type with human-like mistakes and corrections."""
+    t('archive.experiments.working_booking_solution.court_booking_final.human_type_with_mistakes')
     await element.click()
     await asyncio.sleep(random.uniform(0.3, 0.8))
     await element.fill('')  # Clear field
@@ -41,6 +43,7 @@ async def human_type_with_mistakes(element, text, mistake_prob=0.10):
 
 async def natural_mouse_movement(page):
     """Natural mouse movement patterns."""
+    t('archive.experiments.working_booking_solution.court_booking_final.natural_mouse_movement')
     for _ in range(random.randint(2, 4)):
         x = random.randint(200, 1000)
         y = random.randint(200, 700)
@@ -53,6 +56,7 @@ async def natural_mouse_movement(page):
 
 async def court_booking_final():
     """Final working court booking with time slot clicking."""
+    t('archive.experiments.working_booking_solution.court_booking_final.court_booking_final')
     
     tomorrow = datetime.now() + timedelta(days=1)
     target_time = "09:00"

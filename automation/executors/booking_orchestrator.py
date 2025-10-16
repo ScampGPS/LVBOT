@@ -2,6 +2,7 @@
 Dynamic Booking Orchestrator
 Coordinates multiple browsers with refresh strategies and dynamic fallbacks
 """
+from utils.tracking import t
 
 import asyncio
 import threading
@@ -47,6 +48,7 @@ class DynamicBookingOrchestrator:
     """
     
     def __init__(self):
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.__init__')
         self.logger = logging.getLogger('BookingOrchestrator')
         self.lock = threading.Lock()
         
@@ -120,6 +122,7 @@ class DynamicBookingOrchestrator:
         Returns:
             Booking plan with browser assignments and fallback strategies
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.create_booking_plan')
         with self.lock:
             self.logger.info(f"""CREATING BOOKING PLAN
             Time slot: {time_slot}
@@ -256,6 +259,7 @@ class DynamicBookingOrchestrator:
         Returns:
             Fallback plan if needed, None otherwise
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.handle_booking_result')
         with self.lock:
             attempt = self.active_attempts.get(reservation_id)
             if not attempt:
@@ -329,12 +333,14 @@ class DynamicBookingOrchestrator:
     
     def get_dynamic_court_assignment(self, reservation_id: str) -> Optional[int]:
         """Get current court assignment for a reservation"""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.get_dynamic_court_assignment')
         with self.lock:
             attempt = self.active_attempts.get(reservation_id)
             return attempt.target_court if attempt else None
     
     def is_court_available(self, court: int) -> bool:
         """Check if a court is available for booking"""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.is_court_available')
         with self.lock:
             return self.court_status.get(court, 'available') == 'available'
     
@@ -351,6 +357,7 @@ class DynamicBookingOrchestrator:
         Returns:
             Dict with reallocation results
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.handle_vip_late_entry')
         with self.lock:
             self.logger.info(f"""VIP LATE ENTRY PROCESSING
             VIP User ID: {vip_user.user_id}
@@ -380,6 +387,7 @@ class DynamicBookingOrchestrator:
     
     def get_booking_summary(self) -> Dict[str, Any]:
         """Get summary of booking attempts"""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.get_booking_summary')
         with self.lock:
             summary = {
                 'total_attempts': len(self.active_attempts),
@@ -410,6 +418,7 @@ class DynamicBookingOrchestrator:
         Returns:
             datetime: The precise moment to refresh
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.get_precision_refresh_moment')
         config = self.precision_refresh_config
         
         # Calculate when slot will appear
@@ -434,6 +443,7 @@ class DynamicBookingOrchestrator:
         Returns:
             bool: True if should refresh now, False otherwise
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.should_refresh_now')
         refresh_moment = self.get_precision_refresh_moment(target_time)
         seconds_until_refresh = (refresh_moment - current_time).total_seconds()
         
@@ -456,6 +466,7 @@ class DynamicBookingOrchestrator:
         Returns:
             Refresh interval in seconds
         """
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.get_smart_refresh_interval')
         seconds_until_target = (target_time - current_time).total_seconds()
         config = self.smart_refresh_config
         
@@ -485,6 +496,7 @@ class DynamicBookingOrchestrator:
     
     def reset(self):
         """Reset orchestrator state"""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator.reset')
         with self.lock:
             self.active_attempts.clear()
             self.court_status = {1: 'available', 2: 'available', 3: 'available'}
@@ -492,6 +504,7 @@ class DynamicBookingOrchestrator:
     
     def _log_plan(self, plan: Dict):
         """Log the booking plan"""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator._log_plan')
         self.logger.info("=" * 60)
         self.logger.info(f"Booking Plan for {plan['time_slot']}:")
         self.logger.info(f"Total users: {plan['total_attempts']}")

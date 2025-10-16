@@ -3,6 +3,7 @@
 Test the phase-optimized booking executor
 Compares current timing vs optimized phase timing
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -19,6 +20,7 @@ logging.basicConfig(
 
 async def test_phase_optimization():
     """Test optimized phase timings"""
+    t('archive.testing.tests.test_phase_optimization.test_phase_optimization')
     logger = logging.getLogger('PhaseOptimizationTest')
     
     print("\n" + "="*80)
@@ -162,6 +164,7 @@ async def test_phase_optimization():
 
 async def main():
     """Run the phase optimization test"""
+    t('archive.testing.tests.test_phase_optimization.main')
     await test_phase_optimization()
 
 if __name__ == "__main__":

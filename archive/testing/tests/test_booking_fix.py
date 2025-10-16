@@ -1,6 +1,7 @@
 """
 Test the booking fix for the overlay issue
 """
+from utils.tracking import t
 import asyncio
 import logging
 from datetime import datetime
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def test_booking_fix():
     """Test the booking with the fixed JavaScript click method"""
+    t('archive.testing.tests.test_booking_fix.test_booking_fix')
     
     # Initialize browser pool
     browser_pool = AsyncBrowserPool(courts=[1])

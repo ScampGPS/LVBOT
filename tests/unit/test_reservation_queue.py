@@ -1,3 +1,4 @@
+from utils.tracking import t
 import json
 from datetime import date, datetime
 
@@ -8,6 +9,7 @@ from reservations.queue.reservation_queue import ReservationQueue, ReservationSt
 
 
 def make_request(user_id: int = 1, status: str = ReservationStatus.PENDING.value) -> ReservationRequest:
+    t('tests.unit.test_reservation_queue.make_request')
     user = UserProfile(
         user_id=user_id,
         first_name="Test",
@@ -27,6 +29,7 @@ def make_request(user_id: int = 1, status: str = ReservationStatus.PENDING.value
 
 
 def test_add_reservation_request_round_trip(tmp_path):
+    t('tests.unit.test_reservation_queue.test_add_reservation_request_round_trip')
     queue_file = tmp_path / "queue.json"
     queue = ReservationQueue(file_path=str(queue_file))
 
@@ -42,6 +45,7 @@ def test_add_reservation_request_round_trip(tmp_path):
 
 
 def test_queue_persistence(tmp_path):
+    t('tests.unit.test_reservation_queue.test_queue_persistence')
     queue_file = tmp_path / "queue.json"
     queue = ReservationQueue(file_path=str(queue_file))
     queue.add_reservation_request(make_request(user_id=1))
@@ -54,6 +58,7 @@ def test_queue_persistence(tmp_path):
 
 
 def test_duplicate_reservation_detection(tmp_path):
+    t('tests.unit.test_reservation_queue.test_duplicate_reservation_detection')
     queue_file = tmp_path / "queue.json"
     queue = ReservationQueue(file_path=str(queue_file))
     queue.add_reservation(

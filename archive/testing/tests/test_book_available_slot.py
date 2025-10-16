@@ -3,6 +3,7 @@
 Test booking an available slot for tomorrow
 Books the first available slot from the courts
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def book_first_available_slot():
     """Book the first available slot for tomorrow"""
+    t('archive.testing.tests.test_book_available_slot.book_first_available_slot')
     logger = logging.getLogger('BookAvailableSlot')
     
     print("\n" + "="*80)

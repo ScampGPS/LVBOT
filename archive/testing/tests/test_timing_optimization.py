@@ -3,6 +3,7 @@
 Timing optimization test - Find the fastest settings that still avoid bot detection
 Tests different warm-up times and action delays systematically
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -22,6 +23,7 @@ class TimingOptimizer:
     """Systematically test different timing configurations"""
     
     def __init__(self):
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.__init__')
         self.logger = logging.getLogger('TimingOptimizer')
         self.results = []
         self.user_info = {
@@ -34,6 +36,7 @@ class TimingOptimizer:
         
     async def find_available_slots(self, browser_pool) -> List[Dict]:
         """Dynamically find available slots for tomorrow ONLY"""
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.find_available_slots')
         from lvbot.utils.court_availability import CourtAvailability
         
         availability = CourtAvailability()
@@ -82,6 +85,7 @@ class TimingOptimizer:
         config_name: str
     ) -> Dict:
         """Test a specific timing configuration"""
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.test_timing_configuration')
         
         self.logger.info(f"\n{'='*80}")
         self.logger.info(f"TESTING CONFIGURATION: {config_name}")
@@ -123,6 +127,7 @@ class TimingOptimizer:
             # Patch the warm-up delay in the browser pool
             original_method = browser_pool._create_and_navigate_court_page_safe
             async def patched_navigate(court):
+                t('archive.testing.tests.test_timing_optimization.TimingOptimizer.test_timing_configuration.patched_navigate')
                 result = await original_method(court)
                 if result:
                     self.logger.info(f"Court {court}: Warming up for {warmup_seconds}s...")
@@ -210,6 +215,7 @@ class TimingOptimizer:
     
     async def run_optimization_tests(self):
         """Run systematic timing tests"""
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.run_optimization_tests')
         
         print("\n" + "="*80)
         print("TIMING OPTIMIZATION TEST SUITE")
@@ -257,12 +263,14 @@ class TimingOptimizer:
     
     def save_results(self):
         """Save test results to file"""
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.save_results')
         with open('timing_optimization_results.json', 'w') as f:
             json.dump(self.results, f, indent=2)
         self.logger.info("Results saved to timing_optimization_results.json")
     
     def display_results(self):
         """Display test results summary"""
+        t('archive.testing.tests.test_timing_optimization.TimingOptimizer.display_results')
         print("\n" + "="*80)
         print("TIMING OPTIMIZATION RESULTS")
         print("="*80)
@@ -294,6 +302,7 @@ class TimingOptimizer:
 
 async def main():
     """Run the timing optimization tests"""
+    t('archive.testing.tests.test_timing_optimization.main')
     optimizer = TimingOptimizer()
     await optimizer.run_optimization_tests()
 

@@ -6,6 +6,7 @@ DOM Structure Extractor for Acuity Scheduling
 This script creates a browser and extracts the raw DOM structure
 around day headers and time buttons to understand the day-specific extraction issue.
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -31,6 +32,7 @@ logger = logging.getLogger('DOMExtractor')
 
 async def extract_dom_structure():
     """Extract DOM structure from Acuity scheduling page"""
+    t('archive.scripts.analysis.extract_dom_structure.extract_dom_structure')
     
     logger.info("Starting DOM structure extraction")
     

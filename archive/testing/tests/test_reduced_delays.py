@@ -3,6 +3,7 @@
 Test reduced initial delay and pre-submit review times
 Find the minimum safe values for these delays
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -19,6 +20,7 @@ logging.basicConfig(
 
 async def test_with_reduced_delays(initial_delay_min: float, initial_delay_max: float, pre_submit_delay: float) -> Tuple[bool, float, bool, str]:
     """Test booking with reduced delays"""
+    t('archive.testing.tests.test_reduced_delays.test_with_reduced_delays')
     logger = logging.getLogger('ReducedDelayTest')
     
     print(f"\n{'='*60}")
@@ -159,6 +161,7 @@ async def test_with_reduced_delays(initial_delay_min: float, initial_delay_max: 
 
 async def main():
     """Test progressively reduced delays"""
+    t('archive.testing.tests.test_reduced_delays.main')
     
     print("\n" + "="*80)
     print("DELAY REDUCTION TEST")

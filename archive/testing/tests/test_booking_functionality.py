@@ -3,6 +3,7 @@
 Test script to validate actual booking functionality
 Tests whether the system can navigate through the booking process
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 async def test_booking_flow():
     """Test the complete booking flow"""
+    t('archive.testing.tests.test_booking_functionality.test_booking_flow')
     logger.info("🧪 Starting booking functionality test...")
     
     browser_pool = None
@@ -141,6 +143,7 @@ async def test_booking_flow():
 
 async def main():
     """Main test execution"""
+    t('archive.testing.tests.test_booking_functionality.main')
     await test_booking_flow()
 
 if __name__ == "__main__":

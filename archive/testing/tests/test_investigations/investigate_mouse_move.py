@@ -1,6 +1,7 @@
 """
 Investigate why mouse.move is taking so long
 """
+from utils.tracking import t
 
 import asyncio
 import time
@@ -10,6 +11,7 @@ from lvbot.utils.async_browser_pool import AsyncBrowserPool
 
 async def test_mouse_move():
     """Test mouse move timing"""
+    t('archive.testing.tests.test_investigations.investigate_mouse_move.test_mouse_move')
     browser_pool = None
     
     try:

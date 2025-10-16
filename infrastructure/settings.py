@@ -7,6 +7,7 @@ they can migrate to :func:`get_settings` gradually without behaviour changes.
 """
 
 from __future__ import annotations
+from utils.tracking import t
 
 import os
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ from . import constants as utils_constants
 
 def _to_bool(value: str, default: bool = False) -> bool:
     """Normalize environment strings such as "true"/"1" into booleans."""
+    t('infrastructure.settings._to_bool')
 
     if value is None:
         return default
@@ -46,6 +48,7 @@ class AppSettings:
 
 def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     """Load configuration from the environment and fall back to defaults."""
+    t('infrastructure.settings.load_settings')
 
     if env is None:
         if load_dotenv is not None:
@@ -85,6 +88,7 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
 @lru_cache(maxsize=1)
 def get_settings() -> AppSettings:
     """Return a cached :class:`AppSettings` instance."""
+    t('infrastructure.settings.get_settings')
 
     return load_settings()
 

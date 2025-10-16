@@ -2,6 +2,7 @@
 """
 Test the time feasibility validator functions
 """
+from utils.tracking import t
 
 import sys
 import os
@@ -19,6 +20,7 @@ from lvbot.utils.time_feasibility_validator import (
 
 def test_time_parsing_and_filtering():
     """Test filtering future times for today"""
+    t('archive.testing.tests.test_time_feasibility.test_time_parsing_and_filtering')
     print("=== Testing Time Filtering ===")
     
     # Test scenario: Current time is 2:00 PM
@@ -38,6 +40,7 @@ def test_time_parsing_and_filtering():
 
 def test_booking_window():
     """Test 48h booking window validation"""
+    t('archive.testing.tests.test_time_feasibility.test_booking_window')
     print("\n=== Testing Booking Window ===")
     
     current_time = datetime(2025, 7, 21, 14, 0)  # Monday 2:00 PM
@@ -60,6 +63,7 @@ def test_booking_window():
 
 def test_day_labels():
     """Test Spanish day label parsing"""
+    t('archive.testing.tests.test_time_feasibility.test_day_labels')
     print("\n=== Testing Day Labels ===")
     
     test_cases = [
@@ -77,6 +81,7 @@ def test_day_labels():
 
 def test_navigation_logic():
     """Test navigation decision logic"""
+    t('archive.testing.tests.test_time_feasibility.test_navigation_logic')
     print("\n=== Testing Navigation Logic ===")
     
     # Monday 2:00 PM - well within 48h window
@@ -97,6 +102,7 @@ def test_navigation_logic():
 
 def test_edge_cases():
     """Test edge cases near 48h boundary"""
+    t('archive.testing.tests.test_time_feasibility.test_edge_cases')
     print("\n=== Testing Edge Cases ===")
     
     # Wednesday 8:00 PM - close to 48h boundary

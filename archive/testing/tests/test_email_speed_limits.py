@@ -3,6 +3,7 @@
 Test email typing speed limits to find the threshold for bot detection
 Tests progressively faster speeds until detection occurs
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -23,6 +24,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
     Test a specific email typing speed
     Returns: (success, execution_time, bot_detected)
     """
+    t('archive.testing.tests.test_email_speed_limits.test_email_speed')
     logger = logging.getLogger('EmailSpeedTest')
     
     # User info
@@ -45,6 +47,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
     
     async def fast_email_type(element, text, mistake_prob=0.10):
         """Custom typing function with configurable speed for email only"""
+        t('archive.testing.tests.test_email_speed_limits.test_email_speed.fast_email_type')
         await element.click()
         await asyncio.sleep(max(0.1, random.uniform(0.3, 0.8) / speed_multiplier))
         await element.fill('')  # Clear field
@@ -117,6 +120,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
         class PatchedExecutor(WorkingBookingExecutor):
             async def _execute_booking_internal(self, page, court_number, target_date, time_slot, user_info_param):
                 # Store original method
+                t('archive.testing.tests.test_email_speed_limits.test_email_speed.PatchedExecutor._execute_booking_internal')
                 original_method = super()._execute_booking_internal
                 
                 # Call original but intercept email field
@@ -129,6 +133,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
         
         async def patched_human_type(element, text, mistake_prob=0.10):
             # Check if this is the email field by the text content
+            t('archive.testing.tests.test_email_speed_limits.test_email_speed.patched_human_type')
             if '@' in text and '.com' in text:
                 logger.info(f"Using {speed_multiplier}x speed for email field")
                 await fast_email_type(element, text, mistake_prob)
@@ -184,6 +189,7 @@ async def test_email_speed(speed_multiplier: float) -> Tuple[bool, float, bool]:
 
 async def run_speed_limit_tests():
     """Run progressive speed tests to find the limit"""
+    t('archive.testing.tests.test_email_speed_limits.run_speed_limit_tests')
     logger = logging.getLogger('SpeedLimitTest')
     
     print("\n" + "="*80)
@@ -269,6 +275,7 @@ async def run_speed_limit_tests():
 
 async def main():
     """Run the email speed limit tests"""
+    t('archive.testing.tests.test_email_speed_limits.main')
     await run_speed_limit_tests()
 
 if __name__ == "__main__":

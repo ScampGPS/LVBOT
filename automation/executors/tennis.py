@@ -1,6 +1,7 @@
 """Unified tennis executor utilities and configuration."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import concurrent.futures
@@ -29,11 +30,13 @@ class TennisConfig:
     preferred_times: Optional[List[str]] = None
 
     def __post_init__(self) -> None:
+        t('automation.executors.tennis.TennisConfig.__post_init__')
         if self.preferred_times is None:
             self.preferred_times = [self.preferred_time]
 
 
 def create_tennis_config_from_user_info(user_info: Dict[str, Any]) -> TennisConfig:
+    t('automation.executors.tennis.create_tennis_config_from_user_info')
     preferred_time = user_info.get("preferred_time", "09:00")
     preferred_times = user_info.get("preferred_times", [preferred_time])
     if "preferred_times" in user_info and "preferred_time" not in user_info:
@@ -57,6 +60,7 @@ class TennisExecutor:
     """Intelligent executor that routes to the best available execution method."""
 
     def __init__(self, browser_pool: Optional[Any] = None, max_workers: int = 2, timeout_seconds: int = 300) -> None:
+        t('automation.executors.tennis.TennisExecutor.__init__')
         self.browser_pool = browser_pool
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_workers = max_workers
@@ -68,13 +72,16 @@ class TennisExecutor:
         self._build_pooled_executor()
 
     def _build_pooled_executor(self) -> None:
+        t('automation.executors.tennis.TennisExecutor._build_pooled_executor')
         self.pooled_executor = AsyncBookingExecutor(self.browser_pool, use_natural_flow=True) if self.browser_pool else None
 
     def set_browser_pool(self, browser_pool: Optional[Any]) -> None:
+        t('automation.executors.tennis.TennisExecutor.set_browser_pool')
         self.browser_pool = browser_pool
         self._build_pooled_executor()
 
     def is_pool_available(self) -> bool:
+        t('automation.executors.tennis.TennisExecutor.is_pool_available')
         if self.browser_pool and hasattr(self.browser_pool, "is_ready"):
             return self.browser_pool.is_ready()
         return False
@@ -86,6 +93,7 @@ class TennisExecutor:
         check_availability_48h: bool = False,
         get_dates: bool = False,
     ) -> ExecutionResult:
+        t('automation.executors.tennis.TennisExecutor.execute')
         if self.is_pool_available() and self.pooled_executor:
             self.logger.info("Using ASYNC BOOKING EXECUTOR with natural flow for optimized booking")
             user_info = getattr(tennis_config, "_original_user_info", None) or {
@@ -117,6 +125,7 @@ class TennisExecutor:
         check_availability_48h: bool,
         get_dates: bool,
     ) -> ExecutionResult:
+        t('automation.executors.tennis.TennisExecutor._execute_direct')
         loop = asyncio.get_event_loop()
         try:
             result = await asyncio.wait_for(
@@ -143,6 +152,7 @@ class TennisExecutor:
         check_availability_48h: bool,
         get_dates: bool,
     ) -> ExecutionResult:
+        t('automation.executors.tennis.TennisExecutor._run_sync_bot')
         self.logger.warning("Direct bot execution not available - TennisBot requires refactoring")
         return ExecutionResult(
             success=False,

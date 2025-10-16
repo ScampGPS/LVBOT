@@ -2,6 +2,7 @@
 """
 Script to record manual booking flow - launches browser and records what happens
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def record_manual_booking():
     """Launch browser and record manual interactions"""
+    t('archive.scripts.maintenance.record_manual_booking.record_manual_booking')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,  # Show browser

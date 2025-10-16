@@ -2,6 +2,7 @@
 Callback data parser for Telegram bot callbacks
 Handles parsing of various callback data formats
 """
+from utils.tracking import t
 
 from typing import Optional, Tuple, Dict, Any
 from datetime import datetime, date
@@ -30,6 +31,7 @@ class CallbackParser:
             Dict with parsed data or None if invalid
             Keys: action, date, court_number, time (optional)
         """
+        t('botapp.callbacks.parser.CallbackParser.parse_booking_callback')
         try:
             # Determine action type
             if callback_data.startswith('book_now_'):
@@ -103,6 +105,7 @@ class CallbackParser:
         Returns:
             Dict with parsed data or None if invalid
         """
+        t('botapp.callbacks.parser.CallbackParser.parse_queue_callback')
         try:
             if callback_data.startswith('queue_time_'):
                 # Format: queue_time_YYYY-MM-DD_HH:MM
@@ -156,6 +159,7 @@ class CallbackParser:
         Returns:
             Formatted callback string
         """
+        t('botapp.callbacks.parser.CallbackParser.format_booking_callback')
         date_str = date.strftime('%Y-%m-%d')
         
         if action in ['book_now', 'confirm_book']:

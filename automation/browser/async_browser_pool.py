@@ -1,3 +1,4 @@
+from utils.tracking import t
 import asyncio
 import logging
 import time
@@ -21,12 +22,14 @@ class AsyncBrowserPool:
     @property
     def DIRECT_COURT_URLS(self):
         """Get direct court URLs from centralized config"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.DIRECT_COURT_URLS')
         return {
             court_num: config["direct_url"] 
             for court_num, config in COURT_CONFIG.items()
         }
 
     def __init__(self, courts: List[int] = [1, 2, 3]):
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.__init__')
         self.courts = courts
         self.pages: Dict[int, Page] = {}
         self.contexts: Dict[int, BrowserContext] = {}  # Track contexts for proper cleanup
@@ -38,6 +41,7 @@ class AsyncBrowserPool:
 
     async def start(self):
         """Initialize browsers and pre-navigate to direct court URLs in parallel"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.start')
         try:
             logger.info("Starting Playwright...")
             self.playwright = await async_playwright().start()
@@ -108,6 +112,7 @@ class AsyncBrowserPool:
         Returns:
             bool: True if successful after retries, raises exception if all attempts fail
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_stagger')
         # Apply stagger delay to prevent simultaneous server hits
         if initial_delay > 0:
             if not PRODUCTION_MODE:
@@ -126,6 +131,7 @@ class AsyncBrowserPool:
         Returns:
             bool: True if successful after retries, raises exception if all attempts fail
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_retry')
         for attempt in range(BrowserPoolConfig.MAX_RETRY_ATTEMPTS):
             try:
                 return await self._create_and_navigate_court_page_safe(court)
@@ -151,6 +157,7 @@ class AsyncBrowserPool:
         Returns:
             bool: True if successful, raises exception if failed
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_safe')
         try:
             # Create context with more realistic browser properties
             context = await self.browser.new_context(
@@ -245,10 +252,12 @@ class AsyncBrowserPool:
 
     async def _create_and_navigate_court_page(self, court: int):
         """Legacy method - keeping for compatibility"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page')
         return await self._create_and_navigate_court_page_safe(court)
 
     async def _cleanup_on_failure(self):
         """Cleanup resources when startup fails"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._cleanup_on_failure')
         try:
             # Close all pages
             for page in self.pages.values():
@@ -289,6 +298,7 @@ class AsyncBrowserPool:
 
     async def stop(self):
         """Cleanup all resources - waits for critical operations to complete"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.stop')
         import asyncio
         
         logger.info("🔴 STARTING BROWSER POOL SHUTDOWN...")
@@ -387,6 +397,7 @@ class AsyncBrowserPool:
 
     async def get_page(self, court_num: int) -> Page:
         """Get page for specific court with connection health check"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_page')
         async with self.lock:
             page = self.pages.get(court_num)
             if not page:
@@ -432,6 +443,7 @@ class AsyncBrowserPool:
     
     def is_ready(self) -> bool:
         """Check if browser pool is ready for use (at least one court available)"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_ready')
         return bool(self.browser and self.pages)
     
     async def wait_until_ready(self, timeout: float = 30) -> bool:
@@ -445,6 +457,7 @@ class AsyncBrowserPool:
         Returns:
             True if ready, False if timeout or error
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.wait_until_ready')
         start_time = time.time()
         while time.time() - start_time < timeout:
             if self.is_ready():
@@ -460,6 +473,7 @@ class AsyncBrowserPool:
         Returns:
             Error message if initialization failed, None otherwise
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_initialization_error')
         if not self.is_ready():
             return "Browser pool not initialized or no pages available"
         return None
@@ -472,6 +486,7 @@ class AsyncBrowserPool:
         Returns:
             Dictionary with pool statistics
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_stats')
         return {
             'browser_count': len(self.pages),
             'browsers_created': len(self.pages),
@@ -495,20 +510,24 @@ class AsyncBrowserPool:
     
     def get_available_courts(self) -> List[int]:
         """Get list of successfully initialized courts"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_available_courts')
         return list(self.pages.keys())
     
     def is_fully_ready(self) -> bool:
         """Check if all requested courts are initialized"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_fully_ready')
         return self.is_ready() and not self.is_partially_ready
     
     async def set_critical_operation(self, in_progress: bool):
         """Set critical operation flag to prevent refresh during important operations"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.set_critical_operation')
         async with self.lock:
             self.critical_operation_in_progress = in_progress
             logger.info(f"Critical operation flag set to: {in_progress}")
     
     def is_critical_operation_in_progress(self) -> bool:
         """Check if a critical operation is in progress"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_critical_operation_in_progress')
         return self.critical_operation_in_progress
     
     async def refresh_browser_pages(self) -> Dict[int, bool]:
@@ -519,6 +538,7 @@ class AsyncBrowserPool:
         Returns:
             Dict[int, bool]: court_number -> success status
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.refresh_browser_pages')
         refresh_results = {}
         
         logger.info("🔄 Starting browser page refresh cycle")
@@ -578,6 +598,7 @@ class AsyncBrowserPool:
         Returns:
             Dict with success status and details
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.execute_parallel_booking')
         try:
             # target_court is already the court number (1, 2, or 3), not an index
             court_number = target_court
@@ -668,6 +689,7 @@ class AsyncBrowserPool:
                 'court': int
             }
         """
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_slot_available')
         try:
             # Get the page for this court
             page = await self.get_page(court_number)
@@ -742,6 +764,7 @@ class AsyncBrowserPool:
     
     async def stop(self):
         """Clean up all browser resources properly"""
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.stop')
         logger.info("Stopping AsyncBrowserPool...")
         
         try:

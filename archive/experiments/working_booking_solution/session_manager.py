@@ -2,6 +2,7 @@
 """
 Session isolation manager for multi-browser environments.
 """
+from utils.tracking import t
 
 import os
 import json
@@ -16,12 +17,14 @@ class SessionManager:
     """Manages booking sessions to prevent conflicts between multiple browsers."""
     
     def __init__(self, session_file="booking_sessions.json"):
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.__init__')
         self.session_file = session_file
         self.session_id = self._generate_session_id()
         self.load_sessions()
     
     def _generate_session_id(self) -> str:
         """Generate unique session ID."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager._generate_session_id')
         timestamp = int(time.time())
         random_part = random.randint(1000, 9999)
         pid = os.getpid()
@@ -29,6 +32,7 @@ class SessionManager:
     
     def load_sessions(self) -> Dict:
         """Load existing sessions from file."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.load_sessions')
         try:
             if os.path.exists(self.session_file):
                 with open(self.session_file, 'r') as f:
@@ -44,6 +48,7 @@ class SessionManager:
     
     def _clean_expired_sessions(self):
         """Remove expired sessions."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager._clean_expired_sessions')
         current_time = time.time()
         expired_sessions = []
         
@@ -59,6 +64,7 @@ class SessionManager:
     
     def save_sessions(self):
         """Save sessions to file."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.save_sessions')
         try:
             with open(self.session_file, 'w') as f:
                 json.dump(self.sessions, f, indent=2)
@@ -67,6 +73,7 @@ class SessionManager:
     
     def register_session(self, target_time: str = "09:00") -> bool:
         """Register a new booking session."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.register_session')
         current_time = time.time()
         
         # Check if another session is targeting the same time slot recently
@@ -90,6 +97,7 @@ class SessionManager:
     
     def update_session_status(self, status: str):
         """Update session status."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.update_session_status')
         if self.session_id in self.sessions:
             self.sessions[self.session_id]['status'] = status
             self.sessions[self.session_id]['last_update'] = time.time()
@@ -97,6 +105,7 @@ class SessionManager:
     
     def get_recommended_delay(self) -> int:
         """Get recommended delay based on active sessions."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.get_recommended_delay')
         active_sessions = sum(1 for s in self.sessions.values() 
                             if s.get('status') == 'active')
         
@@ -107,6 +116,7 @@ class SessionManager:
     
     def cleanup_session(self):
         """Clean up current session."""
+        t('archive.experiments.working_booking_solution.session_manager.SessionManager.cleanup_session')
         if self.session_id in self.sessions:
             del self.sessions[self.session_id]
             self.save_sessions()
@@ -119,6 +129,7 @@ class BrowserInstanceManager:
     @staticmethod
     def get_unique_user_data_dir() -> str:
         """Create unique user data directory for browser isolation."""
+        t('archive.experiments.working_booking_solution.session_manager.BrowserInstanceManager.get_unique_user_data_dir')
         timestamp = int(time.time())
         pid = os.getpid()
         random_id = random.randint(1000, 9999)
@@ -130,6 +141,7 @@ class BrowserInstanceManager:
     @staticmethod
     def get_staggered_viewport() -> Dict[str, int]:
         """Get viewport size that's different from other likely instances."""
+        t('archive.experiments.working_booking_solution.session_manager.BrowserInstanceManager.get_staggered_viewport')
         # Base dimensions with per-instance variation
         base_width = 1200
         base_height = 800
@@ -145,6 +157,7 @@ class BrowserInstanceManager:
     @staticmethod
     def get_unique_user_agent() -> str:
         """Generate slightly different user agent per instance."""
+        t('archive.experiments.working_booking_solution.session_manager.BrowserInstanceManager.get_unique_user_agent')
         base_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         
         # Add small variations

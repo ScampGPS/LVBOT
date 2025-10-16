@@ -2,6 +2,7 @@
 """
 Check actual form field names on the booking page
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 async def check_form_fields():
     """Check the actual form field names"""
+    t('archive.scripts.playwright.check_form_fields.check_form_fields')
     
     # Test URL
     target_date = datetime.now() + timedelta(days=1)

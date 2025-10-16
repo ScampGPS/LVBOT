@@ -3,6 +3,7 @@
 Comprehensive test script for LVBOT browser pool system
 Tests browser pool initialization, health checks, and booking functionality
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class BrowserSystemTester:
     def __init__(self):
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.__init__')
         self.browser_pool = None
         self.health_checker = None
         self.test_results = {
@@ -40,6 +42,7 @@ class BrowserSystemTester:
     
     async def test_browser_pool_initialization(self):
         """Test browser pool initialization"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.test_browser_pool_initialization')
         logger.info("🧪 Testing browser pool initialization...")
         
         try:
@@ -73,6 +76,7 @@ class BrowserSystemTester:
     
     async def test_health_checker_initialization(self):
         """Test health checker initialization"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.test_health_checker_initialization')
         logger.info("🧪 Testing health checker initialization...")
         
         try:
@@ -94,6 +98,7 @@ class BrowserSystemTester:
     
     async def test_health_checks(self):
         """Test health check execution"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.test_health_checks')
         logger.info("🧪 Testing health check execution...")
         
         try:
@@ -130,6 +135,7 @@ class BrowserSystemTester:
     
     async def test_navigation(self):
         """Test basic navigation to Club LaVilla"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.test_navigation')
         logger.info("🧪 Testing navigation to Club LaVilla...")
         
         try:
@@ -175,6 +181,7 @@ class BrowserSystemTester:
     
     async def test_booking_form_access(self):
         """Test access to booking form"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.test_booking_form_access')
         logger.info("🧪 Testing booking form accessibility...")
         
         try:
@@ -241,6 +248,7 @@ class BrowserSystemTester:
     
     async def cleanup(self):
         """Clean up resources"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.cleanup')
         logger.info("🧹 Cleaning up test resources...")
         
         try:
@@ -255,6 +263,7 @@ class BrowserSystemTester:
     
     def print_test_summary(self):
         """Print a summary of test results"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.print_test_summary')
         logger.info("\n" + "="*60)
         logger.info("🧪 BROWSER SYSTEM TEST SUMMARY")
         logger.info("="*60)
@@ -298,6 +307,7 @@ class BrowserSystemTester:
     
     async def run_all_tests(self):
         """Run all tests in sequence"""
+        t('archive.testing.tests.test_browser_system.BrowserSystemTester.run_all_tests')
         logger.info("🚀 Starting comprehensive browser system tests...")
         
         try:
@@ -313,6 +323,7 @@ class BrowserSystemTester:
 
 async def main():
     """Main test execution"""
+    t('archive.testing.tests.test_browser_system.main')
     tester = BrowserSystemTester()
     await tester.run_all_tests()
 

@@ -14,6 +14,7 @@ This script performs comprehensive testing of the browser pool to determine:
 
 Run this script to diagnose browser pool failures.
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -41,6 +42,7 @@ class BrowserPoolTester:
     """Comprehensive browser pool testing and diagnostics"""
     
     def __init__(self):
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.__init__')
         self.browser_pool = None
         self.health_checker = None
         self.test_results = {
@@ -62,6 +64,7 @@ class BrowserPoolTester:
         Returns:
             Dict with detailed test results
         """
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.run_all_tests')
         logger.info("🧪 Starting comprehensive browser pool testing...")
         
         try:
@@ -108,6 +111,7 @@ class BrowserPoolTester:
     
     async def test_pool_initialization(self):
         """Test browser pool initialization"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_pool_initialization')
         logger.info("🔧 Testing browser pool initialization...")
         
         try:
@@ -129,6 +133,7 @@ class BrowserPoolTester:
     
     async def test_browser_connection(self):
         """Test browser connection status"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_browser_connection')
         logger.info("🌐 Testing browser connection...")
         
         try:
@@ -144,6 +149,7 @@ class BrowserPoolTester:
     
     async def test_page_creation(self):
         """Test page creation for each court"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_page_creation')
         logger.info("📄 Testing page creation...")
         
         available_courts = self.browser_pool.get_available_courts()
@@ -167,6 +173,7 @@ class BrowserPoolTester:
     
     async def test_navigation(self):
         """Test basic navigation to booking site"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_navigation')
         logger.info("🧭 Testing navigation to booking site...")
         
         booking_url = "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312"
@@ -197,6 +204,7 @@ class BrowserPoolTester:
     
     async def test_javascript_execution(self):
         """Test JavaScript execution without timeout wrapper"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_javascript_execution')
         logger.info("⚡ Testing JavaScript execution...")
         
         for court_num in self.browser_pool.get_available_courts():
@@ -224,6 +232,7 @@ class BrowserPoolTester:
     
     async def test_dom_queries(self):
         """Test DOM query capabilities"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_dom_queries')
         logger.info("🔍 Testing DOM queries...")
         
         for court_num in self.browser_pool.get_available_courts():
@@ -250,6 +259,7 @@ class BrowserPoolTester:
     
     async def test_network_connectivity(self):
         """Test network connectivity to booking site"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_network_connectivity')
         logger.info("🌍 Testing network connectivity...")
         
         for court_num in self.browser_pool.get_available_courts():
@@ -282,6 +292,7 @@ class BrowserPoolTester:
     
     async def test_health_checker(self):
         """Test the health checker that's causing the original error"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.test_health_checker')
         logger.info("🏥 Testing health checker (this will likely fail)...")
         
         if not self.health_checker:
@@ -309,6 +320,7 @@ class BrowserPoolTester:
     
     def analyze_results(self):
         """Analyze test results and provide diagnosis"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.analyze_results')
         logger.info("🔬 Analyzing test results...")
         
         # Count successful tests
@@ -402,6 +414,7 @@ class BrowserPoolTester:
     
     async def cleanup(self):
         """Clean up resources"""
+        t('archive.testing.tests.test_browser_pool.BrowserPoolTester.cleanup')
         logger.info("🧹 Cleaning up...")
         
         try:
@@ -413,6 +426,7 @@ class BrowserPoolTester:
 
 async def main():
     """Run the browser pool test"""
+    t('archive.testing.tests.test_browser_pool.main')
     tester = BrowserPoolTester()
     
     try:

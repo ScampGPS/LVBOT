@@ -13,6 +13,7 @@ This tool:
 4. Saves screenshots with timestamps and court numbers
 5. Compares detected slots with visible slots
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -48,6 +49,7 @@ class CourtAvailabilityDebugger:
     """Debug tool for comparing visible vs detected court availability"""
     
     def __init__(self):
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.__init__')
         self.time_extractor = TimeSlotExtractor()
         self.day_mapper = DayMapper()
         self.debug_dir = None
@@ -56,6 +58,7 @@ class CourtAvailabilityDebugger:
         
     async def initialize(self):
         """Initialize playwright and browser"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.initialize')
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(
             headless=False,
@@ -73,6 +76,7 @@ class CourtAvailabilityDebugger:
         
     async def cleanup(self):
         """Clean up browser and playwright"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.cleanup')
         if self.browser:
             await self.browser.close()
         if self.playwright:
@@ -85,6 +89,7 @@ class CourtAvailabilityDebugger:
         Returns:
             Dict with analysis results
         """
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.analyze_court_page')
         court_config = COURT_CONFIG.get(court_num)
         if not court_config:
             logger.error(f"Invalid court number: {court_num}")
@@ -196,6 +201,7 @@ class CourtAvailabilityDebugger:
             
     async def _check_no_availability(self, page: Page) -> bool:
         """Check if page shows no availability message"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._check_no_availability')
         patterns = [
             'No hay citas disponibles',
             'no hay horarios disponibles',
@@ -215,6 +221,7 @@ class CourtAvailabilityDebugger:
         
     async def _find_all_time_elements(self, page: Page) -> List[Dict]:
         """Find all elements that might contain time information"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._find_all_time_elements')
         visible_elements = []
         
         # Search for elements containing time patterns
@@ -263,6 +270,7 @@ class CourtAvailabilityDebugger:
         
     async def _get_element_selector(self, element) -> str:
         """Try to get a useful selector for an element"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._get_element_selector')
         try:
             # Try to get a unique selector
             tag = await element.evaluate('el => el.tagName.toLowerCase()')
@@ -281,6 +289,7 @@ class CourtAvailabilityDebugger:
             
     async def _highlight_element(self, page: Page, element):
         """Highlight an element on the page"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._highlight_element')
         try:
             await page.evaluate('''
                 element => {
@@ -294,6 +303,7 @@ class CourtAvailabilityDebugger:
             
     async def _test_all_selectors(self, page: Page) -> Dict:
         """Test all configured selectors and see what they find"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._test_all_selectors')
         selector_results = {}
         
         for selector in TIME_SLOT_SELECTORS:
@@ -321,6 +331,7 @@ class CourtAvailabilityDebugger:
         
     async def compare_with_bot(self) -> Dict:
         """Compare debug results with what the actual bot sees"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.compare_with_bot')
         logger.info("\n" + "="*60)
         logger.info("Comparing with actual bot detection...")
         logger.info("="*60)
@@ -359,6 +370,7 @@ class CourtAvailabilityDebugger:
             
     async def run_full_debug(self):
         """Run complete debugging analysis"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger.run_full_debug')
         await self.initialize()
         
         try:
@@ -399,6 +411,7 @@ class CourtAvailabilityDebugger:
             
     def _create_summary(self, court_results: Dict, bot_comparison: Dict) -> Dict:
         """Create summary of findings"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._create_summary')
         summary = {}
         
         for court_num in [1, 2, 3]:
@@ -427,6 +440,7 @@ class CourtAvailabilityDebugger:
         
     def _create_markdown_report(self, summary: Dict, report_path: Path):
         """Create a markdown report of the findings"""
+        t('archive.scripts.diagnostics.debug_court_availability.CourtAvailabilityDebugger._create_markdown_report')
         lines = [
             "# LVBOT Court Availability Debug Report",
             f"\nGenerated: {summary['debug_time']}",
@@ -479,6 +493,7 @@ class CourtAvailabilityDebugger:
 
 async def main():
     """Main entry point"""
+    t('archive.scripts.diagnostics.debug_court_availability.main')
     debugger = CourtAvailabilityDebugger()
     await debugger.run_full_debug()
 

@@ -2,6 +2,7 @@
 Centralized Error Handling System for Tennis Bot
 Provides robust, user-friendly error handling across all bot operations
 """
+from utils.tracking import t
 
 import logging
 from typing import Optional
@@ -34,6 +35,7 @@ class ErrorHandler:
         Returns:
             None
         """
+        t('botapp.error_handler.ErrorHandler.handle_telegram_error')
         logger = logging.getLogger('ErrorHandler')
         
         # Check for common non-critical errors that shouldn't be logged as errors
@@ -108,6 +110,7 @@ class ErrorHandler:
         Returns:
             None
         """
+        t('botapp.error_handler.ErrorHandler.handle_booking_error')
         logger = logging.getLogger('ErrorHandler')
         
         # Log booking error with context
@@ -158,6 +161,7 @@ class ErrorHandler:
         Returns:
             None
         """
+        t('botapp.error_handler.ErrorHandler.handle_user_authorization_error')
         logger = logging.getLogger('ErrorHandler')
         
         # Log security event
@@ -211,6 +215,7 @@ class ErrorHandler:
         Returns:
             None
         """
+        t('botapp.error_handler.ErrorHandler.handle_validation_error')
         logger = logging.getLogger('ErrorHandler')
         
         # Log validation error
@@ -264,6 +269,7 @@ class ErrorHandler:
         Returns:
             None
         """
+        t('botapp.error_handler.ErrorHandler.log_error_context')
         logger = logging.getLogger('ErrorHandler')
         
         # Build context information

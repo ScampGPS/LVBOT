@@ -2,6 +2,7 @@
 """
 Test booking execution timing to identify bottlenecks
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def test_booking_timing():
     """Test booking execution with detailed timing breakdown"""
+    t('archive.testing.tests.test_booking_timing.test_booking_timing')
     
     # Test parameters
     court_number = 1

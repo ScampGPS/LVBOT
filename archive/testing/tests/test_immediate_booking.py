@@ -3,6 +3,7 @@
 Direct test of immediate booking functionality
 Tests booking for tomorrow using Saul's information
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -28,6 +29,7 @@ logging.basicConfig(
 
 async def test_immediate_booking():
     """Test immediate booking with working executor"""
+    t('archive.testing.tests.test_immediate_booking.test_immediate_booking')
     logger = logging.getLogger('TestImmediateBooking')
     
     print("\n" + "="*80)
@@ -129,6 +131,7 @@ async def test_immediate_booking():
 
 async def test_single_slot():
     """Test a single specific time slot"""
+    t('archive.testing.tests.test_immediate_booking.test_single_slot')
     logger = logging.getLogger('TestSingleSlot')
     
     print("\n" + "="*80)
@@ -184,6 +187,7 @@ async def test_single_slot():
 
 async def main():
     """Main test function"""
+    t('archive.testing.tests.test_immediate_booking.main')
     
     # Choose which test to run
     print("\nSelect test mode:")

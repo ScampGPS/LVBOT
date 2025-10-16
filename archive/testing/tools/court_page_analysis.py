@@ -3,6 +3,7 @@
 Test to analyze DOM and network differences between Court 1, 2, and 3 pages
 Specifically looking for why Court 3 fails to load properly
 """
+from utils.tracking import t
 
 import asyncio
 import json
@@ -19,6 +20,7 @@ COURT_URLS = {
 
 async def analyze_court_page(page, court_number):
     """Analyze a single court page for DOM and network resources"""
+    t('archive.testing.tools.court_page_analysis.analyze_court_page')
     print(f"\n{'='*60}")
     print(f"ANALYZING COURT {court_number}")
     print(f"{'='*60}")
@@ -36,6 +38,7 @@ async def analyze_court_page(page, court_number):
     network_requests = []
     
     async def log_request(request):
+        t('archive.testing.tools.court_page_analysis.analyze_court_page.log_request')
         network_requests.append({
             "url": request.url,
             "method": request.method,
@@ -45,6 +48,7 @@ async def analyze_court_page(page, court_number):
     
     async def log_response(response):
         # Log failed responses
+        t('archive.testing.tools.court_page_analysis.analyze_court_page.log_response')
         if response.status >= 400:
             results["errors"].append({
                 "url": response.url,
@@ -165,6 +169,7 @@ async def analyze_court_page(page, court_number):
 
 async def main():
     """Run the court page analysis"""
+    t('archive.testing.tools.court_page_analysis.main')
     print("🎾 Court Page Analysis Tool")
     print("Analyzing differences between Court 1, 2, and 3")
     

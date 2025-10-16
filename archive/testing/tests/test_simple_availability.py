@@ -2,6 +2,7 @@
 """
 Simple test of availability checking without browser pool warm-up
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 async def test_direct():
     """Test availability checking directly"""
+    t('archive.testing.tests.test_simple_availability.test_direct')
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         

@@ -3,6 +3,7 @@
 Test booking with humanized browser behavior
 Includes warm-up delays and anti-bot measures
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -18,6 +19,7 @@ logging.basicConfig(
 
 async def test_humanized_booking():
     """Test booking with humanized behavior"""
+    t('archive.testing.tests.test_booking_humanized.test_humanized_booking')
     logger = logging.getLogger('HumanizedBooking')
     
     print("\n" + "="*80)

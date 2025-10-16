@@ -1,6 +1,7 @@
 """
 Test booking in scheduler context to understand the hang
 """
+from utils.tracking import t
 
 import asyncio
 import time
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def simulate_scheduler_booking():
     """Simulate how the scheduler runs bookings"""
+    t('archive.testing.tests.test_investigations.test_scheduler_context.simulate_scheduler_booking')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.async_booking_executor import AsyncBookingExecutor
     
@@ -35,6 +37,7 @@ async def simulate_scheduler_booking():
         
         # Simulate scheduler creating booking task
         async def execute_single_booking():
+            t('archive.testing.tests.test_investigations.test_scheduler_context.simulate_scheduler_booking.execute_single_booking')
             print(f"\nBooking task thread: {threading.current_thread().name}")
             print(f"Booking task event loop: {id(asyncio.get_running_loop())}")
             

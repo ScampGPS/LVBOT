@@ -3,6 +3,7 @@
 Script to monitor manual booking - logs all events, fields, and information
 while you perform a manual booking
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 async def monitor_manual_booking():
     """Launch browser and monitor manual booking interactions"""
+    t('archive.scripts.monitoring.monitor_manual_booking.monitor_manual_booking')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,  # Show browser
@@ -44,6 +46,7 @@ async def monitor_manual_booking():
         
         def log_event(event_type, data):
             """Log event to console and file"""
+            t('archive.scripts.monitoring.monitor_manual_booking.monitor_manual_booking.log_event')
             timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
             log_entry = f"[{timestamp}] {event_type}: {json.dumps(data, ensure_ascii=False)}"
             logger.info(log_entry)

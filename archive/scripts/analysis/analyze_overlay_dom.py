@@ -1,6 +1,7 @@
 """
 Analyze the DOM structure of the rules overlay to find a way to bypass it
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def analyze_overlay_dom():
     """Analyze the DOM structure in detail"""
+    t('archive.scripts.analysis.analyze_overlay_dom.analyze_overlay_dom')
     
     async with async_playwright() as p:
         # Launch browser

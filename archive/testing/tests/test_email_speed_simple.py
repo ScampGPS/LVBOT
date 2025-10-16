@@ -3,6 +3,7 @@
 Simple test for email typing speed limits
 Modifies the working executor directly for each test
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -20,6 +21,7 @@ logging.basicConfig(
 
 async def test_with_email_speed(email_speed_multiplier: float):
     """Test booking with specific email typing speed"""
+    t('archive.testing.tests.test_email_speed_simple.test_with_email_speed')
     logger = logging.getLogger('EmailSpeedTest')
     
     print(f"\n{'='*60}")
@@ -159,6 +161,7 @@ async def test_with_email_speed(email_speed_multiplier: float):
 
 async def main():
     """Run email speed tests"""
+    t('archive.testing.tests.test_email_speed_simple.main')
     
     print("\n" + "="*80)
     print("EMAIL TYPING SPEED LIMIT TEST")

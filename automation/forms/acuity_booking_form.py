@@ -3,6 +3,7 @@ Acuity booking form handler for filling appointment details
 Following LVBOT principles: modular, reusable, focused on one task
 Simplified implementation using working patterns from successful tests
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -31,6 +32,7 @@ class AcuityBookingForm:
         Args:
             use_javascript (bool): If True, use JavaScript form filling. If False, use native Playwright methods.
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.__init__')
         self.logger = logger
         self.use_javascript = use_javascript
         
@@ -41,6 +43,7 @@ class AcuityBookingForm:
         Returns:
             Tuple of (has_errors: bool, error_messages: list)
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.check_form_validation_errors')
         try:
             validation_result = await page.evaluate("""
             () => {
@@ -115,6 +118,7 @@ class AcuityBookingForm:
         Returns:
             Tuple of (success: bool, message: str)
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.fill_booking_form')
         try:
             # Validate required fields
             required_fields = ['client.firstName', 'client.lastName', 'client.phone', 'client.email']
@@ -198,6 +202,7 @@ class AcuityBookingForm:
         Returns:
             int: Number of fields successfully filled
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm._fill_form_javascript')
         self.logger.info("📝 Filling form fields with JavaScript...")
         
         result = await page.evaluate("""
@@ -245,6 +250,7 @@ class AcuityBookingForm:
         Returns:
             int: Number of fields successfully filled
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm._fill_form_playwright')
         self.logger.info("📝 Filling form fields with enhanced Playwright approach...")
         
         fields = [
@@ -346,6 +352,7 @@ class AcuityBookingForm:
         Returns:
             bool: True if form filled successfully
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.fill_form')
         try:
             # Map external keys to internal format
             user_data = {
@@ -411,6 +418,7 @@ class AcuityBookingForm:
         Returns:
             bool: True if form was submitted successfully
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm._submit_form_simple')
         try:
             self.logger.info("🚀 Submitting form with JavaScript...")
             
@@ -462,6 +470,7 @@ class AcuityBookingForm:
         Returns:
             Tuple of (success: bool, message: str)
         """
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.check_booking_success')
         try:
             self.logger.info("🔍 Checking booking success...")
             

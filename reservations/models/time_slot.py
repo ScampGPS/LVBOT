@@ -1,6 +1,7 @@
 """
 TimeSlot model for representing court availability time slots
 """
+from utils.tracking import t
 
 from dataclasses import dataclass
 from typing import Optional
@@ -24,6 +25,7 @@ class TimeSlot:
     
     def __str__(self) -> str:
         """String representation of the time slot"""
+        t('reservations.models.time_slot.TimeSlot.__str__')
         return f"Court {self.court}: {self.start_time} - {self.end_time}"
     
     def duration_minutes(self) -> Optional[int]:
@@ -33,6 +35,7 @@ class TimeSlot:
         Returns:
             Duration in minutes if parseable, None otherwise
         """
+        t('reservations.models.time_slot.TimeSlot.duration_minutes')
         try:
             from datetime import datetime
             

@@ -4,6 +4,7 @@ Reservation Queue Management Module
 This module provides the ReservationQueue class for managing queued reservation requests.
 It handles storage, retrieval, and status updates of reservation requests with JSON persistence.
 """
+from utils.tracking import t
 
 import json
 import uuid
@@ -50,6 +51,7 @@ class ReservationQueue:
         Args:
             file_path (str): Path to the JSON file for persistence. Defaults to 'queue.json'.
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.__init__')
         self.file_path = file_path
         self.logger = logging.getLogger('ReservationQueue')
         self.queue = self._load_queue()
@@ -69,6 +71,7 @@ class ReservationQueue:
         Returns:
             str: Unique reservation ID assigned to the new reservation
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.add_reservation')
         from datetime import datetime, timedelta
         import pytz
         from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
@@ -148,6 +151,7 @@ class ReservationQueue:
 
     def add_reservation_request(self, request: ReservationRequest) -> str:
         """Add a dataclass reservation request to the queue."""
+        t('reservations.queue.reservation_queue.ReservationQueue.add_reservation_request')
 
         payload = {
             'user_id': request.user.user_id,
@@ -168,6 +172,7 @@ class ReservationQueue:
 
     def list_reservations(self) -> List[ReservationRequest]:
         """Return reservations as dataclasses."""
+        t('reservations.queue.reservation_queue.ReservationQueue.list_reservations')
 
         results: List[ReservationRequest] = []
         for item in self.queue:
@@ -205,6 +210,7 @@ class ReservationQueue:
         Returns:
             Optional[Dict[str, Any]]: Reservation dictionary if found, None otherwise
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.get_reservation')
         for reservation in self.queue:
             if reservation.get('id') == reservation_id:
                 return reservation
@@ -220,6 +226,7 @@ class ReservationQueue:
         Returns:
             List[Dict[str, Any]]: List of reservation dictionaries for the user
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.get_user_reservations')
         user_reservations = [
             reservation for reservation in self.queue 
             if reservation.get('user_id') == user_id
@@ -235,6 +242,7 @@ class ReservationQueue:
         Returns:
             List[Dict[str, Any]]: List of pending/scheduled reservation dictionaries
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.get_pending_reservations')
         pending_reservations = [
             reservation for reservation in self.queue 
             if reservation.get('status') in ['pending', 'scheduled', ReservationStatus.CONFIRMED.value]
@@ -254,6 +262,7 @@ class ReservationQueue:
         Returns:
             List of reservations for the specified time slot
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.get_reservations_by_time_slot')
         matching_reservations = []
         for reservation in self.queue:
             # Check both 'time' and 'target_time' fields for compatibility
@@ -284,6 +293,7 @@ class ReservationQueue:
         Returns:
             True if successful, False if reservation not found
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.add_to_waitlist')
         for reservation in self.queue:
             if reservation.get('id') == reservation_id:
                 old_status = reservation.get('status')
@@ -317,6 +327,7 @@ class ReservationQueue:
         Returns:
             List of waitlisted reservations sorted by position
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.get_waitlist_for_slot')
         waitlisted = []
         for reservation in self.queue:
             res_date = reservation.get('target_date')
@@ -342,6 +353,7 @@ class ReservationQueue:
         Returns:
             bool: True if update was successful, False if reservation not found
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.update_reservation_status')
         for reservation in self.queue:
             if reservation.get('id') == reservation_id:
                 old_status = reservation.get('status')
@@ -377,6 +389,7 @@ class ReservationQueue:
         Returns:
             bool: True if removed successfully, False if reservation not found
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.remove_reservation')
         for i, reservation in enumerate(self.queue):
             if reservation.get('id') == reservation_id:
                 removed_reservation = self.queue.pop(i)
@@ -401,6 +414,7 @@ class ReservationQueue:
         Returns:
             bool: True if update was successful, False if reservation not found
         """
+        t('reservations.queue.reservation_queue.ReservationQueue.update_reservation')
         for i, reservation in enumerate(self.queue):
             if reservation.get('id') == reservation_id:
                 # Update the reservation while preserving the ID
@@ -420,6 +434,7 @@ class ReservationQueue:
         
         Handles file operation errors gracefully and logs any issues.
         """
+        t('reservations.queue.reservation_queue.ReservationQueue._save_queue')
         try:
             # Ensure directory exists
             Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
@@ -439,6 +454,7 @@ class ReservationQueue:
         Returns:
             List[Dict[str, Any]]: List of reservation dictionaries, empty list if file doesn't exist
         """
+        t('reservations.queue.reservation_queue.ReservationQueue._load_queue')
         try:
             if Path(self.file_path).exists():
                 with open(self.file_path, 'r', encoding='utf-8') as f:
@@ -466,6 +482,7 @@ class ReservationQueue:
         Returns:
             Dictionary mapping status to count
         """
+        t('reservations.queue.reservation_queue.ReservationQueue._get_status_counts')
         from collections import Counter
         status_counts = Counter(r.get('status', 'unknown') for r in self.queue)
         return dict(status_counts)

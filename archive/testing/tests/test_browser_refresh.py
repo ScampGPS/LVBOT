@@ -3,6 +3,7 @@
 Test script for the new browser refresh functionality
 Validates that browsers can be refreshed without event loop conflicts
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -20,6 +21,7 @@ logger = logging.getLogger('BrowserRefreshTest')
 
 async def test_browser_refresh():
     """Test the new browser refresh functionality"""
+    t('archive.testing.tests.test_browser_refresh.test_browser_refresh')
     logger.info("🧪 TESTING BROWSER REFRESH FUNCTIONALITY")
     
     try:
@@ -90,6 +92,7 @@ async def test_browser_refresh():
 
 async def test_scheduler_integration():
     """Test that the refresh functionality integrates properly with the scheduler"""
+    t('archive.testing.tests.test_browser_refresh.test_scheduler_integration')
     logger.info("🧪 TESTING SCHEDULER INTEGRATION")
     
     try:
@@ -126,6 +129,7 @@ async def test_scheduler_integration():
 
 async def main():
     """Run all tests"""
+    t('archive.testing.tests.test_browser_refresh.main')
     logger.info("🚀 STARTING BROWSER REFRESH TESTS")
     logger.info(f"Test started at: {datetime.now()}")
     

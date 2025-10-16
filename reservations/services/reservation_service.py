@@ -1,6 +1,7 @@
 """Domain service encapsulating reservation queue and scheduler."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import logging
 from datetime import date
@@ -25,6 +26,7 @@ class ReservationService:
         browser_pool=None,
         executor_config: Optional[AsyncExecutorConfig] = None,
     ) -> None:
+        t('reservations.services.reservation_service.ReservationService.__init__')
         self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue or ReservationQueue()
         self.user_manager = user_manager
@@ -39,6 +41,7 @@ class ReservationService:
 
     def enqueue(self, request: ReservationRequest) -> str:
         """Add a reservation request to the queue."""
+        t('reservations.services.reservation_service.ReservationService.enqueue')
 
         reservation_id = self.queue.add_reservation_request(request)
         self.logger.info("Queued reservation %s for user %s", reservation_id, request.user.user_id)
@@ -46,11 +49,13 @@ class ReservationService:
 
     def list_requests(self) -> List[ReservationRequest]:
         """Return all requests as dataclasses."""
+        t('reservations.services.reservation_service.ReservationService.list_requests')
 
         return self.queue.list_reservations()
 
     def start_scheduler(self) -> None:
         """Start the reservation scheduler thread if not running."""
+        t('reservations.services.reservation_service.ReservationService.start_scheduler')
 
         if not self.scheduler.running:
             self.logger.info("Starting reservation scheduler")
@@ -58,15 +63,18 @@ class ReservationService:
 
     def stop_scheduler(self) -> None:
         """Stop the reservation scheduler if running."""
+        t('reservations.services.reservation_service.ReservationService.stop_scheduler')
 
         if self.scheduler.running:
             self.logger.info("Stopping reservation scheduler")
             self.scheduler.stop()
 
     def is_scheduler_running(self) -> bool:
+        t('reservations.services.reservation_service.ReservationService.is_scheduler_running')
         return self.scheduler.running
 
     def get_queue_statistics(self) -> dict:
+        t('reservations.services.reservation_service.ReservationService.get_queue_statistics')
         return self.queue._get_status_counts()
 
     def build_request(
@@ -76,6 +84,7 @@ class ReservationService:
         target_time: str,
         court_preferences: Iterable[int],
     ) -> ReservationRequest:
+        t('reservations.services.reservation_service.ReservationService.build_request')
         return ReservationRequest(
             request_id=None,
             user=user,

@@ -3,6 +3,7 @@
 Optimized Booking Executor - Faster version based on phase analysis
 Targets the slowest phases identified in analysis
 """
+from utils.tracking import t
 
 import asyncio
 import random
@@ -46,10 +47,12 @@ class OptimizedExecutionResult:
 
 def apply_speed(delay_seconds):
     """Apply speed multiplier to delay times"""
+    t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.apply_speed')
     return max(0.1, delay_seconds / SPEED_CONFIG['SPEED_MULTIPLIER'])
 
 async def optimized_mouse_movement(page):
     """Optimized mouse movement - fewer, faster movements"""
+    t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.optimized_mouse_movement')
     for _ in range(SPEED_CONFIG['MOUSE_MOVEMENTS']):
         x = random.randint(400, 800)
         y = random.randint(300, 600)
@@ -58,6 +61,7 @@ async def optimized_mouse_movement(page):
 
 async def optimized_typing(element, text, mistake_prob=0.05):
     """Optimized typing - faster with fewer mistakes"""
+    t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.optimized_typing')
     await element.click()
     await asyncio.sleep(0.1)
     await element.fill('')
@@ -84,16 +88,19 @@ class OptimizedBookingExecutor:
     """Optimized executor with faster phase timings"""
     
     def __init__(self, browser_pool=None):
+        t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.OptimizedBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.logger = logging.getLogger('OptimizedExecutor')
         self.phase_times = {}
         
     def start_phase(self, phase_name: str):
         """Track phase start time"""
+        t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.OptimizedBookingExecutor.start_phase')
         self.phase_times[phase_name] = time.time()
         
     def end_phase(self, phase_name: str) -> float:
         """Track phase end time and return duration"""
+        t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.OptimizedBookingExecutor.end_phase')
         if phase_name in self.phase_times:
             duration = time.time() - self.phase_times[phase_name]
             self.phase_times[phase_name] = duration
@@ -108,6 +115,7 @@ class OptimizedBookingExecutor:
         user_info: Dict[str, str]
     ) -> OptimizedExecutionResult:
         """Execute optimized booking"""
+        t('archive.legacy_modules.browser_cleanup.optimized_booking_executor.OptimizedBookingExecutor.execute_booking')
         
         start_time = time.time()
         

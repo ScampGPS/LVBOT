@@ -2,6 +2,7 @@
 """
 Analyze the DOM structure to understand how to find courts
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 def analyze_dom():
     """Analyze DOM structure of the booking page"""
+    t('archive.scripts.analysis.analyze_dom_structure.analyze_dom')
     
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)

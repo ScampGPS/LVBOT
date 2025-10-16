@@ -3,6 +3,7 @@
 Implement experienced user mode in the main booking executor
 Adds a flag to enable fast booking for experienced users
 """
+from utils.tracking import t
 import pathlib
 import sys
 import shutil
@@ -15,6 +16,7 @@ PROJECT_UTILS = ROOT_DIR / 'lvbot' / 'utils'
 
 def add_experienced_mode():
     """Add experienced user mode to async_booking_executor.py"""
+    t('archive.scripts.maintenance.implement_experienced_mode.add_experienced_mode')
     
     # Read the current async_booking_executor.py
     executor_file = PROJECT_UTILS / 'async_booking_executor.py'

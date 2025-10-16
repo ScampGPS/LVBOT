@@ -2,6 +2,7 @@
 """
 Test the new AvailabilityCheckerV2 implementation
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -16,6 +17,7 @@ logging.basicConfig(
 
 async def test_availability_checker():
     """Test the new availability checker"""
+    t('archive.testing.tests.test_availability_v2.test_availability_checker')
     print("=" * 60)
     print("Testing AvailabilityCheckerV2")
     print("=" * 60)

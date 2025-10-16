@@ -2,6 +2,7 @@
 Telegram UI utility functions
 Handles keyboard creation and message formatting
 """
+from utils.tracking import t
 
 from typing import List, Optional, Dict, Any
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
@@ -16,6 +17,7 @@ class TelegramUI:
     @staticmethod
     def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0) -> InlineKeyboardMarkup:
         """Create the main menu keyboard"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_main_menu_keyboard')
         keyboard = [
             [
                 InlineKeyboardButton("🎾 Reserve Court", callback_data='menu_reserve'),
@@ -45,6 +47,7 @@ class TelegramUI:
     @staticmethod
     def create_court_selection_keyboard(available_courts: List[int]) -> ReplyKeyboardMarkup:
         """Create court selection keyboard"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_court_selection_keyboard')
         keyboard = []
         
         # Add individual court buttons
@@ -60,6 +63,7 @@ class TelegramUI:
     @staticmethod
     def create_queue_court_selection_keyboard(available_courts: List[int]) -> InlineKeyboardMarkup:
         """Create inline court selection keyboard for queue booking flow"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_queue_court_selection_keyboard')
         keyboard = []
         
         # Add individual court buttons in rows of 3
@@ -85,16 +89,19 @@ class TelegramUI:
     @staticmethod
     def create_yes_no_keyboard() -> ReplyKeyboardMarkup:
         """Create simple yes/no keyboard"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_yes_no_keyboard')
         return ReplyKeyboardMarkup([["Yes", "No"]], one_time_keyboard=True, resize_keyboard=True)
     
     @staticmethod
     def create_cancel_keyboard() -> ReplyKeyboardMarkup:
         """Create keyboard with only cancel option"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_cancel_keyboard')
         return ReplyKeyboardMarkup([["Cancel"]], one_time_keyboard=True, resize_keyboard=True)
     
     @staticmethod
     def create_queue_confirmation_keyboard() -> InlineKeyboardMarkup:
         """Create inline confirmation keyboard for queue booking flow"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_queue_confirmation_keyboard')
         keyboard = [
             [
                 InlineKeyboardButton("✅ Confirm", callback_data='queue_confirm'),
@@ -114,6 +121,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with single 'Back to Menu' button
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_back_to_menu_keyboard')
         keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data='back_to_menu')]]
         return InlineKeyboardMarkup(keyboard)
     
@@ -125,6 +133,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with Edit Profile and Back to Menu buttons
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_profile_keyboard')
         keyboard = [
             [InlineKeyboardButton("✏️ Edit Profile", callback_data='edit_profile')],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data='back_to_menu')]
@@ -139,6 +148,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with edit options for each field
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_edit_profile_keyboard')
         keyboard = [
             [InlineKeyboardButton("👤 Edit Name", callback_data='edit_name')],
             [InlineKeyboardButton("📱 Edit Phone", callback_data='edit_phone')],
@@ -155,6 +165,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with cancel button
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_cancel_edit_keyboard')
         keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data='cancel_edit')]]
         return InlineKeyboardMarkup(keyboard)
     
@@ -166,6 +177,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with numeric keypad
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_phone_keypad')
         keyboard = [
             [
                 InlineKeyboardButton("1", callback_data='phone_digit_1'),
@@ -201,6 +213,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with name type options
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_name_type_keyboard')
         keyboard = [
             [InlineKeyboardButton("👤 Edit First Name", callback_data='edit_first_name')],
             [InlineKeyboardButton("👥 Edit Last Name", callback_data='edit_last_name')],
@@ -217,6 +230,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with alphabet
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_letter_keyboard')
         # Letters in rows - uppercase for names
         letters = [
             ["A", "B", "C", "D", "E", "F"],
@@ -257,6 +271,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with confirm/retry options
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_email_confirm_keyboard')
         keyboard = [
             [InlineKeyboardButton("✅ Yes, Save This Email", callback_data='email_confirm')],
             [InlineKeyboardButton("🔄 Try Again", callback_data='edit_email')],
@@ -272,6 +287,7 @@ class TelegramUI:
         Returns:
             InlineKeyboardMarkup with email-safe characters
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_email_char_keyboard')
         # Characters valid in email
         chars = [
             ["a", "b", "c", "d", "e", "f"],
@@ -307,6 +323,7 @@ class TelegramUI:
         Create the 48h booking type selection keyboard
         Returns two options: immediate (within 48h) or future (after 48h)
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_48h_booking_type_keyboard')
         from infrastructure.constants import TEST_MODE_ENABLED
         
         # Build button text based on test mode
@@ -327,6 +344,7 @@ class TelegramUI:
         Create year selection keyboard for future bookings
         Shows current year and next year
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_year_selection_keyboard')
         current_year = datetime.now().year
         keyboard = [
             [InlineKeyboardButton(f"📅 {current_year}", callback_data=f'year_{current_year}')],
@@ -343,6 +361,7 @@ class TelegramUI:
         Args:
             year: The selected year
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_month_selection_keyboard')
         months = [
             "January", "February", "March", "April",
             "May", "June", "July", "August",
@@ -386,6 +405,7 @@ class TelegramUI:
             month: The selected month (1-12)
             flow_type: 'immediate' or 'queue_booking' to determine filtering rules
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_day_selection_keyboard')
         import calendar
         from datetime import date, datetime, timedelta
         import pytz
@@ -488,6 +508,7 @@ class TelegramUI:
         Args:
             dates: List of (date_obj, label) tuples
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_date_selection_keyboard')
         keyboard = []
         for i in range(0, len(dates), 2):
             row = []
@@ -503,6 +524,7 @@ class TelegramUI:
     def create_time_selection_keyboard(available_times: List[str], selected_date: str, 
                                      flow_type: str = 'availability') -> InlineKeyboardMarkup:
         """Create time selection keyboard with flow-specific callbacks"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_time_selection_keyboard')
         from datetime import datetime, date
         
         keyboard = []
@@ -549,6 +571,7 @@ class TelegramUI:
     @staticmethod
     def create_time_selection_keyboard_simple(date=None) -> InlineKeyboardMarkup:
         """Create time selection keyboard for modify flow (no parameters)"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_time_selection_keyboard_simple')
         # Use centralized court hours from constants
         available_times = get_court_hours(date)
         
@@ -569,6 +592,7 @@ class TelegramUI:
     @staticmethod
     def create_court_selection_keyboard() -> InlineKeyboardMarkup:
         """Create court selection keyboard for modify flow"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_court_selection_keyboard')
         available_courts = [1, 2, 3]
         keyboard = []
         
@@ -595,6 +619,7 @@ class TelegramUI:
     @staticmethod
     def format_reservation_confirmation(reservation_details: Dict[str, Any]) -> str:
         """Format reservation confirmation message"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_reservation_confirmation')
         courts_text = ', '.join([f"Court {c}" for c in reservation_details['courts']])
         
         message = f"""✅ **Reservation Confirmed!**
@@ -615,6 +640,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     @staticmethod
     def format_user_tier_badge(tier_name: str) -> str:
         """Format user tier into an emoji badge"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_user_tier_badge')
         tier_badges = {
             'ADMIN': '👑',
             'VIP': '⭐',
@@ -633,6 +659,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             str: Formatted message string for display
         """
+        t('botapp.ui.telegram_ui.TelegramUI.format_reservations_list')
         if not reservations:
             return ("📋 **My Reservations**\n\n"
                    "You have no active reservations at the moment.\n\n"
@@ -701,6 +728,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     @staticmethod
     def format_error_message(error_type: str, details: Optional[str] = None) -> str:
         """Format standardized error messages"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_error_message')
         error_messages = {
             'unauthorized': "🔐 You are not authorized to use this bot.\nPlease send /start to request access.",
             'invalid_date': "❌ Invalid date selected. Please choose a valid date.",
@@ -725,6 +753,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
                                   date: datetime, 
                                   show_summary: bool = True) -> str:
         """Format court availability message"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_availability_message')
         date_str = date.strftime('%A, %B %d')
         message = f"🎾 **Court Availability**\n📅 {date_str}\n\n"
         
@@ -758,6 +787,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     @staticmethod
     def format_user_profile_message(user_data: Dict[str, Any], is_hardcoded: bool = False) -> str:
         """Format user profile display"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_user_profile_message')
         status_emoji = "✅" if user_data.get('is_active', True) else "🔴"
         
         # Format phone with (+502) prefix if set
@@ -790,6 +820,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     @staticmethod
     def format_queue_status_message(queue_items: List[Dict[str, Any]], timezone_str: str) -> str:
         """Format queue status message"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_queue_status_message')
         if not queue_items:
             return "📋 No queued reservations."
         
@@ -812,6 +843,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     def create_pagination_keyboard(current_page: int, total_pages: int, 
                                  callback_prefix: str) -> List[InlineKeyboardButton]:
         """Create pagination buttons for multi-page displays"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_pagination_keyboard')
         buttons = []
         
         if current_page > 0:
@@ -830,11 +862,13 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
     @staticmethod
     def format_loading_message(action: str = "Processing") -> str:
         """Format a loading message"""
+        t('botapp.ui.telegram_ui.TelegramUI.format_loading_message')
         return f"⏳ {action}..."
     
     @staticmethod
     def create_admin_menu_keyboard(pending_count: int = 0) -> InlineKeyboardMarkup:
         """Create admin menu keyboard"""
+        t('botapp.ui.telegram_ui.TelegramUI.create_admin_menu_keyboard')
         keyboard = [
             [
                 InlineKeyboardButton(f"🆕 Pending ({pending_count})", callback_data='admin_pending'),
@@ -869,6 +903,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             InlineKeyboardMarkup with time buttons grouped by court (vertical) or time slots (matrix)
         """
+        t('botapp.ui.telegram_ui.TelegramUI.create_court_availability_keyboard')
         if layout_type == "matrix":
             # Matrix layout: times as rows, courts as columns with day cycling
             return TelegramUI._create_matrix_layout_keyboard(available_times, selected_date, available_dates)
@@ -889,6 +924,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             InlineKeyboardMarkup with vertical court layout
         """
+        t('botapp.ui.telegram_ui.TelegramUI._create_vertical_layout_keyboard')
         keyboard = []
         
         # Sort courts
@@ -941,6 +977,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             InlineKeyboardMarkup with matrix layout
         """
+        t('botapp.ui.telegram_ui.TelegramUI._create_matrix_layout_keyboard')
         import logging
         logger = logging.getLogger(__name__)
         
@@ -1015,6 +1052,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             Dict mapping time slot to dict of court availability (court_num -> bool)
         """
+        t('botapp.ui.telegram_ui.TelegramUI._build_time_matrix')
         time_matrix = {}
         
         # Collect all unique times
@@ -1051,6 +1089,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             Filtered time matrix with only rows that have at least 1 available court
         """
+        t('botapp.ui.telegram_ui.TelegramUI._filter_empty_time_rows')
         filtered_matrix = {}
         
         for time_slot, court_availability in time_matrix.items():
@@ -1075,6 +1114,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             List of keyboard rows for the matrix layout
         """
+        t('botapp.ui.telegram_ui.TelegramUI._create_matrix_keyboard_rows')
         keyboard_rows = []
         
         # Sort time slots for consistent display
@@ -1116,6 +1156,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             Day label string
         """
+        t('botapp.ui.telegram_ui.TelegramUI._get_day_label_for_date')
         from datetime import datetime, timedelta
         
         try:
@@ -1148,6 +1189,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             Next available date string
         """
+        t('botapp.ui.telegram_ui.TelegramUI._get_next_day')
         if not available_dates:
             return current_date
         
@@ -1181,6 +1223,7 @@ Priority: {'High' if reservation_details.get('priority', 1) == 0 else 'Normal'}"
         Returns:
             Formatted message string matching the UI design
         """
+        t('botapp.ui.telegram_ui.TelegramUI.format_interactive_availability_message')
         date_str = date.strftime('%A, %B %d')
         
         # Calculate total slots if not provided

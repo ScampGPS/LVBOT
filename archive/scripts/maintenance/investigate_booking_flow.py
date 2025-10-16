@@ -1,6 +1,7 @@
 """
 Investigate the actual booking flow and why we're seeing rules page instead of calendar
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def investigate_booking_flow():
     """Investigate the booking flow step by step"""
+    t('archive.scripts.maintenance.investigate_booking_flow.investigate_booking_flow')
     
     async with async_playwright() as p:
         # Launch browser

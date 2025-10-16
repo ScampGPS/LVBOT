@@ -2,6 +2,7 @@
 """
 Test the day cycling fix
 """
+from utils.tracking import t
 
 import sys
 import os
@@ -10,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Test that the formatted_times no longer try to add hour ranges
 def test_formatted_times():
     """Test that formatted times work without _add_hour method"""
+    t('archive.testing.tests.test_day_cycling_fix.test_formatted_times')
     
     # Simulate the data structure from complete_matrix
     selected_date_times = {

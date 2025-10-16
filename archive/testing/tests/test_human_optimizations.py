@@ -4,6 +4,7 @@ Test human-like optimizations:
 1. Copy-paste email instead of typing
 2. Experienced user with minimal delays
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -21,6 +22,7 @@ logging.basicConfig(
 
 async def test_copy_paste_email():
     """Test using copy-paste for email field"""
+    t('archive.testing.tests.test_human_optimizations.test_copy_paste_email')
     logger = logging.getLogger('CopyPasteTest')
     
     print("\n" + "="*80)
@@ -85,6 +87,7 @@ async def test_copy_paste_email():
 
 async def test_experienced_user():
     """Test with experienced user timing - minimal delays"""
+    t('archive.testing.tests.test_human_optimizations.test_experienced_user')
     logger = logging.getLogger('ExperiencedUserTest')
     
     print("\n" + "="*80)
@@ -389,6 +392,7 @@ class ExperiencedUserExecutor:
 
 async def run_booking_test(test_name: str) -> tuple:
     """Run a booking test with current configuration"""
+    t('archive.testing.tests.test_human_optimizations.run_booking_test')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.async_booking_executor import AsyncBookingExecutor
     from lvbot.utils.court_availability import CourtAvailability
@@ -464,6 +468,7 @@ async def run_booking_test(test_name: str) -> tuple:
 
 async def main():
     """Run human optimization tests"""
+    t('archive.testing.tests.test_human_optimizations.main')
     
     print("\n" + "="*80)
     print("HUMAN-LIKE OPTIMIZATION TESTS")

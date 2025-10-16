@@ -2,6 +2,7 @@
 """
 Test that experienced mode is now the default
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -14,6 +15,7 @@ logging.basicConfig(
 
 async def test_default_mode():
     """Test that experienced mode is the default"""
+    t('archive.testing.tests.test_default_mode.test_default_mode')
     
     from lvbot.utils.async_booking_executor import AsyncBookingExecutor
     

@@ -3,6 +3,7 @@
 Test script to simulate Telegram button clicks for booking
 Tests the "Book Now" (within 48h) functionality
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -33,6 +34,7 @@ logging.basicConfig(
 class MockUpdate:
     """Mock Telegram Update object for testing"""
     def __init__(self, user_id: int, user_name: str, callback_data: str = None, message_text: str = None):
+        t('archive.testing.tests.test_telegram_booking.MockUpdate.__init__')
         self.callback_query = None
         self.message = None
         
@@ -79,7 +81,9 @@ class MockUpdate:
             })()
     
     def _create_async_edit_text(self):
+        t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_edit_text')
         async def edit_text(*args, **kwargs):
+            t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_edit_text.edit_text')
             print(f"[EDIT MESSAGE] {args[0] if args else kwargs.get('text', '')}")
             if 'reply_markup' in kwargs and kwargs['reply_markup']:
                 print("[BUTTONS SHOWN]")
@@ -89,7 +93,9 @@ class MockUpdate:
         return edit_text
     
     def _create_async_reply_text(self):
+        t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_reply_text')
         async def reply_text(*args, **kwargs):
+            t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_reply_text.reply_text')
             print(f"[REPLY] {args[0] if args else kwargs.get('text', '')}")
             if 'reply_markup' in kwargs and kwargs['reply_markup']:
                 print("[BUTTONS SHOWN]")
@@ -99,12 +105,16 @@ class MockUpdate:
         return reply_text
     
     def _create_async_delete(self):
+        t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_delete')
         async def delete():
+            t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_delete.delete')
             print("[MESSAGE DELETED]")
         return delete
     
     def _create_async_answer(self):
+        t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_answer')
         async def answer(*args, **kwargs):
+            t('archive.testing.tests.test_telegram_booking.MockUpdate._create_async_answer.answer')
             print(f"[CALLBACK ANSWER] {args[0] if args else ''}")
         return answer
 
@@ -112,6 +122,7 @@ class TestTelegramBooking:
     """Test harness for Telegram booking functionality"""
     
     def __init__(self):
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.__init__')
         self.logger = logging.getLogger('TestTelegramBooking')
         self.bot = None
         self.user_id = 125763357  # Saul's user ID
@@ -119,6 +130,7 @@ class TestTelegramBooking:
         
     async def setup_bot(self):
         """Initialize the bot with test configuration"""
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.setup_bot')
         self.logger.info("Setting up test bot...")
         
         # Create bot instance
@@ -134,6 +146,7 @@ class TestTelegramBooking:
         
     async def simulate_button_click(self, callback_data: str):
         """Simulate a button click"""
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.simulate_button_click')
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"SIMULATING BUTTON CLICK: {callback_data}")
         self.logger.info(f"{'='*60}")
@@ -160,6 +173,7 @@ class TestTelegramBooking:
     
     async def simulate_message(self, text: str):
         """Simulate sending a message"""
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.simulate_message')
         self.logger.info(f"\n{'='*60}")
         self.logger.info(f"SIMULATING MESSAGE: {text}")
         self.logger.info(f"{'='*60}")
@@ -189,6 +203,7 @@ class TestTelegramBooking:
     
     async def test_book_now_flow(self):
         """Test the complete Book Now flow"""
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.test_book_now_flow')
         self.logger.info("\n" + "="*80)
         self.logger.info("TESTING BOOK NOW (WITHIN 48H) FLOW")
         self.logger.info("="*80)
@@ -234,12 +249,14 @@ class TestTelegramBooking:
     
     async def cleanup(self):
         """Clean up resources"""
+        t('archive.testing.tests.test_telegram_booking.TestTelegramBooking.cleanup')
         if self.bot and self.bot.browser_pool:
             await self.bot.browser_pool.cleanup()
         self.logger.info("Cleanup complete")
 
 async def main():
     """Main test function"""
+    t('archive.testing.tests.test_telegram_booking.main')
     print("\n" + "="*80)
     print("TELEGRAM BOOKING TEST - BOOK NOW FUNCTIONALITY")
     print("="*80)

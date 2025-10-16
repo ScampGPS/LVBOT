@@ -3,6 +3,7 @@
 Test a single timing configuration safely
 Only books ONE slot for tomorrow
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def test_single_timing(warmup_seconds: float, initial_delay_min: float, initial_delay_max: float):
     """Test a single timing configuration"""
+    t('archive.testing.tests.test_single_timing.test_single_timing')
     logger = logging.getLogger('SingleTimingTest')
     
     print("\n" + "="*80)
@@ -126,6 +128,7 @@ async def test_single_timing(warmup_seconds: float, initial_delay_min: float, in
 
 async def main():
     """Run test with specified timing"""
+    t('archive.testing.tests.test_single_timing.main')
     import sys
     
     if len(sys.argv) == 4:

@@ -3,6 +3,7 @@ Emergency Browser Fallback System
 Independent booking mechanism that operates without browser pool dependencies
 Used as last resort when browser pool is completely unavailable
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -35,6 +36,7 @@ class EmergencyBrowserFallback:
     
     def __init__(self):
         """Initialize emergency fallback - no pool dependencies"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.__init__')
         self.logger = logging.getLogger('EmergencyBrowserFallback')
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
@@ -53,6 +55,7 @@ class EmergencyBrowserFallback:
     
     async def create_browser(self) -> Browser:
         """Create a single browser instance directly with Playwright"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.create_browser')
         try:
             if not self.playwright:
                 self.playwright = await async_playwright().start()
@@ -111,6 +114,7 @@ class EmergencyBrowserFallback:
         Returns:
             EmergencyBookingResult with booking outcome
         """
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.book_reservation')
         if not self._initialized:
             await self.create_browser()
             
@@ -190,6 +194,7 @@ class EmergencyBrowserFallback:
     
     async def _check_form_visible(self, page: Page) -> bool:
         """Check if booking form is visible"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_form_visible')
         try:
             # Check for form fields
             first_name_field = await page.query_selector('input[name="client.firstName"]')
@@ -199,6 +204,7 @@ class EmergencyBrowserFallback:
     
     async def _try_click_continue(self, page: Page):
         """Try to click continue button if present"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._try_click_continue')
         try:
             continue_btn = await page.query_selector('button:has-text("Continuar")')
             if continue_btn:
@@ -209,6 +215,7 @@ class EmergencyBrowserFallback:
     
     async def _fill_booking_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
         """Fill the booking form with user information"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._fill_booking_form')
         try:
             # Fill form fields with proper field names
             await page.fill('input[name="client.firstName"]', user_info.get('first_name', ''))
@@ -233,6 +240,7 @@ class EmergencyBrowserFallback:
     
     async def _submit_booking(self, page: Page) -> Dict[str, Any]:
         """Submit the booking and check for confirmation"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._submit_booking')
         try:
             # Find and click submit button
             submit_btn = await page.query_selector('button[type="submit"]:has-text("Schedule")')
@@ -285,6 +293,7 @@ class EmergencyBrowserFallback:
     
     async def _check_for_errors(self, page: Page) -> Optional[str]:
         """Check page for error messages"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_for_errors')
         try:
             # Common error selectors
             error_selectors = [
@@ -313,6 +322,7 @@ class EmergencyBrowserFallback:
     
     async def cleanup(self):
         """Clean up browser resources"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.cleanup')
         try:
             if self.context:
                 await self.context.close()
@@ -334,11 +344,13 @@ class EmergencyBrowserFallback:
     
     async def __aenter__(self):
         """Context manager entry"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.__aenter__')
         await self.create_browser()
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.__aexit__')
         await self.cleanup()
 
 
@@ -353,6 +365,7 @@ async def emergency_book(
     Quick emergency booking function
     Creates fallback browser, executes booking, and cleans up
     """
+    t('automation.browser.emergency_browser_fallback.emergency_book')
     async with EmergencyBrowserFallback() as fallback:
         return await fallback.book_reservation(
             user_info=user_info,

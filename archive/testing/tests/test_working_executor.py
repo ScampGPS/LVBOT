@@ -3,6 +3,7 @@
 Test the working booking executor directly
 This tests the exact same flow as court_booking_final.py but within LVBOT context
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -26,6 +27,7 @@ logging.basicConfig(
 
 async def test_working_executor():
     """Test the working executor directly"""
+    t('archive.testing.tests.test_working_executor.test_working_executor')
     logger = logging.getLogger('TestWorkingExecutor')
     
     print("\n" + "="*80)
@@ -114,6 +116,7 @@ async def test_working_executor():
 
 async def test_all_courts():
     """Test booking on all courts"""
+    t('archive.testing.tests.test_working_executor.test_all_courts')
     logger = logging.getLogger('TestAllCourts')
     
     print("\n" + "="*80)
@@ -172,6 +175,7 @@ async def test_all_courts():
 
 async def main():
     """Main test function"""
+    t('archive.testing.tests.test_working_executor.main')
     
     # Run single court test automatically
     await test_working_executor()

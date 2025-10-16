@@ -2,6 +2,7 @@
 """
 Script to capture confirmation page details after successful booking
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def capture_confirmation_page():
     """Navigate to booking form and capture confirmation details after submission"""
+    t('archive.scripts.playwright.capture_confirmation_page.capture_confirmation_page')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,  # Show browser

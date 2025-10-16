@@ -2,6 +2,7 @@
 Async Booking Executor - Clean Version
 Uses the proven working method from court_booking_final.py
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -47,6 +48,7 @@ class AsyncBookingExecutor:
             browser_pool: AsyncBrowserPool instance
             use_natural_flow: Whether to use natural flow (ignored - always uses working method)
         """
+        t('archive.legacy_modules.async_booking_executor_clean.AsyncBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.use_natural_flow = use_natural_flow  # Kept for compatibility but ignored
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -62,6 +64,7 @@ class AsyncBookingExecutor:
         """
         Execute booking attempts on multiple courts in parallel
         """
+        t('archive.legacy_modules.async_booking_executor_clean.AsyncBookingExecutor.execute_parallel_booking')
         self.logger.info(f"Starting parallel booking for courts {court_numbers} at {time_slot}")
         
         # Always use the working method regardless of use_natural_flow
@@ -139,6 +142,7 @@ class AsyncBookingExecutor:
         """
         Execute a single booking attempt using the working method
         """
+        t('archive.legacy_modules.async_booking_executor_clean.AsyncBookingExecutor.execute_booking')
         execution_start = time.time()
         
         try:
@@ -193,6 +197,7 @@ class AsyncBookingExecutor:
         """
         Internal booking execution - always uses the working method
         """
+        t('archive.legacy_modules.async_booking_executor_clean.AsyncBookingExecutor._execute_booking_internal')
         try:
             # Always use the PROVEN WORKING METHOD from court_booking_final.py
             self.logger.info(f"Using WORKING solution from court_booking_final.py for Court {court_number}")

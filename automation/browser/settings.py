@@ -1,6 +1,7 @@
 """Browser settings dataclass and helpers."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 from dataclasses import dataclass, field
 from typing import Iterable, List, Optional
@@ -21,6 +22,7 @@ class BrowserSettings:
 
     def with_courts(self, courts: Iterable[int]) -> "BrowserSettings":
         """Return a copy with a different list of courts."""
+        t('automation.browser.settings.BrowserSettings.with_courts')
 
         return BrowserSettings(
             courts=list(courts),
@@ -33,6 +35,7 @@ class BrowserSettings:
 
 def load_browser_settings() -> BrowserSettings:
     """Derive :class:`BrowserSettings` from the global application settings."""
+    t('automation.browser.settings.load_browser_settings')
 
     app_settings = get_settings()
 

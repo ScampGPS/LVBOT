@@ -1,6 +1,7 @@
 """Consolidated booking executors and related helpers."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 def _safe_sleep(seconds: float) -> None:
     """Sleep helper that clamps to non-negative values."""
+    t('automation.executors.booking._safe_sleep')
 
     if seconds > 0:
         time.sleep(seconds)
@@ -43,10 +45,12 @@ WORKING_SPEED_MULTIPLIER = 2.5
 
 
 def _working_apply_speed(delay_seconds: float) -> float:
+    t('automation.executors.booking._working_apply_speed')
     return max(0.1, delay_seconds / WORKING_SPEED_MULTIPLIER)
 
 
 async def _working_human_type_with_mistakes(element, text: str, mistake_prob: float = 0.10) -> None:
+    t('automation.executors.booking._working_human_type_with_mistakes')
     await element.click()
     await asyncio.sleep(_working_apply_speed(random.uniform(0.3, 0.8)))
     await element.fill("")
@@ -73,6 +77,7 @@ async def _working_human_type_with_mistakes(element, text: str, mistake_prob: fl
 
 
 async def _working_natural_mouse_movement(page: Page) -> None:
+    t('automation.executors.booking._working_natural_mouse_movement')
     movement_count = max(1, int(random.randint(1, 2) / WORKING_SPEED_MULTIPLIER))
     for _ in range(movement_count):
         x = random.randint(200, 1000)
@@ -87,6 +92,7 @@ class WorkingBookingExecutor:
     """Working booking executor based on the proven flow."""
 
     def __init__(self, browser_pool: Optional[Any] = None) -> None:
+        t('automation.executors.booking.WorkingBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.logger = logging.getLogger("WorkingBookingExecutor")
 
@@ -97,6 +103,7 @@ class WorkingBookingExecutor:
         time_slot: str,
         user_info: Dict[str, str],
     ) -> ExecutionResult:
+        t('automation.executors.booking.WorkingBookingExecutor.execute_booking')
         if not self.browser_pool:
             return ExecutionResult(success=False, error_message="Browser pool not initialized")
 
@@ -121,6 +128,7 @@ class WorkingBookingExecutor:
         time_slot: str,
         user_info: Dict[str, str],
     ) -> ExecutionResult:
+        t('automation.executors.booking.WorkingBookingExecutor._execute_booking_internal')
         self.logger.info("Starting booking: Court %s at %s on %s", court_number, time_slot, target_date)
 
         delay_min = getattr(self, "INITIAL_DELAY_MIN", 3.0)
@@ -187,6 +195,7 @@ class WorkingBookingExecutor:
         return ExecutionResult(success=False, error_message="Booking confirmation not detected", court_number=court_number)
 
     async def _fill_booking_form(self, page: Page, user_info: Dict[str, str]) -> None:
+        t('automation.executors.booking.WorkingBookingExecutor._fill_booking_form')
         self.logger.info("Filling booking form with user info")
 
         first_name = user_info.get("first_name", "")
@@ -218,6 +227,7 @@ PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "true").lower() == "true"
 
 
 def _experienced_apply_speed(delay_seconds: float) -> float:
+    t('automation.executors.booking._experienced_apply_speed')
     return max(0.05, delay_seconds / EXPERIENCED_SPEED_MULTIPLIER)
 
 
@@ -227,6 +237,7 @@ async def _experienced_take_screenshot_if_dev(
     court_number: int,
     log: logging.Logger,
 ) -> Optional[str]:
+    t('automation.executors.booking._experienced_take_screenshot_if_dev')
     if PRODUCTION_MODE:
         log.debug("Screenshot skipped in production mode: %s", filename_prefix)
         return None
@@ -247,6 +258,7 @@ async def _experienced_take_screenshot_if_dev(
 
 
 async def _experienced_fast_fill(element, text: str) -> None:
+    t('automation.executors.booking._experienced_fast_fill')
     await element.click()
     await asyncio.sleep(0.05)
     await element.fill("")
@@ -256,6 +268,7 @@ async def _experienced_fast_fill(element, text: str) -> None:
 
 
 async def _experienced_minimal_mouse_movement(page: Page) -> None:
+    t('automation.executors.booking._experienced_minimal_mouse_movement')
     x = random.randint(400, 800)
     y = random.randint(300, 600)
     await page.mouse.move(x, y)
@@ -271,6 +284,7 @@ async def _experienced_find_time_slot_with_refresh(
     log: logging.Logger,
     target_datetime: Optional[datetime] = None,
 ) -> Optional[Any]:
+    t('automation.executors.booking._experienced_find_time_slot_with_refresh')
     if target_datetime:
         booking_window_opens = DateTimeHelpers.get_booking_window_open_time(target_datetime, 48)
         current_time = datetime.now(target_datetime.tzinfo)
@@ -357,6 +371,7 @@ class ExperiencedBookingExecutor:
     """Fast booking executor tuned for experienced users."""
 
     def __init__(self, browser_pool: Optional[Any] = None) -> None:
+        t('automation.executors.booking.ExperiencedBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.logger = logging.getLogger("ExperiencedBookingExecutor")
 
@@ -368,6 +383,7 @@ class ExperiencedBookingExecutor:
         user_info: Dict[str, str],
         target_datetime: Optional[datetime] = None,
     ) -> ExecutionResult:
+        t('automation.executors.booking.ExperiencedBookingExecutor.execute_booking')
         if not self.browser_pool:
             return ExecutionResult(success=False, error_message="Browser pool not initialized")
 
@@ -426,6 +442,7 @@ class ExperiencedBookingExecutor:
             return ExecutionResult(success=False, error_message=str(exc), court_number=court_number)
 
     async def _fill_form(self, page: Page, user_info: Dict[str, str]) -> None:
+        t('automation.executors.booking.ExperiencedBookingExecutor._fill_form')
         fields = {
             'input[name="client.firstName"]': user_info.get("first_name", ""),
             'input[name="client.lastName"]': user_info.get("last_name", ""),
@@ -457,6 +474,7 @@ class AsyncBookingExecutor:
     }
 
     def __init__(self, browser_pool: Optional[Any] = None, use_natural_flow: bool = False, experienced_mode: bool = True) -> None:
+        t('automation.executors.booking.AsyncBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.use_natural_flow = use_natural_flow
         self.experienced_mode = experienced_mode
@@ -472,6 +490,7 @@ class AsyncBookingExecutor:
         target_date: datetime,
         max_concurrent: int = 3,
     ) -> Dict[str, Any]:
+        t('automation.executors.booking.AsyncBookingExecutor.execute_parallel_booking')
         self.logger.info("Starting parallel booking for courts %s at %s", court_numbers, time_slot)
 
         tasks: List[Tuple[int, asyncio.Task]] = []
@@ -535,6 +554,7 @@ class AsyncBookingExecutor:
         user_info: Dict[str, str],
         target_date: datetime,
     ) -> ExecutionResult:
+        t('automation.executors.booking.AsyncBookingExecutor.execute_booking')
         if not self.browser_pool:
             return ExecutionResult(success=False, error_message="Browser pool not initialized", court_number=court_number)
 
@@ -569,6 +589,7 @@ class SmartAsyncBookingExecutor:
     }
 
     def __init__(self, browser_pool: AsyncBrowserPool) -> None:
+        t('automation.executors.booking.SmartAsyncBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.form_handler = AcuityBookingForm(use_javascript=True)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -580,6 +601,7 @@ class SmartAsyncBookingExecutor:
         user_info: Dict[str, str],
         target_date: datetime,
     ) -> ExecutionResult:
+        t('automation.executors.booking.SmartAsyncBookingExecutor.execute_booking_with_retry')
         try:
             return await asyncio.wait_for(
                 self._execute_booking_with_retry_internal(court_number, time_slot, user_info, target_date),
@@ -603,6 +625,7 @@ class SmartAsyncBookingExecutor:
         user_info: Dict[str, str],
         target_date: datetime,
     ) -> ExecutionResult:
+        t('automation.executors.booking.SmartAsyncBookingExecutor._execute_booking_with_retry_internal')
         last_error: Optional[str] = None
         mexico_tz = pytz.timezone("America/Mexico_City")
         hour, minute = map(int, time_slot.split(":"))
@@ -686,6 +709,7 @@ class SmartAsyncBookingExecutor:
         user_info: Dict[str, str],
         target_date: datetime,
     ) -> ExecutionResult:
+        t('automation.executors.booking.SmartAsyncBookingExecutor._execute_booking_with_smart_timeout')
         page = await self.browser_pool.get_page(court_number)
         if not page:
             return ExecutionResult(
@@ -752,6 +776,7 @@ class SmartAsyncBookingExecutor:
         time_slot: str,
         phases_completed: Dict[str, float],
     ) -> bool:
+        t('automation.executors.booking.SmartAsyncBookingExecutor._progressive_navigation')
         start = time.time()
         try:
             await page.reload(wait_until="domcontentloaded")
@@ -784,11 +809,13 @@ class UnifiedAsyncBookingExecutor:
     """Route booking requests to the appropriate executor based on config."""
 
     def __init__(self, browser_pool: Optional[Any] = None, config: AsyncExecutorConfig = DEFAULT_EXECUTOR_CONFIG) -> None:
+        t('automation.executors.booking.UnifiedAsyncBookingExecutor.__init__')
         self.config = config
         self.browser_pool = browser_pool
         self._executor = self._build_executor()
 
     def _build_executor(self) -> Any:
+        t('automation.executors.booking.UnifiedAsyncBookingExecutor._build_executor')
         if self.config.use_experienced_mode:
             return ExperiencedBookingExecutor(browser_pool=self.browser_pool)
         if self.config.use_smart_navigation:
@@ -798,9 +825,11 @@ class UnifiedAsyncBookingExecutor:
         return AsyncBookingExecutor(browser_pool=self.browser_pool)
 
     def __getattr__(self, item: str) -> Any:
+        t('automation.executors.booking.UnifiedAsyncBookingExecutor.__getattr__')
         return getattr(self._executor, item)
 
     def with_config(self, config: AsyncExecutorConfig) -> "UnifiedAsyncBookingExecutor":
+        t('automation.executors.booking.UnifiedAsyncBookingExecutor.with_config')
         return UnifiedAsyncBookingExecutor(browser_pool=self.browser_pool, config=config)
 
 

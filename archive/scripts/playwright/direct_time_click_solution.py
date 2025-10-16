@@ -1,6 +1,7 @@
 """
 Direct solution to click time slots even with overlay present
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def direct_time_click():
     """Click time slots directly using various methods"""
+    t('archive.scripts.playwright.direct_time_click_solution.direct_time_click')
     
     async with async_playwright() as p:
         # Launch browser

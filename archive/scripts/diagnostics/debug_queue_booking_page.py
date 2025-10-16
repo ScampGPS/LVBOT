@@ -2,6 +2,7 @@
 """
 Debug script to take screenshots of what's actually on the page during queue booking
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -21,6 +22,7 @@ import pytz
 
 async def debug_queue_booking_page():
     """Take screenshots to see what's actually on each court page"""
+    t('archive.scripts.diagnostics.debug_queue_booking_page.debug_queue_booking_page')
     browser_pool = None
     
     try:

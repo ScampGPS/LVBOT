@@ -1,6 +1,7 @@
 """Consolidated helpers for availability extraction and date utilities."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import logging
 from datetime import date, datetime, timedelta
@@ -24,6 +25,7 @@ class DayDetector:
 
     @staticmethod
     async def extract_page_text_content(frame: Frame) -> str:
+        t('automation.availability.support.DayDetector.extract_page_text_content')
         try:
             text_content = await frame.evaluate("() => document.body.textContent || ''")
             return text_content.strip()
@@ -33,6 +35,7 @@ class DayDetector:
 
     @classmethod
     def get_available_days(cls, text_content: str) -> List[str]:
+        t('automation.availability.support.DayDetector.get_available_days')
         if not text_content:
             return []
 
@@ -50,6 +53,7 @@ class TimeOrderExtractor:
     """Extract and group Acuity time buttons based on DOM order."""
 
     async def extract_raw_time_buttons(self, frame: Frame) -> List[Dict[str, str]]:
+        t('automation.availability.support.TimeOrderExtractor.extract_raw_time_buttons')
         try:
             time_buttons = await frame.evaluate(
                 r"""() => {
@@ -75,6 +79,7 @@ class TimeOrderExtractor:
     def group_times_by_order_logic(
         self, time_buttons: List[Dict[str, str]], available_days: List[str]
     ) -> Dict[str, List[str]]:
+        t('automation.availability.support.TimeOrderExtractor.group_times_by_order_logic')
         if not time_buttons or not available_days:
             return {}
 
@@ -98,6 +103,7 @@ class TimeOrderExtractor:
 
     @staticmethod
     def _time_to_hour(time_str: str) -> int:
+        t('automation.availability.support.TimeOrderExtractor._time_to_hour')
         try:
             return int(time_str.split(":")[0])
         except (ValueError, IndexError):
@@ -108,6 +114,7 @@ class TimeOrderExtractor:
 def convert_day_labels_to_dates(
     times_by_day: Dict[str, List[str]], reference_date: Optional[date] = None
 ) -> Dict[str, List[str]]:
+    t('automation.availability.support.convert_day_labels_to_dates')
     reference = reference_date or date.today()
     mapped: Dict[str, List[str]] = {}
 
@@ -129,6 +136,7 @@ def convert_day_labels_to_dates(
 
 
 def _parse_time_string(time_str: str) -> Tuple[int, int]:
+    t('automation.availability.support._parse_time_string')
     if ":" not in time_str:
         raise ValueError(f"Time string '{time_str}' missing colon separator")
 
@@ -147,6 +155,7 @@ def _parse_time_string(time_str: str) -> Tuple[int, int]:
 def filter_future_times_for_today(
     times: List[str], current_time: Optional[datetime] = None
 ) -> List[str]:
+    t('automation.availability.support.filter_future_times_for_today')
     reference = current_time or datetime.now()
     current_hour = reference.hour
     current_minute = reference.minute
@@ -175,6 +184,7 @@ class AcuityTimeParser:
         day_detector: Optional[DayDetector] = None,
         time_extractor: Optional[TimeOrderExtractor] = None,
     ) -> None:
+        t('automation.availability.support.AcuityTimeParser.__init__')
         self.day_detector = day_detector or DayDetector()
         self.time_extractor = time_extractor or TimeOrderExtractor()
 
@@ -184,6 +194,7 @@ class AcuityTimeParser:
         reference_date: Optional[date] = None,
         current_time: Optional[datetime] = None,
     ) -> Dict[str, List[str]]:
+        t('automation.availability.support.AcuityTimeParser.extract_times_by_day')
         text_content = await self.day_detector.extract_page_text_content(frame)
         available_days = self.day_detector.get_available_days(text_content)
         if not available_days:
@@ -227,10 +238,12 @@ class DateTimeHelpers:
 
     @staticmethod
     def format_date_for_display(value: datetime) -> str:
+        t('automation.availability.support.DateTimeHelpers.format_date_for_display')
         return value.strftime("%A, %B %d")
 
     @staticmethod
     def format_time_for_display(time_str: str, use_12h: bool = True) -> str:
+        t('automation.availability.support.DateTimeHelpers.format_time_for_display')
         if not use_12h:
             return time_str
 
@@ -245,19 +258,23 @@ class DateTimeHelpers:
 
     @staticmethod
     def get_hours_until(target: datetime, reference: Optional[datetime] = None) -> float:
+        t('automation.availability.support.DateTimeHelpers.get_hours_until')
         ref = reference or datetime.now(target.tzinfo)
         return (target - ref).total_seconds() / 3600
 
     @staticmethod
     def is_within_booking_window(target: datetime, window_hours: int = 48) -> bool:
+        t('automation.availability.support.DateTimeHelpers.is_within_booking_window')
         return 0 <= DateTimeHelpers.get_hours_until(target) <= window_hours
 
     @staticmethod
     def get_booking_window_open_time(target: datetime, window_hours: int = 48) -> datetime:
+        t('automation.availability.support.DateTimeHelpers.get_booking_window_open_time')
         return target - timedelta(hours=window_hours)
 
     @staticmethod
     def _parse_date_with_formats(value: str) -> Optional[datetime]:
+        t('automation.availability.support.DateTimeHelpers._parse_date_with_formats')
         if not value:
             return None
 
@@ -273,6 +290,7 @@ class DateTimeHelpers:
     def parse_reservation_datetime(
         cls, date_str: str, time_str: str, timezone_str: str = DEFAULT_TZ
     ) -> Optional[datetime]:
+        t('automation.availability.support.DateTimeHelpers.parse_reservation_datetime')
         date_obj = cls._parse_date_with_formats(date_str)
         if not date_obj or ":" not in time_str:
             return None
@@ -284,6 +302,7 @@ class DateTimeHelpers:
 
     @classmethod
     def parse_callback_date(cls, callback_data: str) -> Optional[date]:
+        t('automation.availability.support.DateTimeHelpers.parse_callback_date')
         if not callback_data or not callback_data.startswith("date_"):
             return None
         try:
@@ -295,6 +314,7 @@ class DateTimeHelpers:
     def parse_date_string(
         cls, value: str, timezone_str: str = DEFAULT_TZ
     ) -> Optional[datetime]:
+        t('automation.availability.support.DateTimeHelpers.parse_date_string')
         parsed = cls._parse_date_with_formats(value)
         if not parsed:
             return None
@@ -302,6 +322,7 @@ class DateTimeHelpers:
 
     @classmethod
     def get_day_label(cls, value: date, timezone_str: str = DEFAULT_TZ) -> str:
+        t('automation.availability.support.DateTimeHelpers.get_day_label')
         tz = pytz.timezone(timezone_str)
         today = datetime.now(tz).date()
         target_date = value if isinstance(value, date) else value.date()
@@ -319,6 +340,7 @@ class DateTimeHelpers:
 
     @staticmethod
     def get_available_slots_for_date(target: datetime, config) -> List[str]:
+        t('automation.availability.support.DateTimeHelpers.get_available_slots_for_date')
         weekday = target.weekday()
         if weekday in {5, 6}:
             return getattr(config, "weekend_times", [])
@@ -326,6 +348,7 @@ class DateTimeHelpers:
 
     @staticmethod
     def format_duration(seconds: float) -> str:
+        t('automation.availability.support.DateTimeHelpers.format_duration')
         if seconds < 60:
             return f"{seconds:.1f} seconds"
         if seconds < 3600:
@@ -336,6 +359,7 @@ class DateTimeHelpers:
 
     @classmethod
     def is_past_time(cls, target_date: datetime, time_str: str) -> bool:
+        t('automation.availability.support.DateTimeHelpers.is_past_time')
         target = cls.parse_reservation_datetime(
             target_date.strftime("%Y-%m-%d"), time_str
         )
@@ -348,11 +372,13 @@ class DateTimeHelpers:
     def get_next_valid_booking_date(
         cls, timezone_str: str = DEFAULT_TZ, booking_window: int = 48
     ) -> datetime:
+        t('automation.availability.support.DateTimeHelpers.get_next_valid_booking_date')
         tz = pytz.timezone(timezone_str)
         return datetime.now(tz) + timedelta(hours=1)
 
     @staticmethod
     def format_countdown(target: datetime, reference: Optional[datetime] = None) -> str:
+        t('automation.availability.support.DateTimeHelpers.format_countdown')
         ref = reference or datetime.now(target.tzinfo)
         diff = target - ref
         if diff.total_seconds() < 0:
@@ -373,6 +399,7 @@ class DateTimeHelpers:
 
     @staticmethod
     def get_week_range(value: datetime) -> Tuple[datetime, datetime]:
+        t('automation.availability.support.DateTimeHelpers.get_week_range')
         start = value - timedelta(days=value.weekday())
         end = start + timedelta(days=6)
         return start, end

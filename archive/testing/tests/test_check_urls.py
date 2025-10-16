@@ -2,6 +2,7 @@
 """
 Quick test to check what URLs we're on after direct navigation
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -15,6 +16,7 @@ logging.basicConfig(
 
 async def test_urls():
     """Check what URLs we're on"""
+    t('archive.testing.tests.test_check_urls.test_urls')
     browser_pool = AsyncBrowserPool()
     
     try:

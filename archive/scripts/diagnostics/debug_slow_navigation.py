@@ -2,6 +2,7 @@
 """
 Debug slow navigation to booking URL with screenshots and network monitoring
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 async def debug_navigation():
     """Debug the slow navigation issue with detailed monitoring"""
+    t('archive.scripts.diagnostics.debug_slow_navigation.debug_navigation')
     
     # Create output directory for screenshots
     output_dir = f"navigation_debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -62,6 +64,7 @@ async def debug_navigation():
         
         # Network event handlers
         async def on_request(request):
+            t('archive.scripts.diagnostics.debug_slow_navigation.debug_navigation.on_request')
             requests.append({
                 'time': time.time(),
                 'url': request.url,
@@ -71,6 +74,7 @@ async def debug_navigation():
             logger.info(f"REQUEST: {request.method} {request.url[:100]}... [{request.resource_type}]")
         
         async def on_response(response):
+            t('archive.scripts.diagnostics.debug_slow_navigation.debug_navigation.on_response')
             responses.append({
                 'time': time.time(),
                 'url': response.url,
@@ -90,9 +94,11 @@ async def debug_navigation():
                 logger.warning(f"REDIRECT {response.status}: {response.url} -> {location}")
         
         async def on_request_failed(request):
+            t('archive.scripts.diagnostics.debug_slow_navigation.debug_navigation.on_request_failed')
             logger.error(f"REQUEST FAILED: {request.url} - {request.failure}")
         
         async def on_request_finished(request):
+            t('archive.scripts.diagnostics.debug_slow_navigation.debug_navigation.on_request_finished')
             response = await request.response()
             if response:
                 timing = response.request.timing

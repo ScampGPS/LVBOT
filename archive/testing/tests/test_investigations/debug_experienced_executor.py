@@ -1,6 +1,7 @@
 """
 Debug version of experienced_booking_executor with detailed logging
 """
+from utils.tracking import t
 
 import asyncio
 import random
@@ -33,10 +34,12 @@ class ExecutionResult:
 
 def apply_speed(delay_seconds):
     """Apply speed multiplier to delay times."""
+    t('archive.testing.tests.test_investigations.debug_experienced_executor.apply_speed')
     return max(0.05, delay_seconds / SPEED_MULTIPLIER)
 
 async def fast_fill(element, text):
     """Fast fill for experienced users - like autofill"""
+    t('archive.testing.tests.test_investigations.debug_experienced_executor.fast_fill')
     await element.click()
     await asyncio.sleep(0.05)
     await element.fill('')
@@ -46,6 +49,7 @@ async def fast_fill(element, text):
 
 async def minimal_mouse_movement(page: Page):
     """Minimal mouse movement for experienced users"""
+    t('archive.testing.tests.test_investigations.debug_experienced_executor.minimal_mouse_movement')
     logger = logging.getLogger('MouseMovement')
     logger.debug("Starting minimal_mouse_movement")
     x = random.randint(400, 800)
@@ -67,6 +71,7 @@ async def find_time_slot_with_refresh(
     """
     Find time slot button, refreshing page if needed
     """
+    t('archive.testing.tests.test_investigations.debug_experienced_executor.find_time_slot_with_refresh')
     if not logger:
         logger = logging.getLogger('TimeSlotRefresher')
     
@@ -164,6 +169,7 @@ class ExperiencedBookingExecutor:
     """Executor for experienced users with minimal delays"""
     
     def __init__(self, browser_pool=None):
+        t('archive.testing.tests.test_investigations.debug_experienced_executor.ExperiencedBookingExecutor.__init__')
         self.browser_pool = browser_pool
         self.logger = logging.getLogger('ExperiencedBookingExecutor')
         
@@ -175,6 +181,7 @@ class ExperiencedBookingExecutor:
         user_info: Dict[str, str]
     ) -> ExecutionResult:
         """Execute booking with experienced user timing"""
+        t('archive.testing.tests.test_investigations.debug_experienced_executor.ExperiencedBookingExecutor.execute_booking')
         
         self.logger.debug(f"execute_booking called with court={court_number}, time={time_slot}")
         
@@ -252,6 +259,7 @@ class ExperiencedBookingExecutor:
 # Test the debug version
 async def test_debug_executor():
     """Test the debug executor to see where it gets stuck"""
+    t('archive.testing.tests.test_investigations.debug_experienced_executor.test_debug_executor')
     import sys
     sys.path.append('/mnt/c/Documents/code/python/lvbot')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool

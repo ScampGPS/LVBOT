@@ -3,6 +3,7 @@
 Test the optimized timing configurations
 Compares original vs optimized phase timings
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -18,6 +19,7 @@ logging.basicConfig(
 
 async def test_optimized_timing():
     """Test optimized timing configuration"""
+    t('archive.testing.tests.test_optimized_timing.test_optimized_timing')
     logger = logging.getLogger('OptimizedTimingTest')
     
     print("\n" + "="*80)
@@ -162,6 +164,7 @@ async def test_optimized_timing():
 
 async def main():
     """Run the optimized timing test"""
+    t('archive.testing.tests.test_optimized_timing.main')
     await test_optimized_timing()
 
 if __name__ == "__main__":

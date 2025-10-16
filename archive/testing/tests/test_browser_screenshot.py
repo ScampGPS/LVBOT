@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Take screenshots of browser pool state"""
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -14,6 +15,7 @@ logging.basicConfig(
 
 async def take_screenshots():
     """Take screenshots of all court browsers"""
+    t('archive.testing.tests.test_browser_screenshot.take_screenshots')
     browser_pool = AsyncBrowserPool()
     
     try:

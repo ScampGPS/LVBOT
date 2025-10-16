@@ -6,6 +6,7 @@ Visual Slot Comparison Tool for LVBOT
 Purpose: Visually compare what slots are shown on screen vs what the bot detects.
 Creates side-by-side comparisons and detailed analysis.
 """
+from utils.tracking import t
 import pathlib
 import sys
 
@@ -39,6 +40,7 @@ class VisualSlotComparison:
     """Tool for visual comparison of available slots"""
     
     def __init__(self):
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison.__init__')
         self.time_extractor = TimeSlotExtractor()
         self.playwright = None
         self.browser = None
@@ -48,6 +50,7 @@ class VisualSlotComparison:
         
     async def initialize(self):
         """Initialize browser"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison.initialize')
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(
             headless=False,
@@ -56,6 +59,7 @@ class VisualSlotComparison:
         
     async def cleanup(self):
         """Clean up resources"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison.cleanup')
         if self.browser:
             await self.browser.close()
         if self.playwright:
@@ -65,6 +69,7 @@ class VisualSlotComparison:
         """
         Analyze a court page and create annotated screenshots
         """
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison.analyze_and_annotate_court')
         court_config = COURT_CONFIG.get(court_num)
         if not court_config:
             return {"error": f"Invalid court number: {court_num}"}
@@ -171,6 +176,7 @@ class VisualSlotComparison:
                                          all_buttons: List[Dict],
                                          court_num: int) -> Path:
         """Create an annotated screenshot showing detected vs missed slots"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison._create_annotated_screenshot')
         try:
             # Open the screenshot
             img = Image.open(screenshot_path)
@@ -219,6 +225,7 @@ class VisualSlotComparison:
             
     async def _test_selectors_with_screenshots(self, page: Page, court_num: int) -> Dict:
         """Test each selector and document what it finds"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison._test_selectors_with_screenshots')
         selector_results = {}
         
         for i, selector in enumerate(TIME_SLOT_SELECTORS[:5]):  # Test first 5 selectors
@@ -272,6 +279,7 @@ class VisualSlotComparison:
         
     async def create_comparison_report(self):
         """Create a comprehensive comparison report"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison.create_comparison_report')
         await self.initialize()
         
         try:
@@ -308,6 +316,7 @@ class VisualSlotComparison:
             
     def _create_summary(self, results: Dict) -> Dict:
         """Create summary statistics"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison._create_summary')
         summary = {
             'total_detected': 0,
             'courts': {}
@@ -326,6 +335,7 @@ class VisualSlotComparison:
         
     def _create_html_report(self, report: Dict) -> str:
         """Create an HTML report for easy viewing"""
+        t('archive.scripts.analysis.visual_slot_comparison.VisualSlotComparison._create_html_report')
         html = f"""
         <!DOCTYPE html>
         <html>
@@ -395,6 +405,7 @@ class VisualSlotComparison:
 
 async def main():
     """Main entry point"""
+    t('archive.scripts.analysis.visual_slot_comparison.main')
     tool = VisualSlotComparison()
     await tool.create_comparison_report()
 

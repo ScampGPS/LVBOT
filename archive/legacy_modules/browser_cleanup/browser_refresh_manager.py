@@ -9,6 +9,7 @@ SCOPE: Works with SimpleBrowserPool and other pool implementations
 This module provides automatic browser refresh functionality that can be
 attached to any browser pool implementation.
 """
+from utils.tracking import t
 
 import logging
 import threading
@@ -37,6 +38,7 @@ class BrowserRefreshManager:
             refresh_interval: Seconds between refreshes (default 15 minutes)
             logger: Optional logger instance
         """
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager.__init__')
         self.browser_pool = browser_pool
         self.refresh_interval = refresh_interval
         self.logger = logger or logging.getLogger(self.__class__.__name__)
@@ -56,6 +58,7 @@ class BrowserRefreshManager:
     
     def start(self):
         """Start the refresh manager"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager.start')
         if self._running:
             self.logger.warning("Refresh manager already running")
             return
@@ -75,6 +78,7 @@ class BrowserRefreshManager:
     
     def stop(self):
         """Stop the refresh manager"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager.stop')
         self.logger.info("Stopping browser refresh manager")
         self._running = False
         
@@ -83,6 +87,7 @@ class BrowserRefreshManager:
     
     def _refresh_loop(self):
         """Main refresh loop"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager._refresh_loop')
         while self._running:
             try:
                 # Wait for refresh interval
@@ -100,6 +105,7 @@ class BrowserRefreshManager:
     
     def _perform_refresh_cycle(self):
         """Perform a complete refresh cycle on all browsers"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager._perform_refresh_cycle')
         self.logger.info("="*40)
         self.logger.info("BROWSER REFRESH CYCLE: Starting")
         self.logger.info(f"Time: {datetime.now()}")
@@ -157,6 +163,7 @@ class BrowserRefreshManager:
         Returns:
             bool: True if browser should be refreshed
         """
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager._should_refresh_browser')
         browser_id = browser_info.get('id', 'unknown')
         
         # Check if browser is available (not in use)
@@ -202,6 +209,7 @@ class BrowserRefreshManager:
         Returns:
             bool: True if successful
         """
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager._refresh_single_browser')
         browser_id = browser_info.get('id', 'unknown')
         
         try:
@@ -257,6 +265,7 @@ class BrowserRefreshManager:
         Returns:
             bool: True if successful
         """
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager._recreate_browser')
         browser_id = browser_info.get('id', 'unknown')
         index = browser_info.get('index', 0)
         
@@ -279,6 +288,7 @@ class BrowserRefreshManager:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get refresh manager statistics"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager.get_stats')
         return {
             'running': self._running,
             'refresh_interval': self.refresh_interval,
@@ -294,5 +304,6 @@ class BrowserRefreshManager:
     
     def force_refresh_all(self):
         """Force immediate refresh of all browsers"""
+        t('archive.legacy_modules.browser_cleanup.browser_refresh_manager.BrowserRefreshManager.force_refresh_all')
         self.logger.info("Force refresh requested for all browsers")
         self._perform_refresh_cycle()

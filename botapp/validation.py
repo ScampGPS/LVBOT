@@ -2,6 +2,7 @@
 Validation utility functions
 Handles input validation for various user inputs
 """
+from utils.tracking import t
 
 from typing import Tuple, List, Optional
 import re
@@ -17,6 +18,7 @@ class ValidationHelpers:
         Validate phone number format
         Returns: (is_valid, cleaned_phone_or_error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_phone_number')
         # Remove all non-digit characters
         digits_only = ''.join(c for c in phone if c.isdigit())
         
@@ -33,6 +35,7 @@ class ValidationHelpers:
         Validate email format
         Returns: (is_valid, cleaned_email_or_error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_email')
         email = email.strip().lower()
         
         # Basic email regex
@@ -54,6 +57,7 @@ class ValidationHelpers:
         Validate if time slot is available
         Returns: (is_valid, time_or_error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_time_slot')
         time = time.strip()
         
         if not available_times:
@@ -75,6 +79,7 @@ class ValidationHelpers:
         Validate court selection
         Returns: (is_valid, court_list, error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_court_selection')
         if not available_courts:
             return False, [], "No courts available"
         
@@ -133,6 +138,7 @@ class ValidationHelpers:
         Validate date selection
         Returns: (is_valid, date_object, error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_date_selection')
         try:
             # Try multiple date formats
             date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%m-%d-%Y', '%d-%m-%Y']
@@ -170,6 +176,7 @@ class ValidationHelpers:
         Validate name input
         Returns: (is_valid, cleaned_name_or_error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_name')
         name = name.strip()
         
         if not name:
@@ -196,6 +203,7 @@ class ValidationHelpers:
         Validate yes/no response
         Returns: (is_valid, is_yes, error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_yes_no_response')
         response = response.strip().lower()
         
         yes_responses = ['yes', 'y', 'si', 'sí', 's', 'yeah', 'yep', 'sure', 'ok', 'okay']
@@ -214,6 +222,7 @@ class ValidationHelpers:
         Validate priority selection
         Returns: (is_valid, priority_value, error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_priority')
         priority = priority.strip().lower()
         
         priority_map = {
@@ -239,6 +248,7 @@ class ValidationHelpers:
         Validate court preference order
         Returns: (is_valid, error_message)
         """
+        t('botapp.validation.ValidationHelpers.validate_court_preference_order')
         if not courts:
             return False, "Court preference cannot be empty"
         

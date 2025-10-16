@@ -1,6 +1,7 @@
 """
 Test immediate booking execution with the event loop fix
 """
+from utils.tracking import t
 
 import asyncio
 import sys
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def test_immediate_booking():
     """Test booking execution in main event loop"""
+    t('archive.testing.tests.test_investigations.test_booking_now.test_immediate_booking')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.reservation_scheduler import ReservationScheduler
     from lvbot.utils.reservation_queue import ReservationQueue
@@ -45,6 +47,7 @@ async def test_immediate_booking():
         
         # Mock notification callback
         async def mock_notification(user_id, message):
+            t('archive.testing.tests.test_investigations.test_booking_now.test_immediate_booking.mock_notification')
             print(f"\n[NOTIFICATION] User {user_id}: {message}")
         
         # Create scheduler with required parameters

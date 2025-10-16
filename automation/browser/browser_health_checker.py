@@ -9,6 +9,7 @@ SCOPE: AsyncBrowserPool health validation
 This module provides comprehensive health checks for the browser pool to
 ensure bookings have the best chance of success by detecting issues early.
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -41,6 +42,7 @@ class HealthCheckResult:
     
     def is_healthy(self) -> bool:
         """Check if the result indicates healthy status"""
+        t('automation.browser.browser_health_checker.HealthCheckResult.is_healthy')
         return self.status == HealthStatus.HEALTHY
 
 
@@ -75,6 +77,7 @@ class BrowserHealthChecker:
         Args:
             browser_pool: AsyncBrowserPool instance to monitor
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.__init__')
         self.browser_pool = browser_pool
         self.last_full_check: Optional[datetime] = None
         self.court_health_cache: Dict[int, CourtHealthStatus] = {}
@@ -89,6 +92,7 @@ class BrowserHealthChecker:
         Returns:
             HealthCheckResult with overall pool health status
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.perform_pre_booking_health_check')
         logger.info("🏥 Starting pre-booking health check...")
         start_time = datetime.now()
         
@@ -187,6 +191,7 @@ class BrowserHealthChecker:
         Returns:
             HealthCheckResult for the overall pool
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.check_pool_health')
         try:
             # Check if pool is ready
             if not self.browser_pool.is_ready():
@@ -258,6 +263,7 @@ class BrowserHealthChecker:
         Returns:
             CourtHealthStatus with detailed health information
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.check_court_health')
         start_time = datetime.now()
         checks_passed = {
             "page_access": False,
@@ -349,6 +355,7 @@ class BrowserHealthChecker:
         Returns:
             Dict with test results
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.test_browser_responsiveness')
         results = {
             "url_accessible": False,
             "javascript_works": False,
@@ -415,6 +422,7 @@ class BrowserHealthChecker:
         Returns:
             Dict mapping court number to health status string
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.get_court_health_summary')
         summary = {}
         for court_num, health in self.court_health_cache.items():
             summary[court_num] = health.status.value
@@ -427,6 +435,7 @@ class BrowserHealthChecker:
         Returns:
             True if pool should be restarted
         """
+        t('automation.browser.browser_health_checker.BrowserHealthChecker.requires_pool_restart')
         # Check if all courts have failed
         if not self.court_health_cache:
             return False

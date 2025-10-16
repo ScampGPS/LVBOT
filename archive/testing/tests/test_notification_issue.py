@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Test script to reproduce the notification issue"""
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -22,12 +23,14 @@ logger = logging.getLogger(__name__)
 class MockBot:
     """Mock bot for testing notifications"""
     def __init__(self, queue, user_db):
+        t('archive.testing.tests.test_notification_issue.MockBot.__init__')
         self.notifications_sent = []
         self.config = {'ADMIN_CHAT_ID': 125763357}
         self.queue = queue
         self.user_db = user_db
         
     async def send_notification(self, user_id: int, message: str):
+        t('archive.testing.tests.test_notification_issue.MockBot.send_notification')
         logger.info(f"MockBot.send_notification called: user_id={user_id}")
         logger.info(f"Message: {message}")
         self.notifications_sent.append({
@@ -38,11 +41,13 @@ class MockBot:
         return True
         
     def send_notification_sync(self, user_id: int, message: str):
+        t('archive.testing.tests.test_notification_issue.MockBot.send_notification_sync')
         logger.info(f"MockBot.send_notification_sync called: user_id={user_id}")
         return True
 
 async def test_notification_flow():
     """Test the notification flow after a successful booking"""
+    t('archive.testing.tests.test_notification_issue.test_notification_flow')
     
     # Initialize components
     queue = ReservationQueue()

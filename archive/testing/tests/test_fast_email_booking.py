@@ -3,6 +3,7 @@
 Test fast email typing in actual booking flow
 Tests if faster email typing works in full booking context
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -18,6 +19,7 @@ logging.basicConfig(
 
 async def test_booking_with_fast_email(email_speed: float = 5.0):
     """Test booking with faster email typing speed"""
+    t('archive.testing.tests.test_fast_email_booking.test_booking_with_fast_email')
     logger = logging.getLogger('FastEmailBookingTest')
     
     print("\n" + "="*80)
@@ -188,6 +190,7 @@ async def test_booking_with_fast_email(email_speed: float = 5.0):
 
 async def main():
     """Test different email speeds in full booking context"""
+    t('archive.testing.tests.test_fast_email_booking.main')
     
     # Test progressively faster speeds
     test_speeds = [5.0, 7.0, 10.0]

@@ -6,6 +6,7 @@ Tracks all reservations including:
 - Immediate reservations made within 48h window
 - Completed reservations with confirmation IDs
 """
+from utils.tracking import t
 
 import json
 import logging
@@ -26,6 +27,7 @@ class ReservationTracker:
         Args:
             file_path: Path to JSON file for persistence
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.__init__')
         self.file_path = file_path
         self.logger = logging.getLogger('ReservationTracker')
         self.reservations = self._load_reservations()
@@ -41,6 +43,7 @@ class ReservationTracker:
         Returns:
             Reservation ID
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.add_immediate_reservation')
         reservation_id = f"imm_{datetime.now().strftime('%Y%m%d%H%M%S')}_{user_id}"
         
         reservation = {
@@ -69,6 +72,7 @@ class ReservationTracker:
         Returns:
             Reservation ID
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.add_completed_booking')
         reservation_id = f"conf_{booking_result.get('confirmation_id', datetime.now().strftime('%Y%m%d%H%M%S'))}"
         
         reservation = {
@@ -102,6 +106,7 @@ class ReservationTracker:
         Returns:
             List of active reservations
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.get_user_active_reservations')
         user_reservations = []
         
         # Get reservations from this tracker
@@ -130,6 +135,7 @@ class ReservationTracker:
         Returns:
             True if cancelled successfully
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.cancel_reservation')
         if reservation_id in self.reservations:
             self.reservations[reservation_id]['status'] = 'cancelled'
             self.reservations[reservation_id]['cancelled_at'] = datetime.now().isoformat()
@@ -148,6 +154,7 @@ class ReservationTracker:
         Returns:
             Reservation data or None
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.get_reservation')
         return self.reservations.get(reservation_id)
     
     def update_reservation(self, reservation_id: str, updates: Dict[str, Any]) -> bool:
@@ -161,6 +168,7 @@ class ReservationTracker:
         Returns:
             True if updated successfully
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.update_reservation')
         if reservation_id in self.reservations:
             self.reservations[reservation_id].update(updates)
             self.reservations[reservation_id]['updated_at'] = datetime.now().isoformat()
@@ -175,6 +183,7 @@ class ReservationTracker:
         Args:
             days_to_keep: Number of days to keep past reservations
         """
+        t('reservations.queue.reservation_tracker.ReservationTracker.cleanup_old_reservations')
         cutoff_date = datetime.now() - timedelta(days=days_to_keep)
         removed_count = 0
         
@@ -194,6 +203,7 @@ class ReservationTracker:
     
     def _save_reservations(self):
         """Save reservations to JSON file"""
+        t('reservations.queue.reservation_tracker.ReservationTracker._save_reservations')
         try:
             Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
             with open(self.file_path, 'w', encoding='utf-8') as f:
@@ -203,6 +213,7 @@ class ReservationTracker:
     
     def _load_reservations(self) -> Dict[str, Dict[str, Any]]:
         """Load reservations from JSON file"""
+        t('reservations.queue.reservation_tracker.ReservationTracker._load_reservations')
         try:
             if Path(self.file_path).exists():
                 with open(self.file_path, 'r', encoding='utf-8') as f:

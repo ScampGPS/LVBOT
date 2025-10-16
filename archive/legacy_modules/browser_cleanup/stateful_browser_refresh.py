@@ -10,6 +10,7 @@ This module ensures that when a browser is refreshed, it returns to the exact
 state it was in before the refresh, including any selected time slots or
 partially filled forms.
 """
+from utils.tracking import t
 
 import logging
 from typing import Optional, Dict, Any, List, Tuple
@@ -27,6 +28,7 @@ class PageState:
     
     def __init__(self):
         """Initialize page state container"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.PageState.__init__')
         self.url: str = ""
         self.court_number: Optional[int] = None
         self.selected_date: Optional[str] = None
@@ -37,6 +39,7 @@ class PageState:
         
     def __str__(self) -> str:
         """String representation of page state"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.PageState.__str__')
         parts = [f"URL: {self.url}"]
         if self.court_number:
             parts.append(f"Court: {self.court_number}")
@@ -57,6 +60,7 @@ class StatefulBrowserRefresh:
     
     def __init__(self):
         """Initialize stateful refresh handler"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh.__init__')
         self.logger = logger
         self.browser_helpers = BrowserHelpers()
         
@@ -70,6 +74,7 @@ class StatefulBrowserRefresh:
         Returns:
             Tuple of (success: bool, message: str)
         """
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh.refresh_with_state')
         try:
             self.logger.info("🔄 Starting stateful page refresh")
             
@@ -103,6 +108,7 @@ class StatefulBrowserRefresh:
         Returns:
             PageState object containing captured state
         """
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._capture_page_state')
         state = PageState()
         state.url = page.url
         
@@ -143,6 +149,7 @@ class StatefulBrowserRefresh:
         Returns:
             bool: True if restoration successful
         """
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._restore_page_state')
         try:
             # Log what state we're trying to restore
             self.logger.info(f"Attempting to restore state: {state}")
@@ -183,6 +190,7 @@ class StatefulBrowserRefresh:
     
     async def _extract_court_number(self, page: Page) -> Optional[int]:
         """Extract court number from current page"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._extract_court_number')
         try:
             # Check URL for court number
             url = page.url
@@ -206,6 +214,7 @@ class StatefulBrowserRefresh:
     
     async def _extract_selected_time(self, page: Page) -> Optional[str]:
         """Extract currently selected time slot"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._extract_selected_time')
         try:
             # Look for highlighted/selected time button
             selected_buttons = await page.query_selector_all('button[class*="selected"], button[aria-pressed="true"]')
@@ -229,6 +238,7 @@ class StatefulBrowserRefresh:
     
     async def _is_form_visible(self, page: Page) -> bool:
         """Check if booking form is visible"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._is_form_visible')
         try:
             # Check for common form indicators
             form_selectors = [
@@ -251,6 +261,7 @@ class StatefulBrowserRefresh:
     
     async def _extract_form_data(self, page: Page) -> Dict[str, str]:
         """Extract data from visible form fields"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._extract_form_data')
         form_data = {}
         
         try:
@@ -278,6 +289,7 @@ class StatefulBrowserRefresh:
     
     async def _click_time_slot(self, page: Page, time_text: str) -> bool:
         """Click on a specific time slot button"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._click_time_slot')
         try:
             # Wait for time slots to be available
             await page.wait_for_selector('button:has-text(":")', timeout=5000)
@@ -300,6 +312,7 @@ class StatefulBrowserRefresh:
     
     async def _restore_form_data(self, page: Page, form_data: Dict[str, str]) -> bool:
         """Restore previously entered form data"""
+        t('archive.legacy_modules.browser_cleanup.stateful_browser_refresh.StatefulBrowserRefresh._restore_form_data')
         try:
             from lvbot.automation.forms.acuity_booking_form import AcuityBookingForm
             

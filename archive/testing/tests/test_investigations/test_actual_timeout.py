@@ -1,6 +1,7 @@
 """
 Test if the code is actually stuck vs just slow
 """
+from utils.tracking import t
 
 import asyncio
 import time
@@ -16,6 +17,7 @@ logging.basicConfig(
 
 async def test_timeout_scenario():
     """Reproduce the exact timeout scenario"""
+    t('archive.testing.tests.test_investigations.test_actual_timeout.test_timeout_scenario')
     from lvbot.utils.async_browser_pool import AsyncBrowserPool
     from lvbot.utils.experienced_booking_executor import ExperiencedBookingExecutor
     

@@ -6,6 +6,7 @@ Real-time Availability Monitor for LVBOT
 Purpose: Monitor in real-time what the bot detects vs what's actually available.
 Shows live updates and takes periodic screenshots for comparison.
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -34,6 +35,7 @@ class ColoredFormatter(logging.Formatter):
     RESET = '\033[0m'
     
     def format(self, record):
+        t('monitoring.realtime_availability_monitor.ColoredFormatter.format')
         log_color = self.COLORS.get(record.levelname, self.RESET)
         record.levelname = f"{log_color}{record.levelname}{self.RESET}"
         return super().format(record)
@@ -50,6 +52,7 @@ class RealtimeAvailabilityMonitor:
     """Monitor court availability in real-time"""
     
     def __init__(self, refresh_interval: int = 5):
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.__init__')
         self.refresh_interval = refresh_interval
         self.browser_pool = None
         self.checker = None
@@ -62,6 +65,7 @@ class RealtimeAvailabilityMonitor:
         
     async def initialize(self):
         """Initialize monitoring session"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.initialize')
         # Create session directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.session_dir = Path(f"realtime_monitor_{timestamp}")
@@ -86,6 +90,7 @@ class RealtimeAvailabilityMonitor:
         
     async def cleanup(self):
         """Clean up resources"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.cleanup')
         if self.monitoring_page:
             await self.monitoring_page.close()
         if self.browser:
@@ -97,6 +102,7 @@ class RealtimeAvailabilityMonitor:
             
     async def take_court_screenshot(self, court_num: int) -> Optional[Path]:
         """Take a screenshot of a specific court page"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.take_court_screenshot')
         try:
             if not self.monitoring_page:
                 self.monitoring_page = await self.browser.new_page()
@@ -117,6 +123,7 @@ class RealtimeAvailabilityMonitor:
             
     def format_availability_change(self, court_num: int, old_data: Dict, new_data: Dict) -> str:
         """Format availability changes for logging"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.format_availability_change')
         old_times = []
         new_times = []
         
@@ -146,6 +153,7 @@ class RealtimeAvailabilityMonitor:
         
     async def monitor_loop(self):
         """Main monitoring loop"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.monitor_loop')
         iteration = 0
         
         while True:
@@ -230,6 +238,7 @@ class RealtimeAvailabilityMonitor:
             
     async def save_state(self):
         """Save current monitoring state"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.save_state')
         state = {
             'last_update': datetime.now().isoformat(),
             'current_availability': self.last_results,
@@ -242,6 +251,7 @@ class RealtimeAvailabilityMonitor:
             
     async def run(self, duration_minutes: Optional[int] = None):
         """Run the monitor for specified duration or indefinitely"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.run')
         await self.initialize()
         
         try:
@@ -266,6 +276,7 @@ class RealtimeAvailabilityMonitor:
             
     async def create_final_report(self):
         """Create a final report of the monitoring session"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.create_final_report')
         report = {
             'session_start': self.change_history[0]['timestamp'] if self.change_history else None,
             'session_end': datetime.now().isoformat(),
@@ -287,6 +298,7 @@ class RealtimeAvailabilityMonitor:
         
     def _summarize_changes(self) -> Dict:
         """Summarize all changes by court"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor._summarize_changes')
         summary = {}
         
         for change in self.change_history:
@@ -313,6 +325,7 @@ class RealtimeAvailabilityMonitor:
         
     def _create_markdown_report(self, report: Dict) -> str:
         """Create a markdown report"""
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor._create_markdown_report')
         lines = [
             "# LVBOT Real-time Monitoring Session Report",
             f"\n**Session Duration**: {report['session_start']} to {report['session_end']}",
@@ -344,6 +357,7 @@ class RealtimeAvailabilityMonitor:
 
 async def main():
     """Main entry point"""
+    t('monitoring.realtime_availability_monitor.main')
     import argparse
     
     parser = argparse.ArgumentParser(description='Real-time LVBOT availability monitor')

@@ -1,6 +1,7 @@
 """
 Unified Court Monitor - Monitors court availability with flexible strategies.
 """
+from utils.tracking import t
 
 import asyncio
 import json
@@ -14,6 +15,7 @@ class CourtMonitor:
     """A unified court monitor with configurable strategies."""
 
     def __init__(self, headless: bool = True, debug: bool = False):
+        t('monitoring.court_monitor.CourtMonitor.__init__')
         self.timezone = pytz.timezone('America/Guatemala')
         self.base_url = "https://www.clublavilla.com/haz-tu-reserva"
         self.headless = headless
@@ -26,6 +28,7 @@ class CourtMonitor:
         self.weekend_slots = WEEKEND_COURT_HOURS
 
     def _setup_logging(self, level):
+        t('monitoring.court_monitor.CourtMonitor._setup_logging')
         log_file = f'court_monitor_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
         logging.basicConfig(
             level=level,
@@ -39,10 +42,12 @@ class CourtMonitor:
 
     def get_slots_for_date(self, date: datetime) -> List[str]:
         """Get available slots for a specific date."""
+        t('monitoring.court_monitor.CourtMonitor.get_slots_for_date')
         return self.weekend_slots if date.weekday() >= 5 else self.weekday_slots
 
     async def monitor_all_day(self, court_numbers: List[int], advance_seconds: int = 30):
         """Monitor specified courts continuously for slots 48 hours in advance."""
+        t('monitoring.court_monitor.CourtMonitor.monitor_all_day')
         self.logger.info(f"48-HOUR ADVANCE COURT MONITORING STARTED for courts: {court_numbers}")
         while True:
             now = datetime.now(self.timezone)
@@ -76,6 +81,7 @@ class CourtMonitor:
 
     async def monitor_single_slot(self, court_number: int, slot_time: str, advance_seconds: int = 30, duration_seconds: int = 90) -> Dict:
         """Monitor a single court/time slot combination."""
+        t('monitoring.court_monitor.CourtMonitor.monitor_single_slot')
         self.logger.info(f"MONITORING: Court {court_number} - Slot {slot_time}")
         slot_found = asyncio.Event()
         winning_browser = None
@@ -115,6 +121,7 @@ class CourtMonitor:
 
     async def _wait_until_start(self, start_time: datetime):
         """Wait until monitoring should start."""
+        t('monitoring.court_monitor.CourtMonitor._wait_until_start')
         now = datetime.now(self.timezone)
         if now < start_time:
             wait_seconds = (start_time - now).total_seconds()
@@ -135,6 +142,7 @@ class CourtMonitor:
         winning_browser
     ) -> Dict:
         """Monitor with a single browser using specified strategy"""
+        t('monitoring.court_monitor.CourtMonitor._monitor_with_browser')
         
         logger = logging.getLogger(browser_name)
         result = {
@@ -181,6 +189,7 @@ class CourtMonitor:
     async def _wait_strategy(self, page: Page, court_number: int, slot_time: str, 
                            expected_time: datetime, end_time: datetime, logger, result: Dict, slot_found: asyncio.Event):
         """Wait strategy: Load once and monitor for changes"""
+        t('monitoring.court_monitor.CourtMonitor._wait_strategy')
         logger.info("Using WAIT strategy")
         await page.goto(self.base_url, wait_until='domcontentloaded')
         frame = await self._setup_booking_page(page, court_number, logger)
@@ -200,6 +209,7 @@ class CourtMonitor:
     async def _refresh_strategy(self, page: Page, court_number: int, slot_time: str,
                               expected_time: datetime, end_time: datetime, logger, result: Dict, slot_found: asyncio.Event):
         """Refresh strategy: Reload page periodically"""
+        t('monitoring.court_monitor.CourtMonitor._refresh_strategy')
         logger.info("Using REFRESH strategy")
         while datetime.now(self.timezone) < end_time and not slot_found.is_set():
             result['checks'] += 1
@@ -223,6 +233,7 @@ class CourtMonitor:
     async def _back_strategy(self, page: Page, court_number: int, slot_time: str,
                            expected_time: datetime, end_time: datetime, logger, result: Dict, slot_found: asyncio.Event):
         """Smart refresh strategy: Refresh only when times visible but target not found"""
+        t('monitoring.court_monitor.CourtMonitor._back_strategy')
         logger.info("Using SMART REFRESH strategy")
         await page.goto(self.base_url, wait_until='domcontentloaded')
         frame = await self._setup_booking_page(page, court_number, logger)
@@ -252,6 +263,7 @@ class CourtMonitor:
 
     async def _setup_booking_page(self, page: Page, court_number: int, logger) -> Optional[Frame]:
         """Setup booking page by clicking RESERVAR button"""
+        t('monitoring.court_monitor.CourtMonitor._setup_booking_page')
         try:
             iframe_elem = await page.wait_for_selector('iframe', timeout=5000)
             frame = await iframe_elem.content_frame()
@@ -269,6 +281,7 @@ class CourtMonitor:
 
     async def _get_all_visible_hours(self, frame: Frame) -> List[str]:
         """Get all visible hour buttons"""
+        t('monitoring.court_monitor.CourtMonitor._get_all_visible_hours')
         visible_hours = []
         try:
             time_elements = await frame.query_selector_all('*:has-text(":")')
@@ -288,6 +301,7 @@ class CourtMonitor:
 
     async def _find_hour_button(self, frame: Frame, slot_time: str) -> Optional[Dict]:
         """Find the hour button for the specified time slot"""
+        t('monitoring.court_monitor.CourtMonitor._find_hour_button')
         try:
             time_elements = await frame.query_selector_all(f'*:has-text("{slot_time}")')
             for elem in time_elements:
@@ -305,6 +319,7 @@ class CourtMonitor:
 
     async def explore_booking_flow(self, court_number: int = 1):
         """Explore the booking flow step by step for debugging."""
+        t('monitoring.court_monitor.CourtMonitor.explore_booking_flow')
         self.logger.info(f"Starting booking flow exploration for Court {court_number}...")
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=False, slow_mo=1000)

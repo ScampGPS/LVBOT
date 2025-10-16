@@ -1,6 +1,7 @@
 """Minimal async helpers for locating the Acuity scheduling iframe."""
 
 from __future__ import annotations
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -26,6 +27,7 @@ class BrowserHelpers:
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
     ) -> Optional[Frame]:
         """Poll the page until the scheduling iframe is located."""
+        t('automation.browser.async_browser_helpers.BrowserHelpers.get_scheduling_frame')
         deadline = asyncio.get_event_loop().time() + timeout
         while asyncio.get_event_loop().time() < deadline:
             try:
@@ -46,6 +48,7 @@ class BrowserHelpers:
     @staticmethod
     async def wait_for_iframe(page: Page, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> Optional[Frame]:
         """Backward-compatible alias for :meth:`get_scheduling_frame`."""
+        t('automation.browser.async_browser_helpers.BrowserHelpers.wait_for_iframe')
         return await BrowserHelpers.get_scheduling_frame(page, timeout)
 
 

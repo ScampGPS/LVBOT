@@ -2,6 +2,7 @@
 """
 Monitor what happens when CANCELAR button is clicked
 """
+from utils.tracking import t
 import pathlib
 from pathlib import Path
 import sys
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def monitor_cancel_click():
     """Monitor the actual cancel button click"""
+    t('archive.scripts.monitoring.monitor_cancel_click.monitor_cancel_click')
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=False,
@@ -39,6 +41,7 @@ async def monitor_cancel_click():
         
         def log_request(request):
             """Log all requests, especially API calls"""
+            t('archive.scripts.monitoring.monitor_cancel_click.monitor_cancel_click.log_request')
             if any(keyword in request.url for keyword in ['api', 'cancel', 'delete', 'appointment']):
                 api_calls.append({
                     'timestamp': datetime.now().isoformat(),
@@ -51,6 +54,7 @@ async def monitor_cancel_click():
         
         def log_response(response):
             """Log responses to tracked requests"""
+            t('archive.scripts.monitoring.monitor_cancel_click.monitor_cancel_click.log_response')
             if any(keyword in response.url for keyword in ['api', 'cancel', 'delete', 'appointment']):
                 logger.info(f"Response: {response.status} {response.url}")
         

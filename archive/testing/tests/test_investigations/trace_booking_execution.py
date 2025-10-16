@@ -1,6 +1,7 @@
 """
 Trace the exact execution path during booking to find where it's getting stuck
 """
+from utils.tracking import t
 
 import asyncio
 import logging
@@ -17,6 +18,7 @@ logging.basicConfig(
 
 async def trace_booking_execution():
     """Trace exactly where the booking is getting stuck"""
+    t('archive.testing.tests.test_investigations.trace_booking_execution.trace_booking_execution')
     
     browser_pool = None
     start_time = time.time()

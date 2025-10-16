@@ -2,6 +2,7 @@
 """
 Test script to verify Telegram availability display after handler fix
 """
+from utils.tracking import t
 
 import asyncio
 import sys
@@ -16,6 +17,7 @@ import pytz
 
 async def test_availability_display():
     """Test that availability data is properly formatted for Telegram display"""
+    t('archive.testing.tests.test_telegram_availability_display.test_availability_display')
     browser_pool = None
     availability_checker = None
     
