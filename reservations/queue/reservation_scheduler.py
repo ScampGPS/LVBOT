@@ -3,6 +3,9 @@
 Reservation Scheduler with Dynamic Booking Orchestration
 Manages the execution of queued reservations with 3 browsers and staggered refresh
 """
+from dataclasses import asdict, replace
+from functools import partial
+
 from tracking import t
 
 import asyncio
@@ -18,15 +21,21 @@ import pytz
 # Read production mode setting (opt-in; default is false for richer diagnostics)
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 
-# Use the now-async SpecializedBrowserPool
-from automation.browser.pools import SpecializedBrowserPool
+# Use the now-async SpecializedBrowserPool via BrowserLifecycle helper
 from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from automation.executors import AsyncExecutorConfig
 from automation.browser.manager import BrowserManager
-from automation.browser.browser_health_checker import BrowserHealthChecker
-from automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
 from botapp.booking.immediate_handler import ImmediateBookingHandler
-from automation.shared.booking_contracts import BookingResult, BookingUser
+from automation.shared.booking_contracts import BookingRequest, BookingResult, BookingUser
+from reservations.queue.scheduler import (
+    BrowserLifecycle,
+    DispatchJob,
+    dispatch_to_executors,
+    hydrate_reservation_batch,
+    pull_ready_reservations,
+    SchedulerStats,
+    record_outcome,
+)
 from reservations.queue.request_builder import build_request_from_reservation
 from reservations.queue.persistence import persist_queue_outcome
 from botapp.notifications import format_failure_message, format_success_message
@@ -132,21 +141,13 @@ class ReservationScheduler:
         
         # Browser manager coordinates pool lifecycle and helpers
         self.browser_manager = BrowserManager(pool=browser_pool)
-        self.browser_pool = browser_pool
-        self._pool_initialized = browser_pool is not None
-        
-        # Recursion prevention
-        self._pool_init_attempts = 0
-        self.MAX_POOL_INIT_ATTEMPTS = 3
-
-        if self.browser_pool:
-            self.logger.info("Using pre-initialized browser pool from main thread")
-            # Set global browser pool for smart executor
-            
-        
-        # Browser lifecycle helpers provided by the manager
-        self.health_checker = None
-        self.recovery_service = None
+        self.browser_lifecycle = BrowserLifecycle(
+            logger=self.logger,
+            browser_manager=self.browser_manager,
+            config=self.config,
+            production_mode=PRODUCTION_MODE,
+            browser_pool=browser_pool,
+        )
 
         # Immediate booking handler reused for queued executions
         self.immediate_booking_handler: Optional[ImmediateBookingHandler] = None
@@ -160,14 +161,32 @@ class ReservationScheduler:
                 self.logger.error(f"Failed to initialize ImmediateBookingHandler: {exc}")
 
         # Performance tracking
-        self.stats = {
-            'total_attempts': 0,
-            'successful_bookings': 0,
-            'failed_bookings': 0,
-            'avg_execution_time': 0,
-            'health_checks_performed': 0,
-            'recovery_attempts': 0
-        }
+        self.stats = SchedulerStats()
+
+    @property
+    def browser_pool(self):
+        return self.browser_lifecycle.browser_pool
+
+    @browser_pool.setter
+    def browser_pool(self, pool):
+        self.browser_lifecycle.browser_pool = pool
+
+    @property
+    def health_checker(self):
+        return self.browser_lifecycle.health_checker
+
+    @health_checker.setter
+    def health_checker(self, checker):
+        self.browser_lifecycle.health_checker = checker
+
+    @property
+    def recovery_service(self):
+        return self.browser_lifecycle.recovery_service
+
+    @recovery_service.setter
+    def recovery_service(self, service):
+        self.browser_lifecycle.recovery_service = service
+
     
     @staticmethod
     def _get_reservation_field(reservation: Dict[str, Any], field: str, default: Any = None) -> Any:
@@ -219,106 +238,6 @@ class ReservationScheduler:
         current = datetime.now()
         return current.date() if as_date else current
     
-    async def _ensure_browser_pool(self):
-        """Ensure browser pool is initialized (lazy initialization)."""
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._ensure_browser_pool')
-
-        if not self._pool_initialized:
-            if self._pool_init_attempts >= self.MAX_POOL_INIT_ATTEMPTS:
-                self.logger.error(
-                    "Exceeded max browser pool initialization attempts (%s)",
-                    self.MAX_POOL_INIT_ATTEMPTS,
-                )
-                return
-
-            self._pool_init_attempts += 1
-            self.logger.info(
-                "Browser pool not initialized, initializing now... (attempt %s/%s)",
-                self._pool_init_attempts,
-                self.MAX_POOL_INIT_ATTEMPTS,
-            )
-            await self._initialize_browser_pool()
-            self._pool_initialized = True
-        elif not PRODUCTION_MODE:
-            self.logger.debug("Browser pool already initialized")
-            
-    async def _initialize_browser_pool(self):
-        """Initialize persistent browser pool with 3 browsers"""
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._initialize_browser_pool')
-        try:
-            pool = await self.browser_manager.ensure_pool()
-            self.browser_pool = pool
-            self.health_checker = self.browser_manager.health_checker
-            self.recovery_service = self.browser_manager.recovery_service
-            if self.browser_pool:
-                self.logger.info("Browser pool initialized successfully: %s", self.browser_pool)
-        
-        except Exception as e:
-            self.logger.error(f"Failed to initialize browser pool: {e}")
-            self.browser_pool = None
-    
-    async def _create_and_initialize_browser_pool_async(self):
-        """Create and initialize browser pool in async context"""
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._create_and_initialize_browser_pool_async')
-        try:
-            # Create pool
-            browser_pool = await self._create_browser_pool_async()
-            
-            if browser_pool:
-                # Wait for pool to be ready (this will create browsers)
-                if not PRODUCTION_MODE:
-                    self.logger.info("Waiting for browser pool to initialize browsers...")
-                if await browser_pool.wait_until_ready(timeout=60):
-                    self.logger.info("Browser pool is ready for use")
-                    return browser_pool
-                else:
-                    error = browser_pool.get_initialization_error()
-                    self.logger.error(f"Browser pool failed to initialize: {error}")
-                    # Still return the pool instance, it might recover
-                    return browser_pool
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"Error in browser pool creation: {e}")
-            return None
-    
-    async def _create_browser_pool_async(self):
-        """Create browser pool in async context"""
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._create_browser_pool_async')
-        try:
-            self.logger.info("="*60)
-            self.logger.info("INITIALIZING SPECIALIZED BROWSER POOL (ASYNC)")
-            self.logger.info("="*60)
-            
-            browser_pool = SpecializedBrowserPool(
-                courts_needed=[1, 2, 3],  # Example: 3 browsers for 3 courts
-                headless=True,
-                booking_url=self.config.booking_url,
-                low_resource_mode=self.config.low_resource_mode,
-                persistent=True,  # Keep alive between bookings
-                max_browsers=self.config.browser_pool_size # Use config setting
-            )
-            
-            # Start the pool - browsers will open with optimizations
-            self.logger.info("Starting specialized browser pool...")
-            await browser_pool.start()
-            
-            self.logger.info("✓ Specialized browser pool started successfully!")
-            self.logger.info("✓ All browsers initialized with performance optimizations")
-            self.logger.info("✓ Ready for high-speed court checking")
-            
-            # Initialize health check and recovery services with the pool
-            self.health_checker = BrowserHealthChecker(browser_pool)
-            self.recovery_service = BrowserPoolRecoveryService(browser_pool)
-            self.logger.info("✓ Health check and recovery services initialized with browser pool")
-            
-            return browser_pool
-            
-        except Exception as e:
-            self.logger.error(f"Error creating browser pool: {e}")
-            return None
-    
     async def run_async(self):
         """Run the scheduler in the current event loop (new method)"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler.run_async')
@@ -330,16 +249,11 @@ class ReservationScheduler:
             self.logger.info("="*60)
             self.logger.info("STARTUP: Initializing browser pool")
             self.logger.info("="*60)
-            await self._ensure_browser_pool()
+            await self.browser_lifecycle.ensure_browser_pool()
         else:
-            self.logger.info("Using pre-initialized browser pool from main thread")
-            # Initialize health check and recovery services if not already done
-            if self.health_checker is None:
-                self.health_checker = BrowserHealthChecker(self.browser_pool)
-                self.logger.info("✓ Health check service initialized with pre-initialized pool")
-            if self.recovery_service is None:
-                self.recovery_service = BrowserPoolRecoveryService(self.browser_pool)
-                self.logger.info("✓ Recovery service initialized with pre-initialized pool")
+            self.browser_lifecycle.ensure_services(
+                log_prefix="Using pre-initialized browser pool from main thread"
+            )
         
         self.logger.info("Reservation scheduler started with browser pool ready")
         
@@ -360,17 +274,11 @@ class ReservationScheduler:
             self.logger.info("="*60)
             self.logger.info("STARTUP: Initializing browser pool")
             self.logger.info("="*60)
-            await self._ensure_browser_pool()
+            await self.browser_lifecycle.ensure_browser_pool()
         else:
-            self.logger.info("Using pre-initialized browser pool from main thread")
-
-            # Initialize health check and recovery services if not already done
-            if self.health_checker is None:
-                self.health_checker = BrowserHealthChecker(self.browser_pool)
-                self.logger.info("✓ Health check service initialized with pre-initialized pool")
-            if self.recovery_service is None:
-                self.recovery_service = BrowserPoolRecoveryService(self.browser_pool)
-                self.logger.info("✓ Recovery service initialized with pre-initialized pool")
+            self.browser_lifecycle.ensure_services(
+                log_prefix="Using pre-initialized browser pool from main thread"
+            )
         
         self.scheduler_thread = threading.Thread(
             target=lambda: asyncio.run(self._scheduler_loop()), # Run async loop in thread
@@ -404,87 +312,89 @@ class ReservationScheduler:
         t('reservations.queue.reservation_scheduler.ReservationScheduler._scheduler_loop')
         while self.running:
             try:
-                # Get reservations that need to be executed
-                pending = self.queue.get_pending_reservations()
-                
-                # Convert timezone string to tzinfo object for datetime.now()
                 tz = pytz.timezone(self.config.timezone)
                 now = datetime.now(tz)
-                
-                # Log scheduler check
-                if pending:
-                    self.logger.info(f"""SCHEDULER CHECK
-                    Current time: {now}
-                    Pending reservations: {len(pending)}
-                    """)
-                
-                # Separate groups for health check vs execution
-                execution_groups = {}
-                health_check_groups = {}
-                
-                for reservation in pending:
-                    status = self._get_reservation_field(reservation, 'status')
-                    # Also process 'pending' status reservations
-                    if status in ['pending', 'scheduled', 'attempting']:
-                        scheduled_execution = self._get_reservation_field(reservation, 'scheduled_execution')
-                        
-                        # Handle scheduled_execution type conversion
-                        if isinstance(scheduled_execution, str):
-                            exec_time = datetime.fromisoformat(scheduled_execution)
-                        elif isinstance(scheduled_execution, datetime):
-                            exec_time = scheduled_execution
-                        else:
-                            self.logger.warning(f"Invalid scheduled_execution type: {type(scheduled_execution)} for reservation {self._get_reservation_field(reservation, 'id', 'unknown')[:8]}... - skipping")
-                            continue
-                        
-                        # Calculate time until execution
-                        time_until = exec_time - now
-                        hours_until = time_until.total_seconds() / 3600
-                        
-                        # Log reservation status
-                        res_id = self._get_reservation_field(reservation, 'id', 'unknown')[:8]
-                        target_date = self._get_reservation_field(reservation, 'target_date')
-                        target_time = self._get_reservation_field(reservation, 'target_time')
-                        
-                        self.logger.info(f"""RESERVATION STATUS CHECK
-                        ID: {res_id}...
-                        Target: {target_date} {target_time}
-                        Scheduled execution: {exec_time}
-                        Time until execution: {hours_until:.1f} hours
-                        Status: {'READY TO EXECUTE' if exec_time <= now else 'WAITING'}
-                        """)
-                        
-                        # Check if it's time to execute (at or past scheduled execution time)
-                        if exec_time <= now:
-                            self.logger.info(f"✅ ENTERING 48H WINDOW - Reservation {res_id}... is ready for execution!")
-                            
-                            # Group by target time for concurrent execution
-                            time = self._get_reservation_field(reservation, 'target_time')
-                            key = f"{target_date}_{time}"
-                            if key not in execution_groups:
-                                execution_groups[key] = []
-                            execution_groups[key].append(reservation)
-                        elif hours_until <= 0.1:  # Within 6 minutes of execution (health check only)
-                            self.logger.info(f"🎯 PRE-EXECUTION HEALTH CHECK - Reservation {res_id}... will execute in {hours_until*60:.1f} minutes")
-                            
-                            # Group for pre-execution health check ONLY
-                            time = self._get_reservation_field(reservation, 'target_time')
-                            key = f"{target_date}_{time}"
-                            if key not in health_check_groups:
-                                health_check_groups[key] = []
-                            health_check_groups[key].append(reservation)
-                
-                # First, perform health checks for groups that are close but not ready
-                for time_key, reservations in health_check_groups.items():
-                    if reservations:
-                        self.logger.info(f"🏥 Performing health check for {len(reservations)} reservations (group: {time_key})")
-                        await self._perform_pre_execution_health_check(reservations)
-                
-                # Then, execute groups that are ready
-                for time_key, reservations in execution_groups.items():
-                    if reservations:
-                        await self._execute_reservation_group(reservations)
-                
+
+                evaluation = pull_ready_reservations(
+                    self.queue,
+                    now=now,
+                    logger=self.logger,
+                )
+
+                for batch in evaluation.requires_health_check:
+                    if not batch.reservations:
+                        continue
+                    self.logger.info(
+                        "🏥 Performing health check for %s reservations (group: %s)",
+                        len(batch.reservations),
+                        batch.time_key,
+                    )
+                    await self._perform_pre_execution_health_check(batch.reservations)
+
+                for batch in evaluation.ready_for_execution:
+                    if not batch.reservations:
+                        continue
+
+                    hydrated = hydrate_reservation_batch(
+                        batch,
+                        executor_config=asdict(self.executor_config)
+                        if self.executor_config
+                        else None,
+                        logger=self.logger,
+                    )
+
+                    if hydrated.failures:
+                        failed_ids = {
+                            str(failure.reservation.get('id'))
+                            for failure in hydrated.failures
+                            if failure.reservation.get('id') is not None
+                        }
+                        for failure in hydrated.failures:
+                            raw_id = failure.reservation.get('id')
+                            if raw_id is None:
+                                continue
+                            reservation_id = str(raw_id)
+                            error_message = f"Failed to prepare booking request: {failure.error}"
+                            failure_result = _failure_result_from_reservation(
+                                failure.reservation,
+                                error_message,
+                                errors=[str(failure.error)],
+                            )
+                            persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                            self._update_reservation_failed(reservation_id, error_message)
+                        filtered_reservations = [
+                            reservation
+                            for reservation in batch.reservations
+                            if str(reservation.get('id')) not in failed_ids
+                        ]
+                    else:
+                        filtered_reservations = list(batch.reservations)
+
+                    prepared_requests: Dict[str, BookingRequest] = {}
+                    if hydrated.requests:
+                        self.logger.debug(
+                            "Prepared %s booking requests for batch %s",
+                            len(hydrated.requests),
+                            batch.time_key,
+                        )
+                        filtered_ids = {
+                            str(reservation.get('id'))
+                            for reservation in filtered_reservations
+                            if reservation.get('id') is not None
+                        }
+                        prepared_requests = {
+                            str(request.request_id): request
+                            for request in hydrated.requests
+                            if request.request_id is not None
+                            and str(request.request_id) in filtered_ids
+                        }
+
+                    if filtered_reservations:
+                        await self._execute_reservation_group(
+                            filtered_reservations,
+                            prepared_requests=prepared_requests,
+                        )
+
                 # Sleep before next check
                 await asyncio.sleep(15)  # Check every 15 seconds
                 
@@ -492,7 +402,12 @@ class ReservationScheduler:
                 self.logger.error(f"Scheduler error: {e}")
                 await asyncio.sleep(30)  # Wait longer on error
     
-    async def _execute_reservation_group(self, reservations: List[Any]):
+    async def _execute_reservation_group(
+        self,
+        reservations: List[Any],
+        *,
+        prepared_requests: Optional[Dict[str, BookingRequest]] = None,
+    ):
         """
         Execute a group of reservations for the same time slot
         Uses persistent browser pool with dynamic court assignment
@@ -502,7 +417,7 @@ class ReservationScheduler:
             return
         
         # Ensure browser pool is initialized
-        await self._ensure_browser_pool()
+        await self.browser_lifecycle.ensure_browser_pool()
         if not self.browser_pool:
             self.logger.error("Browser pool not available")
             return
@@ -608,145 +523,104 @@ class ReservationScheduler:
         
         # Execute bookings using persistent pool
         self.logger.info("🚀 STARTING PARALLEL BOOKING EXECUTION")
-        await self._execute_with_persistent_pool(booking_plan, target_date, reservations)
+        await self._execute_with_persistent_pool(
+            booking_plan,
+            target_date,
+            reservations,
+            prepared_requests=prepared_requests,
+        )
         
         # Handle waitlisted users
         if booking_plan['waitlisted_users']:
             await self._handle_waitlisted_users(booking_plan['waitlisted_users'], target_date_str, time_slot)
     
-    async def _execute_with_persistent_pool(self, booking_plan: Dict[str, Any], target_date: datetime, reservations: List[Dict[str, Any]]):
+    async def _execute_with_persistent_pool(
+        self,
+        booking_plan: Dict[str, Any],
+        target_date: datetime,
+        reservations: List[Dict[str, Any]],
+        *,
+        prepared_requests: Optional[Dict[str, BookingRequest]] = None,
+    ):
         """
         Execute bookings using persistent browser pool with smart court assignment
         """
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_with_persistent_pool')
         browser_assignments = booking_plan['browser_assignments']
-        results = {}
         
         # Create lookup for reservations by ID for efficient access
-        reservation_lookup = {self._get_reservation_field(res, 'id'): res for res in reservations}
+        reservation_lookup = {
+            str(self._get_reservation_field(res, 'id')): res for res in reservations
+        }
         
-        # Create tasks for concurrent execution
-        booking_tasks = []
-        
-        # Prepare all booking tasks first
-        for i, assignment in enumerate(browser_assignments, 1):
+        prepared_requests = prepared_requests or {}
+
+        results: Dict[str, Dict[str, Any]] = {}
+        jobs: List[DispatchJob] = []
+        total_assignments = len(browser_assignments)
+
+        for index, assignment in enumerate(browser_assignments, 1):
             attempt = assignment['attempt']
-            reservation_id = attempt.reservation_id
-            
-            # Get the original reservation dictionary
+            reservation_id = str(attempt.reservation_id)
+
             reservation = reservation_lookup.get(reservation_id)
             if not reservation:
-                self.logger.error(f"❌ Reservation {reservation_id[:8]}... not found in lookup")
-                results[reservation_id] = {'success': False, 'error': 'Reservation not found'}
+                self.logger.error(
+                    "❌ Reservation %s not found in lookup",
+                    reservation_id[:8],
+                )
+                results[reservation_id] = {
+                    'success': False,
+                    'error': 'Reservation not found',
+                }
                 continue
-            
-            # Create task for this booking with a name for better debugging
-            task = asyncio.create_task(
-                self._execute_single_booking(
-                    assignment, reservation, target_date, i, len(browser_assignments)
-                ),
-                name=f"booking-{reservation_id[:8]}"
+
+            jobs.append(
+                DispatchJob(
+                    reservation_id=reservation_id,
+                    assignment=assignment,
+                    reservation=reservation,
+                    index=index,
+                    total=total_assignments,
+                    prebuilt_request=prepared_requests.get(reservation_id),
+                )
             )
-            booking_tasks.append((reservation_id, task))
-        
-        # Execute all tasks concurrently with timeout
-        if booking_tasks:
-            self.logger.info(f"🚀 Executing {len(booking_tasks)} bookings concurrently")
-            
-            # Create a mapping of tasks to reservation IDs
-            task_to_reservation = {task: reservation_id for reservation_id, task in booking_tasks}
-            
-            # Wait for all tasks concurrently with timeout to prevent infinite hanging
-            # Timeout of 60 seconds for complete natural flow (navigation + form detection + natural flow + submission)
-            timeout = 60  # Extended for complete natural flow
-            done, pending = await asyncio.wait(
-                [task for _, task in booking_tasks],
-                return_when=asyncio.ALL_COMPLETED,
-                timeout=timeout
+
+        if jobs:
+            execute_single = partial(self._execute_single_booking, target_date=target_date)
+            dispatch_results, timeouts = await dispatch_to_executors(
+                jobs,
+                execute_single=execute_single,
+                logger=self.logger,
             )
-            
-            # Cancel any hanging tasks that didn't complete within timeout
-            if pending:
-                self.logger.warning(f"Found {len(pending)} hanging booking tasks - cancelling them")
-                for task in pending:
-                    reservation_id = task_to_reservation[task]
-                    self.logger.warning(f"Cancelling hanging task for reservation {reservation_id[:8]}...")
-                    task.cancel()
-                    # Mark reservation as failed due to timeout
+            results.update(dispatch_results)
+
+            if timeouts:
+                # Ensure critical operation flag is cleared to keep pool healthy
+                if hasattr(self.browser_pool, 'set_critical_operation'):
+                    try:
+                        await self.browser_pool.set_critical_operation(False)
+                        self.logger.info(
+                            "✅ Critical operation flag forcibly cleared after task cancellation",
+                        )
+                    except Exception as cleanup_error:  # pragma: no cover - defensive guard
+                        self.logger.error(
+                            "❌ Failed to clear critical operation flag after cancellation: %s",
+                            cleanup_error,
+                        )
+
+                for reservation_id, timeout_message in timeouts.items():
                     reservation_data = reservation_lookup.get(reservation_id, {})
-                    timeout_message = f'Booking timed out after {timeout} seconds'
                     failure_result = _failure_result_from_reservation(
                         reservation_data,
                         timeout_message,
                         errors=[timeout_message],
                     )
                     persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                    self._update_reservation_failed(reservation_id, timeout_message)
                     results[reservation_id] = _booking_result_to_dict(failure_result)
-                
-                # Wait briefly for cancellation to complete
-                if pending:
-                    try:
-                        await asyncio.wait(pending, timeout=5)
-                    except asyncio.CancelledError:
-                        pass  # Expected when tasks are cancelled
-                
-                # CRITICAL: Force clear critical operations after task cancellation
-                # This ensures the browser pool doesn't get stuck waiting for operations that were cancelled
-                try:
-                    await self.browser_pool.set_critical_operation(False)
-                    self.logger.info("✅ Critical operation flag forcibly cleared after task cancellation")
-                except Exception as cleanup_error:
-                    self.logger.error(f"❌ Failed to clear critical operation flag after cancellation: {cleanup_error}")
-            
-            # Process completed tasks
-            for task in done:
-                reservation_id = task_to_reservation[task]
-                try:
-                    result = task.result()
-                    results[reservation_id] = result
 
-                    if result['success']:
-                        self.orchestrator.handle_booking_result(
-                            reservation_id,
-                            success=True,
-                            court_booked=result.get('court')
-                        )
-                        self._update_reservation_success(reservation_id, result)
-                    else:
-                        self.orchestrator.handle_booking_result(
-                            reservation_id,
-                            success=False
-                        )
-                        error_msg = result.get('error', 'Unknown error')
-                        self._update_reservation_failed(reservation_id, error_msg)
-
-                except asyncio.CancelledError:
-                    self.logger.warning(f"Task was cancelled for reservation {reservation_id[:8]}...")
-                    reservation_data = reservation_lookup.get(reservation_id, {})
-                    cancel_message = 'Task was cancelled'
-                    failure_result = _failure_result_from_reservation(
-                        reservation_data,
-                        cancel_message,
-                        errors=[cancel_message],
-                    )
-                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                    results[reservation_id] = _booking_result_to_dict(failure_result)
-                    self._update_reservation_failed(reservation_id, cancel_message)
-                except Exception as e:
-                    self.logger.error(f"Task failed for reservation {reservation_id}: {e}")
-                    reservation_data = reservation_lookup.get(reservation_id, {})
-                    error_message = str(e)
-                    failure_result = _failure_result_from_reservation(
-                        reservation_data,
-                        error_message,
-                        errors=[error_message],
-                    )
-                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                    results[reservation_id] = _booking_result_to_dict(failure_result)
-                    self._update_reservation_failed(reservation_id, error_message)
-            
-            # Process results from completed and cancelled tasks
+        for reservation_id, result in results.items():
+            record_outcome(self, reservation_id, result)
         
         # Handle overflow users if any
         overflow_count = booking_plan.get('overflow_count', 0)
@@ -765,7 +639,16 @@ class ReservationScheduler:
         await self._notify_booking_results(results)
     
     
-    async def _execute_single_booking(self, assignment: Dict, reservation: Dict, target_date: datetime, index: int, total: int) -> Dict:
+    async def _execute_single_booking(
+        self,
+        assignment: Dict,
+        reservation: Dict,
+        target_date: datetime,
+        index: int,
+        total: int,
+        *,
+        prebuilt_request: Optional[BookingRequest] = None,
+    ) -> Dict:
         """Execute a single queued booking using the unified booking contracts."""
 
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_single_booking')
@@ -809,16 +692,24 @@ class ReservationScheduler:
         if attempt_number is None:
             attempt_number = getattr(attempt, 'attempt', None)
 
+        base_metadata = {
+            'queue_reservation_id': reservation_id,
+            'queue_attempt': attempt_number,
+            'assigned_browser': assignment.get('browser_id'),
+        }
+
         try:
-            booking_request = build_request_from_reservation(
-                reservation,
-                user_profile=user_profile,
-                metadata={
-                    'queue_reservation_id': reservation_id,
-                    'queue_attempt': attempt_number,
-                    'assigned_browser': assignment.get('browser_id'),
-                },
-            )
+            if prebuilt_request is not None:
+                booking_request = replace(
+                    prebuilt_request,
+                    metadata={**prebuilt_request.metadata, **base_metadata},
+                )
+            else:
+                booking_request = build_request_from_reservation(
+                    reservation,
+                    user_profile=user_profile,
+                    metadata=base_metadata,
+                )
         except ValueError as exc:
             self.logger.error(
                 "Failed to build booking request for reservation %s: %s",
@@ -892,7 +783,14 @@ class ReservationScheduler:
         """Update reservation status to completed"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._update_reservation_success')
         self.queue.update_reservation_status(reservation_id, 'completed')
-        self.stats['successful_bookings'] += 1
+        execution_time = None
+        booking_result = result.get('booking_result') if isinstance(result, dict) else None
+        if isinstance(booking_result, BookingResult):
+            execution_time = booking_result.metadata.get('queue_execution_time_seconds')
+        elif isinstance(result, dict):
+            execution_time = result.get('queue_execution_time_seconds')
+
+        self.stats.record_success(execution_time)
         self.logger.info(f"Reservation {reservation_id} completed successfully")
 
     def _update_reservation_failed(self, reservation_id: str, error: str):
@@ -914,7 +812,7 @@ class ReservationScheduler:
         
         # Update status to failed
         self.queue.update_reservation_status(reservation_id, 'failed', error=error)
-        self.stats['failed_bookings'] += 1
+        self.stats.record_failure()
         
         # In test mode, don't remove failed reservations to allow retry
         from infrastructure.constants import TEST_MODE_ENABLED
@@ -1131,74 +1029,58 @@ class ReservationScheduler:
     def get_performance_report(self) -> str:
         """Get scheduler performance statistics"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler.get_performance_report')
-        success_rate = (
-            (self.stats['successful_bookings'] / self.stats['total_attempts'] * 100)
-            if self.stats['total_attempts'] > 0 else 0
-        )
-        
-        report = (
-            f"📊 **Performance Statistics**\\n\\n"
-            f"🎯 Success Rate: {success_rate:.1f}%\\n"
-            f"✅ Successful: {self.stats['successful_bookings']}\\n"
-            f"❌ Failed: {self.stats['failed_bookings']}\\n"
-            f"📈 Total Attempts: {self.stats['total_attempts']}\\n"
-        )
-        
-        # Add health check statistics
-        if self.stats.get('health_checks_performed', 0) > 0:
-            report += (
-                f"\\n🏥 **Health Monitoring**\\n"
-                f"Health Checks: {self.stats['health_checks_performed']}\\n"
-                f"Recovery Attempts: {self.stats.get('recovery_attempts', 0)}\\n"
-            )
-        
-        # Add recovery statistics if available
+        sections = [self.stats.format_report()]
+
         if self.recovery_service:
             recovery_stats = self.recovery_service.get_recovery_stats()
             if recovery_stats['total_recovery_attempts'] > 0:
-                report += (
-                    f"\\n🔧 **Recovery Statistics**\\n"
-                    f"Total Recoveries: {recovery_stats['total_recovery_attempts']}\\n"
-                    f"Successful: {recovery_stats['successful_recoveries']}\\n"
-                    f"Success Rate: {recovery_stats['success_rate']*100:.1f}%\\n"
+                sections.append(
+                    f"\n🔧 **Recovery Statistics**\n"
+                    f"Total Recoveries: {recovery_stats['total_recovery_attempts']}\n"
+                    f"Successful: {recovery_stats['successful_recoveries']}\n"
+                    f"Success Rate: {recovery_stats['success_rate']*100:.1f}%\n"
                 )
                 if recovery_stats['emergency_browser_active']:
-                    report += f"⚠️ Emergency browser is active\\n"
-        
-        # Add browser pool statistics if available (now works with SpecializedBrowserPool)
+                    sections.append("⚠️ Emergency browser is active")
+
         if self.browser_pool and hasattr(self.browser_pool, 'get_stats'):
             try:
                 pool_stats = self.browser_pool.get_stats()
-                report += (
-                    f"\\n🌐 **Browser Pool Status**\\n"
-                    f"Active Browsers: {pool_stats.get('browser_count', 0)}\\n"
-                    f"Max Browsers: {pool_stats.get('max_browsers', 0)}\\n"
-                    f"Browsers Recycled: {pool_stats.get('browsers_recycled', 0)}\\n"
+                sections.append(
+                    f"\n🌐 **Browser Pool Status**\n"
+                    f"Active Browsers: {pool_stats.get('browser_count', 0)}\n"
+                    f"Max Browsers: {pool_stats.get('max_browsers', 0)}\n"
+                    f"Browsers Recycled: {pool_stats.get('browsers_recycled', 0)}\n"
                 )
-                
-                # Add browser health details
+
                 browser_details = pool_stats.get('browser_details', {})
                 if browser_details:
-                    healthy_browsers = sum(1 for details in browser_details.values() if details.get('healthy', False))
-                    report += f"Healthy Browsers: {healthy_browsers}/{len(browser_details)}\\n"
-                    
-                    # Show browser ages for staleness monitoring
-                    avg_age = sum(details.get('age_minutes', 0) for details in browser_details.values()) / len(browser_details)
-                    report += f"Avg Browser Age: {avg_age:.1f} minutes\\n"
-                    
-                    # Check for old browsers that might need refresh
-                    old_browsers = [bid for bid, details in browser_details.items() 
-                                  if details.get('age_minutes', 0) > 60]  # More than 1 hour
-                    
+                    healthy_browsers = sum(
+                        1 for details in browser_details.values() if details.get('healthy', False)
+                    )
+                    sections.append(f"Healthy Browsers: {healthy_browsers}/{len(browser_details)}")
+
+                    avg_age = sum(
+                        details.get('age_minutes', 0) for details in browser_details.values()
+                    ) / len(browser_details)
+                    sections.append(f"Avg Browser Age: {avg_age:.1f} minutes")
+
+                    old_browsers = [
+                        bid
+                        for bid, details in browser_details.items()
+                        if details.get('age_minutes', 0) > 60
+                    ]
+
                     if old_browsers:
-                        report += f"\\n⚠️ **Staleness Warning**\\n"
-                        report += f"{len(old_browsers)} browser(s) older than 1 hour - may need refresh\\n"
-                    
-            except Exception as e:
-                self.logger.debug(f"Could not get browser pool stats: {e}")
-        
-        return report
-    
+                        sections.append("\n⚠️ **Staleness Warning**")
+                        sections.append(
+                            f"{len(old_browsers)} browser(s) older than 1 hour - may need refresh"
+                        )
+            except Exception as exc:  # pragma: no cover - best effort stats
+                self.logger.debug(f"Could not get browser pool stats: {exc}")
+
+        return "\n".join([section for section in sections if section])
+
     async def _check_startup_reservations(self):
         """Check for existing reservations at startup and attempt to book ready ones"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._check_startup_reservations')
@@ -1293,7 +1175,7 @@ class ReservationScheduler:
             return True
         
         try:
-            self.stats['health_checks_performed'] += 1
+            self.stats.record_health_check()
             
             # Perform comprehensive health check
             health_result = await self.health_checker.perform_pre_booking_health_check()
@@ -1334,7 +1216,7 @@ class ReservationScheduler:
                 
                 # Attempt recovery
                 if self.recovery_service:
-                    self.stats['recovery_attempts'] += 1
+                    self.stats.record_recovery_attempt()
                     recovery_result = await self.recovery_service.recover_browser_pool(
                         failed_courts=failed_courts if failed_courts else None,
                         error_context=health_result.message

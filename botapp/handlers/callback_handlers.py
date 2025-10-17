@@ -10,7 +10,7 @@ from typing import Dict, Callable, Any, List
 from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from automation.availability import DateTimeHelpers
+from automation.availability import DateTimeHelpers, fetch_available_slots
 from infrastructure.constants import COURT_HOURS, get_court_hours
 
 from ..ui.telegram_ui import TelegramUI
@@ -2754,19 +2754,14 @@ class CallbackHandler:
                 self.logger.warning(f"No page available for court {court_num}")
                 return []
             
-            # FIXED: Use date-specific extraction instead of generic extraction
-            from automation.availability import AcuityTimeParser
             from automation.forms.acuity_page_validator import AcuityPageValidator
-            
-            # Get the appropriate frame for extraction
+
             frame = await AcuityPageValidator._get_extraction_frame(page)
             if not frame:
                 self.logger.warning(f"Court {court_num}: No extraction frame available")
                 return []
-            
-            # Extract times using new time-order parser and filter for target date
-            parser = AcuityTimeParser()
-            times_by_day = await parser.extract_times_by_day(frame)
+
+            times_by_day = await fetch_available_slots(page)
             target_date_str = target_date.strftime('%Y-%m-%d')
             
             if target_date_str in times_by_day:
@@ -2880,7 +2875,6 @@ class CallbackHandler:
                 self.logger.warning(f"No page available for court {court_num}")
                 return {}
             
-            from automation.availability import AcuityTimeParser
             from automation.forms.acuity_page_validator import AcuityPageValidator
             
             # Get the appropriate frame for extraction
@@ -2889,9 +2883,7 @@ class CallbackHandler:
                 self.logger.warning(f"Court {court_num}: No extraction frame available")
                 return {}
             
-            # Extract ALL times by day using the new time-order parser
-            parser = AcuityTimeParser()
-            times_by_day = await parser.extract_times_by_day(frame)
+            times_by_day = await fetch_available_slots(page)
             
             self.logger.info(f"Court {court_num}: Extracted times for {len(times_by_day)} days: {times_by_day}")
             return times_by_day

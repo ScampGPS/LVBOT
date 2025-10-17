@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 from playwright.async_api import Page
 
 from infrastructure.constants import COURT_CONFIG, NO_AVAILABILITY_PATTERNS
-from .support import AcuityTimeParser
+from .api import fetch_available_slots
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,8 @@ class AvailabilityChecker:
     def __init__(self, browser_pool) -> None:
         t('automation.availability.checker.AvailabilityChecker.__init__')
         self.browser_pool = browser_pool
-        self.acuity_parser = AcuityTimeParser()
+        self._reference_date: Optional[date] = None
+        self._current_time: Optional[datetime] = None
 
     async def check_all_courts_parallel(self) -> Dict[int, List[str]]:
         t('automation.availability.checker.AvailabilityChecker.check_all_courts_parallel')
@@ -46,8 +47,13 @@ class AvailabilityChecker:
         court_numbers: Optional[List[int]] = None,
         max_concurrent: int = 3,
         timeout_per_court: float = 30.0,
+        reference_date: Optional[date] = None,
+        current_time: Optional[datetime] = None,
     ) -> Dict[int, Dict[str, List[str]]]:
         t('automation.availability.checker.AvailabilityChecker.check_availability')
+        self._reference_date = reference_date
+        self._current_time = current_time
+
         targets = court_numbers or list(COURT_CONFIG.keys())
         valid_courts = [c for c in targets if c in COURT_CONFIG]
         if len(valid_courts) < len(targets):
@@ -56,7 +62,11 @@ class AvailabilityChecker:
 
         semaphore = asyncio.Semaphore(max_concurrent)
         tasks = [self._check_with_semaphore(court, semaphore, timeout_per_court) for court in valid_courts]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        finally:
+            self._reference_date = None
+            self._current_time = None
 
         availability: Dict[int, Dict[str, List[str]]] = {}
         for court_num, result in zip(valid_courts, results):
@@ -101,7 +111,11 @@ class AvailabilityChecker:
             if await self._has_no_availability_message(page):
                 return {}
 
-            parsed = await self.acuity_parser.extract_times_by_day(page)
+            parsed = await fetch_available_slots(
+                page,
+                reference_date=self._reference_date,
+                current_time=self._current_time,
+            )
             if not parsed:
                 logger.warning("Court %s: No times returned by parser", court_num)
                 return {}

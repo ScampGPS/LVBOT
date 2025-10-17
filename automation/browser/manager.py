@@ -8,7 +8,8 @@ import logging
 from typing import Optional
 
 from .async_browser_pool import AsyncBrowserPool
-from .browser_health_checker import BrowserHealthChecker, HealthStatus
+from .browser_health_checker import BrowserHealthChecker
+from .health.types import HealthStatus
 from .browser_pool_recovery import BrowserPoolRecoveryService
 from .settings import BrowserSettings, load_browser_settings
 

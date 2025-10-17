@@ -10,7 +10,6 @@ from automation.shared.booking_contracts import (
     BookingSource,
     BookingUser,
 )
-from botapp.booking.request_builder import booking_user_from_profile
 from reservations.models import ReservationRequest as ReservationRecord
 
 REQUIRED_RESERVATION_FIELDS = {"target_date", "target_time"}
@@ -35,6 +34,8 @@ def _normalise_courts(courts: Optional[Sequence[int]], fallback: Optional[int]) 
 
 
 def _resolve_user(reservation: Dict[str, Any], provided: Optional[Dict[str, Any]]) -> BookingUser:
+    from botapp.booking.request_builder import booking_user_from_profile
+
     if provided:
         return booking_user_from_profile(provided)
 
@@ -127,4 +128,3 @@ def build_request_from_dataclass(
         metadata=base_metadata,
         executor_config=executor_config,
     )
-

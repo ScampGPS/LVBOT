@@ -1,57 +1,21 @@
-"""
-Browser Pool Recovery Service - Handles browser pool failures and recovery
-==========================================================================
+"""Browser pool recovery orchestration service."""
 
-PURPOSE: Provides recovery strategies for browser pool failures to maintain bot availability
-PATTERN: Multiple escalating recovery strategies from individual court to full restart
-SCOPE: Browser pool recovery and emergency fallback mechanisms
-
-This module provides resilient recovery from browser failures while maintaining
-thread safety and async compatibility.
-"""
-from tracking import t
+from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
-from enum import Enum
-from dataclasses import dataclass, field
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+from tracking import t
 
-
-class RecoveryStrategy(Enum):
-    """Enumeration of available recovery strategies"""
-    INDIVIDUAL_COURT = "individual_court"
-    PARTIAL_POOL = "partial_pool"
-    FULL_RESTART = "full_restart"
-    EMERGENCY_FALLBACK = "emergency_fallback"
-
-
-@dataclass
-class RecoveryAttempt:
-    """Track individual recovery attempt details"""
-    strategy: RecoveryStrategy
-    timestamp: datetime
-    courts_affected: List[int]
-    success: bool
-    error_message: Optional[str] = None
-    duration_seconds: float = 0.0
-
-
-@dataclass
-class RecoveryResult:
-    """Result of a recovery operation"""
-    success: bool
-    strategy_used: RecoveryStrategy
-    courts_recovered: List[int]
-    courts_failed: List[int]
-    message: str
-    error_details: Optional[str] = None
-    attempts: List[RecoveryAttempt] = field(default_factory=list)
-    total_duration_seconds: float = 0.0
+from automation.browser.recovery.strategies.base import RecoveryContext, RecoveryStrategyExecutor
+from automation.browser.recovery.strategies.emergency_fallback import EmergencyFallbackRecovery
+from automation.browser.recovery.strategies.full_restart import FullRestartRecovery
+from automation.browser.recovery.strategies.individual_court import IndividualCourtRecovery
+from automation.browser.recovery.strategies.partial_pool import PartialPoolRecovery
+from automation.browser.recovery.types import RecoveryAttempt, RecoveryResult, RecoveryStrategy
 
 
 class BrowserPoolRecoveryService:
@@ -74,12 +38,20 @@ class BrowserPoolRecoveryService:
         """
         t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.__init__')
         self.browser_pool = browser_pool
+        self.logger = logging.getLogger(__name__)
         self.recovery_history: List[RecoveryAttempt] = []
         self.emergency_browser = None
         self.recovery_lock = asyncio.Lock()
         self.max_recovery_attempts = 3
         self.recovery_timeout = 60  # seconds per attempt
-        
+
+        self._strategy_registry: Dict[RecoveryStrategy, RecoveryStrategyExecutor] = {
+            RecoveryStrategy.INDIVIDUAL_COURT: IndividualCourtRecovery(),
+            RecoveryStrategy.PARTIAL_POOL: PartialPoolRecovery(),
+            RecoveryStrategy.FULL_RESTART: FullRestartRecovery(),
+            RecoveryStrategy.EMERGENCY_FALLBACK: EmergencyFallbackRecovery(),
+        }
+
     async def recover_browser_pool(self, failed_courts: List[int] = None, 
                                   error_context: str = None) -> RecoveryResult:
         """
@@ -97,7 +69,11 @@ class BrowserPoolRecoveryService:
             start_time = datetime.now()
             all_attempts = []
             
-            logger.warning(f"🔧 Starting browser pool recovery. Failed courts: {failed_courts}, Error: {error_context}")
+            self.logger.warning(
+                "🔧 Starting browser pool recovery. Failed courts: %s, Error: %s",
+                failed_courts,
+                error_context,
+            )
             
             # Determine initial strategy based on failure scope
             if failed_courts is None:
@@ -114,43 +90,50 @@ class BrowserPoolRecoveryService:
             
             # Try strategies in order until one succeeds
             for strategy in strategies:
-                logger.info(f"🔄 Attempting recovery strategy: {strategy.value}")
-                
+                executor = self._strategy_registry[strategy]
+                self.logger.info("🔄 Attempting recovery strategy: %s", strategy.value)
+
                 try:
-                    if strategy == RecoveryStrategy.INDIVIDUAL_COURT:
-                        result = await self.recover_individual_court(failed_courts[0])
-                    elif strategy == RecoveryStrategy.PARTIAL_POOL:
-                        result = await self.recover_partial_pool(failed_courts or self.browser_pool.courts)
-                    elif strategy == RecoveryStrategy.FULL_RESTART:
-                        result = await self.perform_full_pool_restart()
-                    elif strategy == RecoveryStrategy.EMERGENCY_FALLBACK:
-                        result = await self.activate_emergency_fallback()
-                    
+                    context_obj = RecoveryContext(self, failed_courts, error_context)
+                    result = await executor.execute(context_obj)
                     all_attempts.extend(result.attempts)
-                    
+                    self.recovery_history.extend(result.attempts)
+
                     if result.success:
                         total_duration = (datetime.now() - start_time).total_seconds()
                         result.total_duration_seconds = total_duration
                         result.attempts = all_attempts
-                        logger.info(f"✅ Recovery successful using {strategy.value} in {total_duration:.1f}s")
+                        self.logger.info(
+                            "✅ Recovery successful using %s in %.1fs",
+                            strategy.value,
+                            total_duration,
+                        )
                         return result
-                    else:
-                        logger.warning(f"❌ Recovery strategy {strategy.value} failed: {result.message}")
-                        
-                except Exception as e:
-                    logger.error(f"💥 Exception during {strategy.value} recovery: {e}")
-                    logger.error(traceback.format_exc())
-                    
-                    # Record failed attempt
+
+                    self.logger.warning(
+                        "❌ Recovery strategy %s failed: %s",
+                        strategy.value,
+                        result.message,
+                    )
+
+                except Exception as exc:
+                    self.logger.error(
+                        "💥 Exception during %s recovery: %s",
+                        strategy.value,
+                        exc,
+                    )
+                    self.logger.error(traceback.format_exc())
+
                     attempt = RecoveryAttempt(
                         strategy=strategy,
                         timestamp=datetime.now(),
                         courts_affected=failed_courts or self.browser_pool.courts,
                         success=False,
-                        error_message=str(e),
-                        duration_seconds=(datetime.now() - start_time).total_seconds()
+                        error_message=str(exc),
+                        duration_seconds=(datetime.now() - start_time).total_seconds(),
                     )
                     all_attempts.append(attempt)
+                    self.recovery_history.append(attempt)
             
             # All strategies failed
             total_duration = (datetime.now() - start_time).total_seconds()
@@ -162,320 +145,8 @@ class BrowserPoolRecoveryService:
                 message="All recovery strategies failed",
                 error_details=f"Tried {len(strategies)} strategies over {total_duration:.1f}s",
                 attempts=all_attempts,
-                total_duration_seconds=total_duration
+                total_duration_seconds=total_duration,
             )
-    
-    async def recover_individual_court(self, court_number: int) -> RecoveryResult:
-        """
-        Recover a single court browser
-        
-        Args:
-            court_number: Court number to recover (1, 2, or 3)
-            
-        Returns:
-            RecoveryResult with recovery outcome
-        """
-        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.recover_individual_court')
-        start_time = datetime.now()
-        attempt = RecoveryAttempt(
-            strategy=RecoveryStrategy.INDIVIDUAL_COURT,
-            timestamp=start_time,
-            courts_affected=[court_number],
-            success=False
-        )
-        
-        try:
-            logger.info(f"🔧 Recovering individual court: {court_number}")
-            
-            # Close existing page and context if they exist
-            if court_number in self.browser_pool.pages:
-                try:
-                    await self.browser_pool.pages[court_number].close()
-                except Exception as e:
-                    logger.debug(f"Error closing page for court {court_number}: {e}")
-                del self.browser_pool.pages[court_number]
-            
-            if court_number in self.browser_pool.contexts:
-                try:
-                    await self.browser_pool.contexts[court_number].close()
-                except Exception as e:
-                    logger.debug(f"Error closing context for court {court_number}: {e}")
-                del self.browser_pool.contexts[court_number]
-            
-            # Recreate the court page with retry logic
-            success = await self.browser_pool._create_and_navigate_court_page_with_retry(court_number)
-            
-            attempt.success = success
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            if success:
-                return RecoveryResult(
-                    success=True,
-                    strategy_used=RecoveryStrategy.INDIVIDUAL_COURT,
-                    courts_recovered=[court_number],
-                    courts_failed=[],
-                    message=f"Successfully recovered court {court_number}",
-                    attempts=[attempt]
-                )
-            else:
-                return RecoveryResult(
-                    success=False,
-                    strategy_used=RecoveryStrategy.INDIVIDUAL_COURT,
-                    courts_recovered=[],
-                    courts_failed=[court_number],
-                    message=f"Failed to recover court {court_number}",
-                    attempts=[attempt]
-                )
-                
-        except Exception as e:
-            attempt.error_message = str(e)
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=False,
-                strategy_used=RecoveryStrategy.INDIVIDUAL_COURT,
-                courts_recovered=[],
-                courts_failed=[court_number],
-                message=f"Exception during court {court_number} recovery",
-                error_details=str(e),
-                attempts=[attempt]
-            )
-    
-    async def recover_partial_pool(self, court_numbers: List[int]) -> RecoveryResult:
-        """
-        Recover multiple courts in the pool
-        
-        Args:
-            court_numbers: List of court numbers to recover
-            
-        Returns:
-            RecoveryResult with recovery outcome
-        """
-        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.recover_partial_pool')
-        start_time = datetime.now()
-        attempt = RecoveryAttempt(
-            strategy=RecoveryStrategy.PARTIAL_POOL,
-            timestamp=start_time,
-            courts_affected=court_numbers,
-            success=False
-        )
-        
-        courts_recovered = []
-        courts_failed = []
-        
-        try:
-            logger.info(f"🔧 Recovering partial pool: courts {court_numbers}")
-            
-            # Close all affected courts first
-            for court_number in court_numbers:
-                if court_number in self.browser_pool.pages:
-                    try:
-                        await self.browser_pool.pages[court_number].close()
-                    except Exception:
-                        pass
-                    del self.browser_pool.pages[court_number]
-                
-                if court_number in self.browser_pool.contexts:
-                    try:
-                        await self.browser_pool.contexts[court_number].close()
-                    except Exception:
-                        pass
-                    del self.browser_pool.contexts[court_number]
-            
-            # Recreate courts in parallel with staggered starts
-            tasks = []
-            for i, court_number in enumerate(court_numbers):
-                delay = i * 1.5  # Stagger by 1.5 seconds
-                tasks.append(self.browser_pool._create_and_navigate_court_page_with_stagger(court_number, delay))
-            
-            # Wait for all courts with error handling
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Process results
-            for court_number, result in zip(court_numbers, results):
-                if isinstance(result, Exception):
-                    logger.error(f"Failed to recover court {court_number}: {result}")
-                    courts_failed.append(court_number)
-                else:
-                    logger.info(f"Successfully recovered court {court_number}")
-                    courts_recovered.append(court_number)
-            
-            # Update partial readiness if needed
-            if courts_recovered:
-                self.browser_pool.is_partially_ready = len(courts_recovered) < len(self.browser_pool.courts)
-            
-            attempt.success = len(courts_recovered) > 0
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=len(courts_recovered) > 0,
-                strategy_used=RecoveryStrategy.PARTIAL_POOL,
-                courts_recovered=courts_recovered,
-                courts_failed=courts_failed,
-                message=f"Recovered {len(courts_recovered)}/{len(court_numbers)} courts",
-                attempts=[attempt]
-            )
-            
-        except Exception as e:
-            attempt.error_message = str(e)
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=False,
-                strategy_used=RecoveryStrategy.PARTIAL_POOL,
-                courts_recovered=[],
-                courts_failed=court_numbers,
-                message="Exception during partial pool recovery",
-                error_details=str(e),
-                attempts=[attempt]
-            )
-    
-    async def perform_full_pool_restart(self) -> RecoveryResult:
-        """
-        Perform complete browser pool restart
-        
-        Returns:
-            RecoveryResult with recovery outcome
-        """
-        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.perform_full_pool_restart')
-        start_time = datetime.now()
-        attempt = RecoveryAttempt(
-            strategy=RecoveryStrategy.FULL_RESTART,
-            timestamp=start_time,
-            courts_affected=self.browser_pool.courts,
-            success=False
-        )
-        
-        try:
-            logger.warning("🔄 Performing full browser pool restart")
-            
-            # Store original court configuration
-            original_courts = self.browser_pool.courts.copy()
-            
-            # Stop the entire pool
-            await self.browser_pool.stop()
-            
-            # Clear all state
-            self.browser_pool.pages.clear()
-            self.browser_pool.contexts.clear()
-            self.browser_pool.browser = None
-            self.browser_pool.playwright = None
-            
-            # Wait a moment for resources to be fully released
-            await asyncio.sleep(2)
-            
-            # Restart the pool
-            self.browser_pool.courts = original_courts
-            await self.browser_pool.start()
-            
-            # Check which courts were successfully initialized
-            courts_recovered = self.browser_pool.get_available_courts()
-            courts_failed = [c for c in original_courts if c not in courts_recovered]
-            
-            attempt.success = len(courts_recovered) > 0
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=len(courts_recovered) > 0,
-                strategy_used=RecoveryStrategy.FULL_RESTART,
-                courts_recovered=courts_recovered,
-                courts_failed=courts_failed,
-                message=f"Full restart completed: {len(courts_recovered)}/{len(original_courts)} courts ready",
-                attempts=[attempt]
-            )
-            
-        except Exception as e:
-            attempt.error_message = str(e)
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=False,
-                strategy_used=RecoveryStrategy.FULL_RESTART,
-                courts_recovered=[],
-                courts_failed=self.browser_pool.courts,
-                message="Exception during full pool restart",
-                error_details=str(e),
-                attempts=[attempt]
-            )
-    
-    async def activate_emergency_fallback(self) -> RecoveryResult:
-        """
-        Activate emergency fallback browser as last resort
-        
-        Returns:
-            RecoveryResult with recovery outcome
-        """
-        t('automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.activate_emergency_fallback')
-        start_time = datetime.now()
-        attempt = RecoveryAttempt(
-            strategy=RecoveryStrategy.EMERGENCY_FALLBACK,
-            timestamp=start_time,
-            courts_affected=[99],  # Special court number for emergency browser
-            success=False
-        )
-        
-        try:
-            logger.critical("🚨 Activating emergency fallback browser")
-            
-            # Create a minimal single browser instance
-            from playwright.async_api import async_playwright
-            
-            if self.emergency_browser:
-                try:
-                    await self.emergency_browser.close()
-                except Exception:
-                    pass
-            
-            # Start emergency playwright instance
-            emergency_playwright = await async_playwright().start()
-            self.emergency_browser = await emergency_playwright.chromium.launch(
-                headless=False,
-                args=['--no-sandbox', '--disable-dev-shm-usage']
-            )
-            
-            # Create a single context and page
-            context = await self.emergency_browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                locale='es-GT',
-                timezone_id='America/Guatemala'
-            )
-            page = await context.new_page()
-            
-            # Navigate to booking site
-            await page.goto("https://clublavilla.as.me", wait_until='domcontentloaded', timeout=30000)
-            
-            # Store emergency browser in special slot
-            self.browser_pool.pages[99] = page
-            self.browser_pool.contexts[99] = context
-            
-            attempt.success = True
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            logger.info("✅ Emergency fallback browser activated")
-            
-            return RecoveryResult(
-                success=True,
-                strategy_used=RecoveryStrategy.EMERGENCY_FALLBACK,
-                courts_recovered=[99],
-                courts_failed=[],
-                message="Emergency browser activated - limited functionality available",
-                attempts=[attempt]
-            )
-            
-        except Exception as e:
-            attempt.error_message = str(e)
-            attempt.duration_seconds = (datetime.now() - start_time).total_seconds()
-            
-            return RecoveryResult(
-                success=False,
-                strategy_used=RecoveryStrategy.EMERGENCY_FALLBACK,
-                courts_recovered=[],
-                courts_failed=[99],
-                message="Failed to activate emergency fallback",
-                error_details=str(e),
-                attempts=[attempt]
-            )
-    
     async def is_recovery_needed(self) -> Tuple[bool, List[int]]:
         """
         Check if recovery is needed and identify failed courts

@@ -6,15 +6,19 @@ It handles storage, retrieval, and status updates of reservation requests with J
 """
 from tracking import t
 
-import json
 import uuid
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Iterable
-from pathlib import Path
+from typing import List, Dict, Any, Optional
 from enum import Enum
 
 from reservations.models import ReservationRequest, UserProfile
+from reservations.queue.reservation_repository import ReservationRepository
+from reservations.queue.reservation_validation import ensure_unique_slot
+from reservations.queue.reservation_transitions import (
+    add_to_waitlist as mark_waitlisted,
+    apply_status_update,
+)
 
 
 class ReservationStatus(Enum):
@@ -52,9 +56,10 @@ class ReservationQueue:
             file_path (str): Path to the JSON file for persistence. Defaults to 'data/queue.json'.
         """
         t('reservations.queue.reservation_queue.ReservationQueue.__init__')
-        self.file_path = file_path
         self.logger = logging.getLogger('ReservationQueue')
-        self.queue = self._load_queue()
+        self.repository = ReservationRepository(file_path, logger=self.logger)
+        self.file_path = file_path
+        self.queue = self.repository.load()
         self.logger.info(f"""RESERVATION QUEUE INITIALIZED
         File: {self.file_path}
         Existing reservations: {len(self.queue)}
@@ -88,19 +93,16 @@ class ReservationQueue:
         
         # Check for duplicate reservations
         user_id = reservation_data.get('user_id')
-        target_date = reservation_data.get('target_date')
-        target_time = reservation_data.get('target_time')
-        
-        # Check if user already has a reservation for this date/time
-        existing_reservations = self.get_reservations_by_time_slot(target_date, target_time)
-        for existing in existing_reservations:
-            if (existing.get('user_id') == user_id and 
-                existing.get('status') in ['pending', 'scheduled', 'attempting']):
-                self.logger.warning(f"""DUPLICATE RESERVATION REJECTED
-                User {user_id} already has a reservation for {target_date} at {target_time}
-                Existing reservation ID: {existing.get('id')}
-                """)
-                raise ValueError(f"You already have a reservation for {target_date} at {target_time}")
+        target_date_raw = reservation_data.get('target_date')
+        target_time_raw = reservation_data.get('target_time')
+
+        ensure_unique_slot(
+            self.queue,
+            user_id=user_id,
+            target_date=target_date_raw,
+            target_time=target_time_raw,
+            logger=self.logger,
+        )
         
         reservation_id = uuid.uuid4().hex
         reservation = {
@@ -297,12 +299,9 @@ class ReservationQueue:
         for reservation in self.queue:
             if reservation.get('id') == reservation_id:
                 old_status = reservation.get('status')
-                reservation['status'] = ReservationStatus.WAITLISTED.value
-                reservation['waitlist_position'] = position
-                reservation['original_position'] = position
+                mark_waitlisted(reservation, position)
                 self._save_queue()
-                
-                # Log waitlist addition
+
                 self.logger.info(f"""ADDED TO WAITLIST
                 Reservation ID: {reservation_id}
                 User ID: {reservation.get('user_id')}
@@ -357,15 +356,9 @@ class ReservationQueue:
         for reservation in self.queue:
             if reservation.get('id') == reservation_id:
                 old_status = reservation.get('status')
-                reservation['status'] = new_status
-                
-                # Update additional fields from kwargs
-                for key, value in kwargs.items():
-                    reservation[key] = value
-                
+                apply_status_update(reservation, new_status, **kwargs)
                 self._save_queue()
-                
-                # Log detailed status change
+
                 self.logger.info(f"""RESERVATION STATUS UPDATED
                 Reservation ID: {reservation_id}
                 User ID: {reservation.get('user_id')}
@@ -431,21 +424,11 @@ class ReservationQueue:
     def _save_queue(self) -> None:
         """
         Internal helper method to save the current queue state to JSON file.
-        
+
         Handles file operation errors gracefully and logs any issues.
         """
         t('reservations.queue.reservation_queue.ReservationQueue._save_queue')
-        try:
-            # Ensure directory exists
-            Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(self.file_path, 'w', encoding='utf-8') as f:
-                json.dump(self.queue, f, indent=2, ensure_ascii=False)
-            
-            self.logger.debug(f"Queue saved to {self.file_path} with {len(self.queue)} reservations")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to save queue to {self.file_path}: {e}")
+        self.repository.save(self.queue)
     
     def _load_queue(self) -> List[Dict[str, Any]]:
         """
@@ -455,25 +438,7 @@ class ReservationQueue:
             List[Dict[str, Any]]: List of reservation dictionaries, empty list if file doesn't exist
         """
         t('reservations.queue.reservation_queue.ReservationQueue._load_queue')
-        try:
-            if Path(self.file_path).exists():
-                with open(self.file_path, 'r', encoding='utf-8') as f:
-                    queue_data = json.load(f)
-                
-                # Ensure we have a list
-                if isinstance(queue_data, list):
-                    self.logger.debug(f"Loaded {len(queue_data)} reservations from {self.file_path}")
-                    return queue_data
-                else:
-                    self.logger.warning(f"Invalid queue format in {self.file_path}, starting with empty queue")
-                    return []
-            else:
-                self.logger.debug(f"Queue file {self.file_path} does not exist, starting with empty queue")
-                return []
-                
-        except Exception as e:
-            self.logger.error(f"Failed to load queue from {self.file_path}: {e}")
-            return []
+        return self.repository.load()
     
     def _get_status_counts(self) -> Dict[str, int]:
         """
