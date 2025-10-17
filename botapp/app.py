@@ -19,18 +19,17 @@ if __name__ == "__main__" and __package__ is None:
 from infrastructure import logging_config
 
 # Now do imports
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import Application
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-# Import async components
-from automation.browser.async_browser_pool import AsyncBrowserPool
-from automation.availability import AvailabilityChecker
-from automation.browser.manager import BrowserManager
-from reservations.services import ReservationService
+# Bootstrap helpers
+from botapp.bootstrap import build_browser_resources, build_reservation_components
+from botapp.commands import register_core_handlers
 from users.manager import UserManager
 from .error_handler import ErrorHandler
 from .handlers.callback_handlers import CallbackHandler
+from .notifications import deliver_notification_with_menu
 from .ui.telegram_ui import TelegramUI
 
 # Simple config
@@ -69,18 +68,22 @@ class CleanBot:
         self.token = token
         self.logger = logging.getLogger('CleanBot')
         self.config = BotConfig()
-        self.browser_pool = AsyncBrowserPool()
-        self.browser_manager = BrowserManager(pool=self.browser_pool)
-        self.availability_checker = AvailabilityChecker(self.browser_pool)
+        (
+            self.browser_pool,
+            self.browser_manager,
+            self.availability_checker,
+        ) = build_browser_resources()
         self.user_manager = UserManager('data/users.json')
-        self.reservation_service = ReservationService(
-            config=self.config,
-            notification_callback=self.send_notification,
-            user_manager=self.user_manager,
-            browser_pool=self.browser_pool,
+        (
+            self.reservation_service,
+            self.reservation_queue,
+            self.scheduler,
+        ) = build_reservation_components(
+            self.config,
+            self.send_notification,
+            self.user_manager,
+            self.browser_pool,
         )
-        self.reservation_queue = self.reservation_service.queue
-        self.scheduler = self.reservation_service.scheduler
         self.callback_handler = CallbackHandler(
             self.availability_checker,
             self.reservation_queue,
@@ -172,49 +175,15 @@ class CleanBot:
         """
         t('botapp.app.CleanBot.send_notification')
         try:
-            # Check if we have application context
-            if not hasattr(self, 'application') or not self.application:
-                self.logger.warning(f"No application context for notification to {user_id}")
-                return
-                
-            # Send actual Telegram message
-            await self.application.bot.send_message(
-                chat_id=user_id, 
-                text=message,
-                parse_mode='Markdown'
+            await deliver_notification_with_menu(
+                getattr(self, 'application', None),
+                self.user_manager,
+                user_id,
+                message,
+                logger=self.logger,
             )
-            self.logger.info(f"Sent notification to {user_id}: {message[:50]}...")
-            
-            # Check if this is a booking result message (success or failure)
-            is_booking_result = (
-                ("✅" in message and "Reservation Successful" in message) or  # Success
-                ("✅" in message and "booked" in message) or  # Success variant
-                ("❌" in message and "Reservation Failed" in message) or  # Failure
-                ("❌" in message and "failed" in message.lower()) or  # Failure variant
-                ("⚠️" in message and "booking" in message.lower())  # Warning/failure
-            )
-            
-            # If it's a booking result, send the main menu after a delay
-            if is_booking_result:
-                # Wait 7 seconds for user to read the message
-                await asyncio.sleep(7)
-                
-                # Get user tier for menu
-                is_admin = self.user_manager.is_admin(user_id)
-                tier = self.user_manager.get_user_tier(user_id)
-                tier_badge = TelegramUI.format_user_tier_badge(tier.name)
-                
-                # Send main menu
-                reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
-                await self.application.bot.send_message(
-                    chat_id=user_id,
-                    text=f"🎾 What would you like to do next? {tier_badge}",
-                    reply_markup=reply_markup
-                )
-                self.logger.info(f"Sent main menu to {user_id} after booking result")
-                
-        except Exception as e:
-            self.logger.error(f"Failed to send notification to {user_id}: {e}")
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error("Failed to send notification to %s: %s", user_id, exc)
     
     # REMOVED: send_notification_sync method that was causing event loop conflicts
     # The scheduler now properly uses the async send_notification method directly
@@ -381,14 +350,7 @@ class CleanBot:
         # Create application with specific configuration to prevent polling conflicts
         app = Application.builder().token(self.token).build()
         
-        # Add handlers
-        app.add_handler(CommandHandler("start", self.start_command))
-        app.add_handler(CommandHandler("check_courts", self.check_courts_command))
-        app.add_handler(CommandHandler("stop", self.stop_command))
-        app.add_handler(CallbackQueryHandler(self.callback_handler.handle_callback))
-        
-        # Add global error handler
-        app.add_error_handler(self.error_handler)
+        register_core_handlers(app, self)
         
         # Use post_init callback to initialize async components
         app.post_init = self._post_init

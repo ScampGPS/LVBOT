@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Dict, Sequence
+
+from tracking import t
 
 from automation.shared.booking_contracts import BookingResult
 from botapp.ui.telegram_ui import TelegramUI
@@ -129,3 +132,49 @@ def format_duplicate_reservation_message(error_message: str) -> str:
             "You can only have one reservation per time slot. Please check your existing reservations or choose a different time.",
         ]
     )
+
+
+async def deliver_notification_with_menu(
+    application,
+    user_manager,
+    user_id: int,
+    message: str,
+    *,
+    logger,
+    follow_up_delay_seconds: int = 7,
+) -> None:
+    """Send a notification and optionally follow up with the main menu."""
+
+    t('botapp.notifications.deliver_notification_with_menu')
+
+    if not application:
+        logger.warning("No application context for notification to %s", user_id)
+        return
+
+    await application.bot.send_message(chat_id=user_id, text=message, parse_mode='Markdown')
+    logger.info("Sent notification to %s: %s", user_id, message[:50])
+
+    def _looks_like_booking_result(text: str) -> bool:
+        lower_text = text.lower()
+        return (
+            ("✅" in text and ("reservation" in lower_text or "booked" in lower_text))
+            or ("❌" in text and "reservation" in lower_text)
+            or ("⚠️" in text and "booking" in lower_text)
+        )
+
+    if not _looks_like_booking_result(message):
+        return
+
+    await asyncio.sleep(max(0, follow_up_delay_seconds))
+
+    is_admin = user_manager.is_admin(user_id)
+    tier = user_manager.get_user_tier(user_id)
+    tier_badge = TelegramUI.format_user_tier_badge(tier.name)
+
+    reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
+    await application.bot.send_message(
+        chat_id=user_id,
+        text=f"🎾 What would you like to do next? {tier_badge}",
+        reply_markup=reply_markup,
+    )
+    logger.info("Sent main menu follow-up to %s", user_id)

@@ -75,7 +75,7 @@ class ImmediateBookingHandler:
             return
         
         # Get user info
-        user = self._get_validated_user(query.from_user.id)
+        user = self._fetch_user_profile(query.from_user.id)
         if not user:
             await query.edit_message_text(
                 TelegramUI.format_error_message('profile_incomplete'),
@@ -110,7 +110,7 @@ class ImmediateBookingHandler:
             await self._send_error(query, "Invalid confirmation format")
             return
         
-        user_profile = self._get_validated_user(query.from_user.id)
+        user_profile = self._fetch_user_profile(query.from_user.id)
         if not user_profile:
             await self._send_error(query, "User profile incomplete")
             return
@@ -132,35 +132,23 @@ class ImmediateBookingHandler:
             await self._send_error(query, str(exc))
             return
 
-        # Show processing message
         await query.edit_message_text("🔄 Processing your booking, please wait...")
 
-        booking_result = await self._execute_booking(booking_request)
+        try:
+            booking_result = await self._run_booking_attempts(booking_request)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error("Booking execution error: %s", exc)
+            booking_result = BookingResult.failure_result(
+                booking_request.user,
+                booking_request.request_id,
+                message=str(exc),
+                metadata={**booking_request.metadata, 'exception': str(exc)},
+            )
 
         if booking_result.success:
-            try:
-                persist_immediate_success(booking_request, booking_result)
-            except Exception as exc:  # pragma: no cover - persistence guard
-                self.logger.error("Failed to persist immediate success: %s", exc)
-            notification = send_success_notification(
-                booking_request.user.user_id,
-                booking_result,
-            )
+            await self._handle_successful_booking(query, booking_request, booking_result)
         else:
-            try:
-                persist_immediate_failure(booking_request, booking_result)
-            except Exception as exc:  # pragma: no cover - persistence guard
-                self.logger.error("Failed to record immediate failure: %s", exc)
-            notification = send_failure_notification(
-                booking_request.user.user_id,
-                booking_result,
-            )
-
-        await query.edit_message_text(
-            notification['message'],
-            parse_mode=notification.get('parse_mode', 'Markdown'),
-            reply_markup=notification.get('reply_markup', TelegramUI.create_back_to_menu_keyboard()),
-        )
+            await self._handle_failed_booking(query, booking_request, booking_result)
     
     async def handle_booking_cancellation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -191,7 +179,7 @@ class ImmediateBookingHandler:
             reply_markup=TelegramUI.create_main_menu_keyboard()
         )
     
-    def _get_validated_user(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def _fetch_user_profile(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
         Get and validate user data
         
@@ -201,7 +189,7 @@ class ImmediateBookingHandler:
         Returns:
             User dict if valid, None otherwise
         """
-        t('botapp.booking.immediate_handler.ImmediateBookingHandler._get_validated_user')
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._fetch_user_profile')
         user = self.user_manager.get_user(user_id)
         
         if not user:
@@ -216,110 +204,184 @@ class ImmediateBookingHandler:
         
         return user
     
-    async def _execute_booking(self, booking_request: BookingRequest) -> BookingResult:
-        """Execute a booking request and return a shared booking result."""
+    def _build_booking_request(
+        self,
+        user_profile: Dict[str, Any],
+        parsed: Dict[str, Any],
+        telegram_user_id: int,
+    ) -> BookingRequest:
+        """Assemble the booking request payload from callback data and user profile."""
 
-        t('botapp.booking.immediate_handler.ImmediateBookingHandler._execute_booking')
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._build_booking_request')
 
-        try:
-            court_number = booking_request.court_preference.primary
-            user_info = {
-                'first_name': booking_request.user.first_name,
-                'last_name': booking_request.user.last_name,
-                'email': booking_request.user.email,
-                'phone': booking_request.user.phone,
-                'user_id': booking_request.user.user_id,
-                'tier': booking_request.user.tier,
-            }
+        required_keys = {'date', 'time', 'court_number'}
+        if not required_keys <= parsed.keys():
+            missing = ', '.join(sorted(required_keys - parsed.keys()))
+            raise ValueError(f'Missing booking details: {missing}')
 
-            natural_result: Optional[BookingResult] = None
+        return build_immediate_booking_request(
+            user_profile,
+            target_date=parsed['date'],
+            time_slot=parsed['time'],
+            court_number=parsed['court_number'],
+            metadata={
+                'trigger': 'immediate_handler',
+                'callback_action': parsed['action'],
+                'telegram_user_id': telegram_user_id,
+            },
+        )
 
-            if self.browser_pool:
-                self.logger.info("🎯 IMMEDIATE BOOKING - Attempting natural flow execution")
-                try:
-                    async_executor = UnifiedAsyncBookingExecutor(
-                        self.browser_pool,
-                        config=AsyncExecutorConfig(natural_flow=True),
-                    )
-                    execution = await async_executor.execute_booking(
-                        court_number=court_number,
-                        time_slot=booking_request.target_time,
-                        user_info=user_info,
-                        target_date=booking_request.target_date,
-                    )
-                    natural_result = build_booking_result_from_execution(
-                        booking_request,
-                        execution,
-                        metadata={
-                            'executor': 'UnifiedAsyncBookingExecutor',
-                            'flow': 'natural',
-                        },
-                    )
-                    if natural_result.success:
-                        self.logger.info("✅ Natural flow booking successful")
-                        return natural_result
-                    self.logger.warning(
-                        "❌ Natural flow booking failed: %s",
-                        natural_result.message or ', '.join(natural_result.errors),
-                    )
-                except Exception as exc:  # pragma: no cover - fallback guard
-                    self.logger.error("❌ Natural flow execution error: %s", exc)
+    def _build_executor_user_info(self, booking_request: BookingRequest) -> Dict[str, Any]:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._build_executor_user_info')
+        user = booking_request.user
+        return {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone': user.phone,
+            'user_id': user.user_id,
+            'tier': user.tier,
+        }
 
-            self.logger.info("Falling back to TennisExecutor flow")
-            executor = TennisExecutor(browser_pool=self.browser_pool)
-            tennis_config = create_tennis_config_from_user_info(
-                {
-                    'email': booking_request.user.email,
-                    'first_name': booking_request.user.first_name,
-                    'last_name': booking_request.user.last_name,
-                    'phone': booking_request.user.phone,
-                    'user_id': booking_request.user.user_id,
-                    'court_preference': booking_request.court_preference.as_list(),
-                    'preferred_times': [booking_request.target_time],
-                    'target_time': booking_request.target_time,
-                }
-            )
-            target_datetime = datetime.combine(booking_request.target_date, datetime.min.time())
-            execution = await executor.execute(
-                tennis_config,
-                target_datetime,
-                check_availability_48h=False,
-                get_dates=False,
-            )
-            fallback_result = build_booking_result_from_execution(
-                booking_request,
-                execution,
-                metadata={
-                    'executor': 'TennisExecutor',
-                    'flow': 'fallback',
-                },
-            )
+    async def _run_booking_attempts(self, booking_request: BookingRequest) -> BookingResult:
+        """Attempt natural booking flow, then fall back to tennis executor."""
 
-            if not fallback_result.success and natural_result and not natural_result.success:
-                combined_errors = tuple({*natural_result.errors, *fallback_result.errors})
-                fallback_result = BookingResult.failure_result(
-                    booking_request.user,
-                    booking_request.request_id,
-                    message=fallback_result.message,
-                    errors=combined_errors,
-                    metadata=dict(fallback_result.metadata),
-                )
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._run_booking_attempts')
 
-            return fallback_result
+        user_info = self._build_executor_user_info(booking_request)
+        natural_result = await self._attempt_natural_flow(booking_request, user_info)
+        if natural_result and natural_result.success:
+            return natural_result
 
-        except Exception as exc:  # pragma: no cover - defensive guard
-            self.logger.error("Booking execution error: %s", exc)
+        fallback_result = await self._attempt_tennis_flow(booking_request)
+
+        if not fallback_result.success and natural_result and not natural_result.success:
+            combined_errors = tuple({*natural_result.errors, *fallback_result.errors})
             return BookingResult.failure_result(
                 booking_request.user,
                 booking_request.request_id,
-                message=str(exc),
-                errors=[str(exc)],
-                metadata={
-                    **booking_request.metadata,
-                    'executor': 'ImmediateBookingHandler',
-                    'flow': 'exception',
-                },
+                message=fallback_result.message,
+                errors=combined_errors,
+                metadata=dict(fallback_result.metadata),
             )
+
+        return fallback_result
+
+    async def _attempt_natural_flow(
+        self,
+        booking_request: BookingRequest,
+        user_info: Dict[str, Any],
+    ) -> Optional[BookingResult]:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._attempt_natural_flow')
+        if not self.browser_pool:
+            return None
+
+        self.logger.info("🎯 IMMEDIATE BOOKING - Attempting natural flow execution")
+        try:
+            async_executor = UnifiedAsyncBookingExecutor(
+                self.browser_pool,
+                config=AsyncExecutorConfig(natural_flow=True),
+            )
+            execution = await async_executor.execute_booking(
+                court_number=booking_request.court_preference.primary,
+                time_slot=booking_request.target_time,
+                user_info=user_info,
+                target_date=booking_request.target_date,
+            )
+            result = build_booking_result_from_execution(
+                booking_request,
+                execution,
+                metadata={'executor': 'UnifiedAsyncBookingExecutor', 'flow': 'natural'},
+            )
+            if result.success:
+                self.logger.info("✅ Natural flow booking successful")
+            else:
+                self.logger.warning(
+                    "❌ Natural flow booking failed: %s",
+                    result.message or ', '.join(result.errors),
+                )
+            return result
+        except Exception as exc:  # pragma: no cover - fallback guard
+            self.logger.error("❌ Natural flow execution error: %s", exc)
+            return None
+
+    async def _attempt_tennis_flow(self, booking_request: BookingRequest) -> BookingResult:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._attempt_tennis_flow')
+
+        self.logger.info("Falling back to TennisExecutor flow")
+        executor = TennisExecutor(browser_pool=self.browser_pool)
+        tennis_config = create_tennis_config_from_user_info(
+            {
+                'email': booking_request.user.email,
+                'first_name': booking_request.user.first_name,
+                'last_name': booking_request.user.last_name,
+                'phone': booking_request.user.phone,
+                'user_id': booking_request.user.user_id,
+                'court_preference': booking_request.court_preference.as_list(),
+                'preferred_times': [booking_request.target_time],
+                'target_time': booking_request.target_time,
+            }
+        )
+        target_datetime = datetime.combine(booking_request.target_date, datetime.min.time())
+        execution = await executor.execute(
+            tennis_config,
+            target_datetime,
+            check_availability_48h=False,
+            get_dates=False,
+        )
+        return build_booking_result_from_execution(
+            booking_request,
+            execution,
+            metadata={'executor': 'TennisExecutor', 'flow': 'fallback'},
+        )
+
+    async def _handle_successful_booking(
+        self,
+        query,
+        booking_request: BookingRequest,
+        booking_result: BookingResult,
+    ) -> None:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._handle_successful_booking')
+
+        try:
+            self._persist_success(booking_request, booking_result)
+        except Exception as exc:  # pragma: no cover - persistence guard
+            self.logger.error("Failed to persist immediate success: %s", exc)
+
+        notification = send_success_notification(booking_request.user.user_id, booking_result)
+        await self._send_notification(query, notification)
+
+    async def _handle_failed_booking(
+        self,
+        query,
+        booking_request: BookingRequest,
+        booking_result: BookingResult,
+    ) -> None:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._handle_failed_booking')
+
+        try:
+            self._persist_failure(booking_request, booking_result)
+        except Exception as exc:  # pragma: no cover - persistence guard
+            self.logger.error("Failed to record immediate failure: %s", exc)
+
+        notification = send_failure_notification(booking_request.user.user_id, booking_result)
+        await self._send_notification(query, notification)
+
+    def _persist_success(self, booking_request: BookingRequest, booking_result: BookingResult) -> str:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._persist_success')
+        return persist_immediate_success(booking_request, booking_result)
+
+    def _persist_failure(self, booking_request: BookingRequest, booking_result: BookingResult) -> str:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._persist_failure')
+        return persist_immediate_failure(booking_request, booking_result)
+
+    async def _send_notification(self, query, notification: Dict[str, Any]) -> None:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._send_notification')
+        await query.edit_message_text(
+            notification['message'],
+            parse_mode=notification.get('parse_mode', 'Markdown'),
+            reply_markup=notification.get('reply_markup', TelegramUI.create_back_to_menu_keyboard()),
+        )
     
     async def _send_error(self, query, message: str) -> None:
         """
