@@ -1,777 +1,170 @@
+"""Async browser pool facade delegating to modular helpers."""
+
+from __future__ import annotations
 from tracking import t
+
 import asyncio
 import logging
-import time
 import os
-from typing import Dict, List, Any, Optional
 from datetime import datetime
-from playwright.async_api import async_playwright, Browser, Page, BrowserContext
-from infrastructure.constants import BrowserTimeouts, BrowserPoolConfig, COURT_CONFIG
+from typing import Any, Dict, List, Optional
 
-# Read production mode setting (off by default to keep verbose debugging enabled)
+from playwright.async_api import Browser, BrowserContext, Page
+
+from automation.browser.pool import health as pool_health
+from automation.browser.pool import init as pool_init
+from automation.browser.pool import maintenance as pool_maintenance
+from automation.browser.pool import tasks as pool_tasks
+from infrastructure.constants import COURT_CONFIG
+
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
-
 logger = logging.getLogger(__name__)
 
+
 class AsyncBrowserPool:
-    """Pure async browser pool using async_playwright
-    REPLACES all existing browser pool implementations
-    """
-    
-    # Use centralized court configuration
+    """Async browser pool backed by Playwright with modular helpers."""
+
+    WARMUP_DELAY = 10.0
+
     @property
-    def DIRECT_COURT_URLS(self):
-        """Get direct court URLs from centralized config"""
+    def DIRECT_COURT_URLS(self) -> Dict[int, str]:
+        """Return direct court URLs from centralized configuration."""
+
         t('automation.browser.async_browser_pool.AsyncBrowserPool.DIRECT_COURT_URLS')
-        return {
-            court_num: config["direct_url"] 
-            for court_num, config in COURT_CONFIG.items()
-        }
+        return {court_num: config["direct_url"] for court_num, config in COURT_CONFIG.items()}
 
-    def __init__(self, courts: List[int] = [1, 2, 3]):
+    def __init__(self, courts: Optional[List[int]] = None) -> None:
         t('automation.browser.async_browser_pool.AsyncBrowserPool.__init__')
-        self.courts = courts
+        self.courts = courts or [1, 2, 3]
         self.pages: Dict[int, Page] = {}
-        self.contexts: Dict[int, BrowserContext] = {}  # Track contexts for proper cleanup
+        self.contexts: Dict[int, BrowserContext] = {}
         self.lock = asyncio.Lock()
-        self.browser: Browser = None
-        self.playwright = None
-        self.critical_operation_in_progress = False  # Flag to prevent refresh during bookings
-        self.is_partially_ready = False  # Track if pool is only partially initialized
-
-    async def start(self):
-        """Initialize browsers and pre-navigate to direct court URLs in parallel"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.start')
-        try:
-            logger.info("Starting Playwright...")
-            self.playwright = await async_playwright().start()
-            
-            logger.info("Launching Chromium browser...")
-            self.browser = await self.playwright.chromium.launch(
-                headless=False,  # Run with UI for debugging
-                args=[
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-blink-features=AutomationControlled',  # Disable automation features
-                    '--disable-infobars',  # Remove "Chrome is being controlled" bar
-                    '--window-size=1920,1080',
-                    '--start-maximized'
-                ]
-            )
-            
-            # PARALLEL initialization with retry mechanism - critical for speed and resilience
-            logger.info("Initializing browser pool with PARALLEL pre-navigation to direct court URLs (with retry)")
-            tasks = []
-            for i, court in enumerate(self.courts):
-                # Add staggered delay to prevent simultaneous hits
-                delay = i * 1.5  # 1.5 seconds between each court initialization
-                tasks.append(self._create_and_navigate_court_page_with_stagger(court, delay))
-            
-            # Wait for ALL courts in parallel - use gather with return_exceptions=True
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Count successful initializations
-            successful_courts = 0
-            failed_courts = []
-            for i, (court, result) in enumerate(zip(self.courts, results)):
-                if isinstance(result, Exception):
-                    logger.error(f"❌ Court {court} failed to initialize: {result}")
-                    failed_courts.append(court)
-                else:
-                    successful_courts += 1
-                    logger.info(f"✅ Court {court} initialized successfully")
-            
-            # Enable partial success - continue with available courts
-            if successful_courts == 0:
-                raise Exception(f"All court initializations failed: 0/{len(self.courts)} courts ready")
-            
-            # Log appropriate message based on success level
-            if successful_courts < len(self.courts):
-                logger.warning(f"⚠️ PARTIAL Browser pool initialization: {successful_courts}/{len(self.courts)} courts ready")
-                logger.warning(f"Failed courts: {failed_courts}")
-                logger.info("Continuing with available courts...")
-            else:
-                logger.info(f"✅ FULL Browser pool initialized with {successful_courts}/{len(self.courts)} courts ready")
-            
-            # Mark pool as partially ready if at least 1 court is available
-            self.is_partially_ready = successful_courts < len(self.courts)
-            
-        except Exception as e:
-            logger.error(f"Failed to start browser pool: {e}")
-            await self._cleanup_on_failure()
-            raise
-
-    async def _create_and_navigate_court_page_with_stagger(self, court: int, initial_delay: float):
-        """
-        Wrapper that adds staggered start and retry logic to court page creation
-        
-        Args:
-            court: The court number to create and navigate
-            initial_delay: Initial delay in seconds before starting (for staggering)
-            
-        Returns:
-            bool: True if successful after retries, raises exception if all attempts fail
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_stagger')
-        # Apply stagger delay to prevent simultaneous server hits
-        if initial_delay > 0:
-            if not PRODUCTION_MODE:
-                logger.info(f"Court {court}: Waiting {initial_delay}s before initialization (staggered start)")
-            await asyncio.sleep(initial_delay)
-        
-        return await self._create_and_navigate_court_page_with_retry(court)
-    
-    async def _create_and_navigate_court_page_with_retry(self, court: int):
-        """
-        Wrapper that adds retry logic to court page creation with exponential backoff
-        
-        Args:
-            court: The court number to create and navigate
-            
-        Returns:
-            bool: True if successful after retries, raises exception if all attempts fail
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_retry')
-        for attempt in range(BrowserPoolConfig.MAX_RETRY_ATTEMPTS):
-            try:
-                return await self._create_and_navigate_court_page_safe(court)
-            except Exception as e:
-                if attempt < BrowserPoolConfig.MAX_RETRY_ATTEMPTS - 1:
-                    # Calculate exponential backoff delay: 2s, 4s, 8s
-                    delay = BrowserTimeouts.RETRY_DELAY_BASE ** (attempt + 1)
-                    logger.warning(f"Court {court} attempt {attempt + 1}/{BrowserPoolConfig.MAX_RETRY_ATTEMPTS} failed: {e}")
-                    if not PRODUCTION_MODE:
-                        logger.info(f"Court {court}: Retrying in {delay}s (exponential backoff)...")
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error(f"Court {court} failed after {BrowserPoolConfig.MAX_RETRY_ATTEMPTS} attempts: {e}")
-                    raise
-
-    async def _create_and_navigate_court_page_safe(self, court: int):
-        """
-        Safe wrapper for parallel court page creation with error handling
-        
-        Args:
-            court: The court number to create and navigate
-            
-        Returns:
-            bool: True if successful, raises exception if failed
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_safe')
-        try:
-            # Create context with more realistic browser properties
-            context = await self.browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                locale='es-GT',
-                timezone_id='America/Guatemala'
-            )
-            page = await context.new_page()
-            
-            # Add anti-detection measures
-            await page.add_init_script("""
-                // Override webdriver detection
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-                
-                // Add chrome object
-                window.chrome = {
-                    runtime: {},
-                };
-                
-                // Fix permissions
-                const originalQuery = window.navigator.permissions.query;
-                window.navigator.permissions.query = (parameters) => (
-                    parameters.name === 'notifications' ?
-                        Promise.resolve({ state: Notification.permission }) :
-                        originalQuery(parameters)
-                );
-            """)
-            
-            self.pages[court] = page
-            self.contexts[court] = context
-            
-            # Pre-navigate if URL available - with shorter timeout for speed
-            if court in self.DIRECT_COURT_URLS:
-                court_url = self.DIRECT_COURT_URLS[court]
-                if not PRODUCTION_MODE:
-                    logger.debug(f"Court {court}: Pre-navigating to {court_url}")
-                
-                # Use domcontentloaded instead of networkidle for faster initialization
-                # The test showed DOM loads at ~7s, networkidle takes 30+s
-                await page.goto(court_url, wait_until='domcontentloaded', timeout=BrowserTimeouts.SLOW_NAVIGATION)
-                
-                # Log where we actually ended up
-                final_url = page.url
-                if not PRODUCTION_MODE:
-                    logger.info(f"Court {court}: After navigation, current URL: {final_url}")
-                
-                if '/datetime/' in final_url:
-                    logger.warning(f"Court {court}: WARNING - Ended up on booking form URL instead of calendar!")
-                    logger.warning(f"Court {court}: This may cause issues for executors expecting calendar page")
-                
-                # Wait for critical calendar elements to appear (they show up around 24-25s)
-                try:
-                    # Wait for time elements which appear around 24-25s based on test
-                    await page.wait_for_selector('[class*="time"]', timeout=30000)
-                    if not PRODUCTION_MODE:
-                        logger.debug(f"Court {court}: Calendar elements loaded")
-                except:
-                    # If calendar elements don't load, continue anyway
-                    logger.warning(f"Court {court}: Calendar elements not found, continuing anyway")
-                
-                logger.debug(f"Court {court}: Pre-navigation completed")
-                
-                # IMPORTANT: Add warm-up delay to appear more human-like
-                # This helps avoid anti-bot detection
-                warmup_delay = getattr(self, 'WARMUP_DELAY', 10.0)  # Default 10s, can be overridden
-                logger.info(f"Court {court}: Warming up browser for {warmup_delay} seconds...")
-                await asyncio.sleep(warmup_delay)
-                logger.info(f"Court {court}: Browser warm-up completed")
-            else:
-                logger.warning(f"Court {court}: No direct URL available for pre-navigation")
-                
-            return True
-            
-        except Exception as e:
-            # Clean up failed page/context
-            if court in self.pages:
-                try:
-                    await self.pages[court].close()
-                    del self.pages[court]
-                except:
-                    pass
-            if court in self.contexts:
-                try:
-                    await self.contexts[court].close()
-                    del self.contexts[court]
-                except:
-                    pass
-            raise e
-
-    async def _create_and_navigate_court_page(self, court: int):
-        """Legacy method - keeping for compatibility"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page')
-        return await self._create_and_navigate_court_page_safe(court)
-
-    async def _cleanup_on_failure(self):
-        """Cleanup resources when startup fails"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool._cleanup_on_failure')
-        try:
-            # Close all pages
-            for page in self.pages.values():
-                try:
-                    await page.close()
-                except:
-                    pass
-            
-            # Close all contexts
-            for context in self.contexts.values():
-                try:
-                    await context.close()
-                except:
-                    pass
-            
-            # Close browser
-            if self.browser:
-                try:
-                    await self.browser.close()
-                except:
-                    pass
-            
-            # Stop playwright
-            if self.playwright:
-                try:
-                    await self.playwright.stop()
-                except:
-                    pass
-            
-            # Clear state
-            self.pages.clear()
-            self.contexts.clear()
-            self.browser = None
-            self.playwright = None
-            
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
-
-    async def stop(self):
-        """Cleanup all resources - waits for critical operations to complete"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.stop')
-        import asyncio
-        
-        logger.info("🔴 STARTING BROWSER POOL SHUTDOWN...")
-        
-        # Wait for critical operations to complete before shutdown
-        if self.critical_operation_in_progress:
-            logger.info("⏳ Waiting for critical booking operations to complete before shutdown...")
-            max_wait_time = 300  # 5 minutes max wait
-            wait_interval = 1    # Check every second
-            waited = 0
-            
-            while self.critical_operation_in_progress and waited < max_wait_time:
-                await asyncio.sleep(wait_interval)
-                waited += wait_interval
-                if waited % 30 == 0:  # Log every 30 seconds
-                    logger.info(f"⏳ Still waiting for critical operations... ({waited}s elapsed)")
-            
-            if self.critical_operation_in_progress:
-                logger.warning(f"⚠️ Forcing shutdown after {max_wait_time}s - critical operation still in progress")
-            else:
-                logger.info("✅ Critical operations completed, proceeding with shutdown")
-        
-        # Enhanced cleanup with better logging and error handling
-        logger.info(f"🔄 Closing {len(self.pages)} pages...")
-        page_errors = []
-        for court_num, page in self.pages.items():
-            try:
-                if page and not page.is_closed():
-                    await page.close()
-                    logger.info(f"✅ Page for court {court_num} closed")
-                else:
-                    logger.info(f"⚠️ Page for court {court_num} was already closed")
-            except Exception as e:
-                # Suppress expected shutdown errors
-                if "Connection closed" in str(e) or "Target closed" in str(e):
-                    logger.debug(f"Page {court_num} already disconnected (normal during shutdown)")
-                else:
-                    page_errors.append(f"Court {court_num}: {str(e)}")
-                    logger.error(f"Error closing page for court {court_num}: {e}")
-        
-        logger.info(f"🔄 Closing {len(self.contexts)} browser contexts...")
-        context_errors = []
-        for court_num, context in self.contexts.items():
-            try:
-                if context:
-                    await context.close()
-                    logger.info(f"✅ Context for court {court_num} closed")
-            except Exception as e:
-                # Suppress expected shutdown errors
-                if "Connection closed" in str(e) or "Target closed" in str(e):
-                    logger.debug(f"Context {court_num} already disconnected (normal during shutdown)")
-                else:
-                    context_errors.append(f"Court {court_num}: {str(e)}")
-                    logger.error(f"Error closing context for court {court_num}: {e}")
-        
-        # Clear the dictionaries
-        self.pages.clear()
-        self.contexts.clear()
-        logger.info("✅ Page and context dictionaries cleared")
-        
-        # Close browser with enhanced error handling
-        if self.browser:
-            try:
-                await self.browser.close()
-                logger.info("✅ Chromium browser closed")
-            except Exception as e:
-                # Suppress expected shutdown errors
-                if "Connection closed" in str(e) or "Target closed" in str(e):
-                    logger.info("ℹ️ Browser already disconnected (normal during shutdown)")
-                else:
-                    logger.error(f"❌ Error closing browser: {e}")
-        else:
-            logger.info("⚠️ No browser instance to close")
-                
-        # Stop playwright with enhanced error handling
-        if self.playwright:
-            try:
-                await self.playwright.stop()
-                logger.info("✅ Playwright stopped")
-            except Exception as e:
-                logger.error(f"❌ Error stopping playwright: {e}")
-        else:
-            logger.info("⚠️ No playwright instance to stop")
-        
-        # Final status report
-        if page_errors or context_errors:
-            logger.warning(f"⚠️ Shutdown completed with {len(page_errors)} page errors and {len(context_errors)} context errors")
-        else:
-            logger.info("✅ BROWSER POOL SHUTDOWN COMPLETED SUCCESSFULLY")
-        
-        # Reset internal state
-        self.browser = None
+        self.browser: Optional[Browser] = None
         self.playwright = None
         self.critical_operation_in_progress = False
         self.is_partially_ready = False
+        self.production_mode = PRODUCTION_MODE
 
-    async def get_page(self, court_num: int) -> Page:
-        """Get page for specific court with connection health check"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_page')
-        async with self.lock:
-            page = self.pages.get(court_num)
-            if not page:
-                # If court was never initialized, log it differently
-                if court_num not in self.courts:
-                    logger.warning(f"Court {court_num} was not requested during initialization")
-                else:
-                    logger.warning(f"Court {court_num} is not available (initialization may have failed)")
-                return None
-            
-            # Check if page connection is still alive
-            try:
-                # Quick connection test - accessing URL property should work if connection is alive
-                _ = page.url  # This will fail if connection is dead
-                return page
-            except Exception as e:
-                logger.warning(f"Court {court_num} page connection is dead: {e}. Recreating...")
-                
-                # Clean up dead page/context
-                try:
-                    await page.close()
-                except:
-                    pass
-                try:
-                    if court_num in self.contexts:
-                        await self.contexts[court_num].close()
-                except:
-                    pass
-                
-                # Remove from tracking
-                if court_num in self.pages:
-                    del self.pages[court_num]
-                if court_num in self.contexts:
-                    del self.contexts[court_num]
-                
-                # Recreate the page
-                try:
-                    await self._create_and_navigate_court_page_safe(court_num)
-                    return self.pages.get(court_num)
-                except Exception as recreate_error:
-                    logger.error(f"Failed to recreate Court {court_num} page: {recreate_error}")
-                    return None
-    
-    def is_ready(self) -> bool:
-        """Check if browser pool is ready for use (at least one court available)"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_ready')
-        return bool(self.browser and self.pages)
-    
-    async def wait_until_ready(self, timeout: float = 30) -> bool:
-        """
-        Wait until browser pool is ready or timeout occurs
-        Compatible with SpecializedBrowserPool interface
-        
-        Args:
-            timeout: Maximum time to wait in seconds
-            
-        Returns:
-            True if ready, False if timeout or error
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.wait_until_ready')
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if self.is_ready():
-                return True
-            await asyncio.sleep(0.5)
-        return False
-    
-    def get_initialization_error(self) -> Optional[str]:
-        """
-        Get initialization error if any
-        Compatible with SpecializedBrowserPool interface
-        
-        Returns:
-            Error message if initialization failed, None otherwise
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_initialization_error')
-        if not self.is_ready():
-            return "Browser pool not initialized or no pages available"
-        return None
-    
-    def get_stats(self) -> Dict:
-        """
-        Get pool statistics
-        Compatible with SpecializedBrowserPool interface
-        
-        Returns:
-            Dictionary with pool statistics
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_stats')
-        return {
-            'browser_count': len(self.pages),
-            'browsers_created': len(self.pages),
-            'browsers_recycled': 0,
-            'positioning_failures': 0,
-            'total_bookings': 0,
-            'successful_bookings': 0,
-            'max_browsers': len(self.courts),
-            'court_assignments': {court: court for court in self.pages.keys()},
-            'browser_details': {
-                f"court{court}": {
-                    'court': court,
-                    'healthy': True,
-                    'positioned': True,
-                    'uses': 0,
-                    'age_minutes': 0
-                } for court in self.pages.keys()
-            },
-            'available_courts': list(self.pages.keys())
-        }
-    
-    def get_available_courts(self) -> List[int]:
-        """Get list of successfully initialized courts"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_available_courts')
-        return list(self.pages.keys())
-    
-    def is_fully_ready(self) -> bool:
-        """Check if all requested courts are initialized"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_fully_ready')
-        return self.is_ready() and not self.is_partially_ready
-    
-    async def set_critical_operation(self, in_progress: bool):
-        """Set critical operation flag to prevent refresh during important operations"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.set_critical_operation')
-        async with self.lock:
-            self.critical_operation_in_progress = in_progress
-            logger.info(f"Critical operation flag set to: {in_progress}")
-    
-    def is_critical_operation_in_progress(self) -> bool:
-        """Check if a critical operation is in progress"""
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_critical_operation_in_progress')
-        return self.critical_operation_in_progress
-    
-    async def refresh_browser_pages(self) -> Dict[int, bool]:
-        """
-        Refresh all browser pages to prevent staleness and memory accumulation.
-        Navigates back to the court booking page for each court.
-        
-        Returns:
-            Dict[int, bool]: court_number -> success status
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.refresh_browser_pages')
-        refresh_results = {}
-        
-        logger.info("🔄 Starting browser page refresh cycle")
-        
-        # Check if we have pages to refresh
-        if not self.pages:
-            logger.warning("No browser pages to refresh")
-            return refresh_results
-        
-        for court in self.courts:
-            if court not in self.pages:
-                logger.warning(f"Court {court} has no page to refresh")
-                refresh_results[court] = False
-                continue
-                
-            page = self.pages[court]
-            
-            try:
-                logger.info(f"🔄 Refreshing Court {court} browser page")
-                
-                # Navigate back to the court's booking page
-                court_url = self.DIRECT_COURT_URLS.get(court)
-                if not court_url:
-                    logger.error(f"No URL found for court {court}")
-                    refresh_results[court] = False
-                    continue
-                
-                # Navigate to the court page with a reasonable timeout
-                await page.goto(court_url, wait_until='domcontentloaded', timeout=30000)
-                logger.info(f"✅ Court {court} refreshed successfully")
-                refresh_results[court] = True
-                
-            except Exception as e:
-                logger.error(f"❌ Failed to refresh Court {court}: {e}")
-                refresh_results[court] = False
-        
-        successful_refreshes = sum(1 for success in refresh_results.values() if success)
-        total_courts = len(refresh_results)
-        
-        logger.info(f"🔄 REFRESH COMPLETE: {successful_refreshes}/{total_courts} courts refreshed successfully")
-        
-        return refresh_results
-    
-    async def execute_parallel_booking(self, target_court: int, user_info: Dict[str, Any], 
-                                     target_time: str = None, user_preferences: List[int] = None,
-                                     target_date: datetime = None) -> Dict[str, Any]:
-        """
-        Execute parallel booking attempt on specified court
-        
-        Args:
-            target_court: Court index (0-2) to book
-            user_info: User information for booking
-            target_time: Preferred time slot
-            user_preferences: List of court preferences
-            target_date: Target date for the booking
-            
-        Returns:
-            Dict with success status and details
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.execute_parallel_booking')
-        try:
-            # target_court is already the court number (1, 2, or 3), not an index
-            court_number = target_court
-            
-            # Get the page for this court
-            page = await self.get_page(court_number)
-            if not page:
-                # Provide more context about why court is not available
-                available_courts = self.get_available_courts()
-                error_msg = f'Court {court_number} page not available. Available courts: {available_courts}'
-                if self.is_partially_ready:
-                    error_msg += ' (Browser pool is partially initialized)'
-                return {
-                    'success': False,
-                    'error': error_msg
-                }
-            
-            from automation.executors.booking import BookingFlowExecutor  # Local import to avoid circular dependency
+    async def start(self) -> None:
+        """Initialize the browser pool."""
 
-            mode = 'fast' if user_info.get('experienced_mode', True) else 'natural'
-            logger.info(f"Using {mode.upper()} booking mode for Court {court_number}")
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.start')
+        await pool_init.start_pool(self)
 
-            executor = BookingFlowExecutor(self, mode=mode)
-            result = await executor.execute_booking(
-                court_number=court_number,
-                target_date=target_date or datetime.now(),
-                time_slot=target_time or '10:00',
-                user_info=user_info,
-            )
+    async def _create_and_navigate_court_page_with_stagger(self, court: int, initial_delay: float):
+        """Compatibility wrapper for legacy recovery routines."""
 
-            return {
-                'success': result.success,
-                'court': result.court_reserved or result.court_number,
-                'time': result.time_reserved or (target_time or '10:00'),
-                'message': result.message or result.confirmation_url,
-                'error': result.error_message,
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in execute_parallel_booking: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
-    async def is_slot_available(self, court_number: int, time_slot: str, target_date: datetime) -> Dict[str, Any]:
-        """
-        Check if a time slot is available without actually booking it
-        
-        Args:
-            court_number: Court number (1, 2, or 3)
-            time_slot: Time slot in HH:MM format (e.g., "13:00")
-            target_date: Target date for checking availability
-            
-        Returns:
-            Dict with availability status:
-            {
-                'available': bool,
-                'reason': str,  # Explanation if not available
-                'checked_at': datetime,
-                'court': int
-            }
-        """
-        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_slot_available')
-        try:
-            # Get the page for this court
-            page = await self.get_page(court_number)
-            if not page:
-                return {
-                    'available': False,
-                    'reason': f'Court {court_number} page not available',
-                    'checked_at': datetime.now(),
-                    'court': court_number
-                }
-            
-            # Construct direct URL to check availability
-            court_urls = {
-                1: "https://clublavilla.as.me/schedule/7d558012/appointment/15970897/calendar/4282490",
-                2: "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312", 
-                3: "https://clublavilla.as.me/schedule/7d558012/appointment/16120442/calendar/4307254"
-            }
-            
-            date_str = target_date.strftime("%Y-%m-%d")
-            appointment_type_id = court_urls[court_number].split('/appointment/')[1].split('/')[0]
-            direct_url = f"{court_urls[court_number]}/datetime/{date_str}T{time_slot}:00-06:00?appointmentTypeIds[]={appointment_type_id}"
-            
-            logger.info(f"Checking availability for Court {court_number} at {time_slot} on {date_str}")
-            
-            await page.goto(direct_url, wait_until="domcontentloaded", timeout=30000)
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_stagger')
+        return await pool_init.create_and_navigate_court_page_with_stagger(self, court, initial_delay)
 
-            selectors = [
-                f'button.time-selection:has(p:text("{time_slot}"))',
-                f'button:has-text("{time_slot}")',
-                f'button:has-text("{time_slot.replace(":00", "")}")',
-            ]
+    async def _create_and_navigate_court_page_with_retry(self, court: int):
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_retry')
+        return await pool_init.create_and_navigate_court_page_with_retry(self, court)
 
-            for selector in selectors:
-                try:
-                    button = await page.wait_for_selector(selector, timeout=BrowserTimeouts.PAGE_LOAD)
-                    if button and await button.is_enabled():
-                        return {
-                            'available': True,
-                            'reason': 'Booking form detected - slot appears available',
-                            'checked_at': datetime.now(),
-                            'court': court_number
-                        }
-                except Exception:
-                    continue
+    async def _create_and_navigate_court_page_safe(self, court: int):
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_safe')
+        return await pool_init.create_and_navigate_court_page_safe(self, court)
 
-            return {
-                'available': False,
-                'reason': 'Booking form not detected - slot may be unavailable',
-                'checked_at': datetime.now(),
-                'court': court_number
-            }
-                
-        except Exception as e:
-            logger.error(f"Error checking availability for Court {court_number}: {e}")
-            return {
-                'available': False,
-                'reason': f'Error during availability check: {str(e)}',
-                'checked_at': datetime.now(),
-                'court': court_number
-            }
-    
-    async def stop(self):
-        """Clean up all browser resources properly"""
+    async def _create_and_navigate_court_page(self, court: int):
+        """Legacy method retained for compatibility."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page')
+        return await pool_init.create_and_navigate_court_page_safe(self, court)
+
+    async def _cleanup_on_failure(self) -> None:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool._cleanup_on_failure')
+        await pool_init.cleanup_on_failure(self)
+
+    async def stop(self) -> None:
+        """Clean up all browser resources with critical-operation awareness."""
+
         t('automation.browser.async_browser_pool.AsyncBrowserPool.stop')
-        logger.info("Stopping AsyncBrowserPool...")
-        
-        try:
-            # Close all pages first
-            for court, page in self.pages.items():
-                try:
-                    logger.debug(f"Closing page for court {court}")
-                    await page.close()
-                except Exception as e:
-                    if "Connection closed" not in str(e) and "Target closed" not in str(e):
-                        logger.error(f"Error closing page for court {court}: {e}")
-            
-            # Close all contexts
-            for court, context in self.contexts.items():
-                try:
-                    logger.debug(f"Closing context for court {court}")
-                    await context.close()
-                except Exception as e:
-                    if "Connection closed" not in str(e) and "Target closed" not in str(e):
-                        logger.error(f"Error closing context for court {court}: {e}")
-            
-            # Close the browser
-            if self.browser:
-                try:
-                    logger.info("Closing browser...")
-                    await self.browser.close()
-                except Exception as e:
-                    if "Connection closed" not in str(e) and "Target closed" not in str(e):
-                        logger.error(f"Error closing browser: {e}")
-            
-            # Stop playwright
-            if self.playwright:
-                try:
-                    logger.info("Stopping playwright...")
-                    await self.playwright.stop()
-                except Exception as e:
-                    logger.error(f"Error stopping playwright: {e}")
-            
-            # Clear references
-            self.pages.clear()
-            self.contexts.clear()
-            self.browser = None
-            self.playwright = None
-            
-            logger.info("✅ AsyncBrowserPool stopped successfully")
-            
-        except Exception as e:
-            logger.error(f"Error during AsyncBrowserPool cleanup: {e}")
+        await pool_maintenance.stop_pool(self)
+
+    async def legacy_stop(self) -> None:
+        """Legacy stop path used by older callers."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.legacy_stop')
+        await pool_maintenance.legacy_stop(self)
+
+    async def refresh_browser_pages(self) -> Dict[int, bool]:
+        """Refresh all initialized court pages."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.refresh_browser_pages')
+        return await pool_maintenance.refresh_browser_pages(self)
+
+    async def set_critical_operation(self, in_progress: bool) -> None:
+        """Toggle the critical operation flag for booking windows."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.set_critical_operation')
+        await pool_maintenance.set_critical_operation(self, in_progress)
+
+    def is_critical_operation_in_progress(self) -> bool:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_critical_operation_in_progress')
+        return pool_health.is_critical_operation_in_progress(self)
+
+    async def get_page(self, court_num: int) -> Optional[Page]:
+        """Fetch (and lazily recreate) the page for a specific court."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_page')
+        return await pool_health.get_page(self, court_num)
+
+    def is_ready(self) -> bool:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_ready')
+        return pool_health.is_ready(self)
+
+    async def wait_until_ready(self, timeout: float = 30) -> bool:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.wait_until_ready')
+        return await pool_health.wait_until_ready(self, timeout)
+
+    def get_initialization_error(self) -> Optional[str]:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_initialization_error')
+        return pool_health.get_initialization_error(self)
+
+    def get_stats(self) -> Dict[str, Any]:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_stats')
+        return pool_health.get_stats(self)
+
+    def get_available_courts(self) -> List[int]:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.get_available_courts')
+        return pool_health.get_available_courts(self)
+
+    def is_fully_ready(self) -> bool:
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_fully_ready')
+        return pool_health.is_fully_ready(self)
+
+    async def execute_parallel_booking(
+        self,
+        target_court: int,
+        user_info: Dict[str, Any],
+        target_time: Optional[str] = None,
+        user_preferences: Optional[List[int]] = None,
+        target_date: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Execute booking using the configured flow executor."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.execute_parallel_booking')
+        return await pool_tasks.execute_parallel_booking(
+            self,
+            target_court=target_court,
+            user_info=user_info,
+            target_time=target_time,
+            user_preferences=user_preferences,
+            target_date=target_date,
+        )
+
+    async def is_slot_available(
+        self,
+        court_number: int,
+        time_slot: str,
+        target_date: datetime,
+    ) -> Dict[str, Any]:
+        """Probe a slot without booking it."""
+
+        t('automation.browser.async_browser_pool.AsyncBrowserPool.is_slot_available')
+        return await pool_tasks.is_slot_available(
+            self,
+            court_number=court_number,
+            time_slot=time_slot,
+            target_date=target_date,
+        )

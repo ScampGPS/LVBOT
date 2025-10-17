@@ -26,6 +26,10 @@ automation.browser.browser_pool_recovery.BrowserPoolRecoveryService.__init__
 automation.browser.manager.BrowserManager.__init__
 automation.browser.manager.BrowserManager.start_pool
 automation.browser.manager.BrowserManager.stop_pool
+automation.browser.pool.init.start_pool
+automation.browser.pool.maintenance.refresh_browser_pages
+automation.browser.pool.tasks.execute_parallel_booking
+automation.browser.pool.tasks.is_slot_available
 automation.browser.settings.load_browser_settings
 automation.executors.booking.AsyncBookingExecutor.__init__
 automation.executors.booking.AsyncBookingExecutor.execute_booking
