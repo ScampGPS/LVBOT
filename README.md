@@ -19,17 +19,16 @@ LVBot is a comprehensive tennis court reservation automation system built with P
 
 ## Refactor Status (August 2025)
 
-The refactor outlined in `docs/plans/LVBOT_REFACTOR_PLAN.md` is underway.
+Refactor tracking now lives in `docs/refactor_roadmap.md` with implementation details collected in `docs/refactor_plan.md`.
 Phase 0.5 archiving is complete and Phase 1 (architecture & naming) has
 introduced new scaffolding:
 
 - `infrastructure/settings.py` centralises runtime configuration loading.
 - Packages under `automation/{browser,executors,availability}` and
   `domain/{queue,models}` support incremental module moves.
-- `docs/plans/LVBOT_MODULE_MIGRATION_MAP.md` tracks the target location for each
-  existing module alongside deduplication progress.
+- `docs/refactor_plan.md` captures the module migration targets and sequencing for the bot runtime refactor.
 
-Sections below describe the legacy layout; prefer the migration map for the
+Sections below describe the legacy layout; prefer the roadmap documents for the
 latest structure until the refactor concludes.
 
 ## Architecture

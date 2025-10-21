@@ -12,7 +12,7 @@ Central documentation hub capturing architecture decisions, migration plans, and
 
 ## Subdirectories
 - `guides/`: Operational and support guides (debugging tools, reservation walkthroughs, success documentation).
-- `plans/`: In-flight planning documents including `LVBOT_REFACTOR_PLAN.md` and a manifest for migration tasks.
+- `plans/`: Legacy placeholder; see `refactor_plan.md` and `refactor_roadmap.md` for current planning docs.
 
 ## Operational Notes
 - When adding new documentation, update this manifest with a one-line summary so contributors can find the material quickly.
