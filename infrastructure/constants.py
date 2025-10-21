@@ -241,11 +241,6 @@ def get_court_hours(date=None):
 # Backwards compatibility - defaults to weekday hours
 COURT_HOURS = WEEKDAY_COURT_HOURS
 
-# Test Mode Configuration
-TEST_MODE_ENABLED = False  # Enable test mode for queue system testing
-TEST_MODE_TRIGGER_DELAY_MINUTES = 0.25  # Execute reservations 15 seconds after queuing (0.25 minutes)
-TEST_MODE_ALLOW_WITHIN_48H = False  # Allow testing within 48h booking window
-
 # Browser Pool Configuration
 DEFAULT_BROWSER_POOL_SIZE = 3
 MAX_BROWSER_AGE_MINUTES = 60

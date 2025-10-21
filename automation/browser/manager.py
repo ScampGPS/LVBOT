@@ -5,13 +5,17 @@ from tracking import t
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Iterable, Optional
+from weakref import WeakSet
 
 from .async_browser_pool import AsyncBrowserPool
 from .browser_health_checker import BrowserHealthChecker
 from .health.types import HealthStatus
 from .browser_pool_recovery import BrowserPoolRecoveryService
 from .settings import BrowserSettings, load_browser_settings
+
+
+_ACTIVE_MANAGERS: "WeakSet[BrowserManager]" = WeakSet()
 
 
 class BrowserManager:
@@ -28,6 +32,8 @@ class BrowserManager:
         self._health_checker: Optional[BrowserHealthChecker] = None
         self._recovery_service: Optional[BrowserPoolRecoveryService] = None
         self._pool_lock = asyncio.Lock()
+
+        _ACTIVE_MANAGERS.add(self)
 
     async def ensure_pool(self) -> AsyncBrowserPool:
         """Ensure the underlying browser pool is started."""
@@ -104,3 +110,39 @@ class BrowserManager:
         if not self._health_checker:
             return None
         return await self._health_checker.check_pool_health()
+
+
+async def shutdown_active_managers(
+    logger: Optional[logging.Logger] = None,
+    managers: Optional[Iterable["BrowserManager"]] = None,
+) -> bool:
+    """Attempt to stop each provided browser manager (defaults to all registered)."""
+
+    t('automation.browser.manager.shutdown_active_managers')
+
+    active = list(managers) if managers is not None else list(_ACTIVE_MANAGERS)
+    if not active:
+        return True
+
+    log = logger or logging.getLogger("BrowserManagerShutdown")
+    success = True
+
+    for manager in active:
+        if manager is None:
+            continue
+        try:
+            manager_log = getattr(manager, "logger", log)
+            await manager.stop_pool(manager_log)
+        except Exception:
+            log.exception("Failed to stop browser manager cleanly")
+            success = False
+
+    return success
+
+
+def iter_active_managers() -> Iterable[BrowserManager]:
+    """Yield currently registered browser managers."""
+
+    if '_ACTIVE_MANAGERS' not in globals():
+        return tuple()
+    return tuple(_ACTIVE_MANAGERS)

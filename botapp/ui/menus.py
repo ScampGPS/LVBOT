@@ -8,7 +8,7 @@ from typing import List
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
-from infrastructure.constants import TEST_MODE_ENABLED
+from infrastructure.settings import get_test_mode
 
 
 def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0) -> InlineKeyboardMarkup:
@@ -66,8 +66,9 @@ def create_48h_booking_type_keyboard() -> InlineKeyboardMarkup:
     """Create the 48-hour booking type selection keyboard."""
 
     t('botapp.ui.menus.create_48h_booking_type_keyboard')
+    config = get_test_mode()
     future_text = "📅 Reserve after 48h"
-    if TEST_MODE_ENABLED:
+    if config.enabled:
         future_text = "🧪 TEST: Queue Booking"
 
     keyboard = [

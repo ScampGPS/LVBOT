@@ -6,12 +6,13 @@ from tracking import t
 
 import os
 import logging
-from typing import Dict, Callable, Any, List
+from typing import Dict, Callable, Any, List, Sequence
 from datetime import datetime, timedelta, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from automation.availability import DateTimeHelpers, fetch_available_slots
 from infrastructure.constants import COURT_HOURS, get_court_hours
+from infrastructure.settings import get_test_mode, update_test_mode
 
 from ..ui.telegram_ui import TelegramUI
 from ..error_handler import ErrorHandler
@@ -41,6 +42,22 @@ class CallbackHandler:
     # Available courts for reservation
     AVAILABLE_COURTS = [1, 2, 3]
     
+    @staticmethod
+    def _format_court_preferences(
+        selected_courts: Sequence[int],
+        all_courts: Sequence[int],
+    ) -> str:
+        """Create a human-friendly court list label."""
+
+        if not selected_courts:
+            return "No Courts Selected"
+
+        selected_set = set(selected_courts)
+        if selected_set == set(all_courts):
+            return "All Courts"
+
+        return ", ".join(f"Court {court}" for court in sorted(selected_set))
+
     def __init__(self, availability_checker, reservation_queue, user_manager, browser_pool=None) -> None:
         """
         Initialize the callback handler
@@ -1235,11 +1252,15 @@ class CallbackHandler:
             # User is authorized - display admin menu
             self.logger.info(f"Admin access granted to user_id: {user_id}")
             
-            # Get pending user count for display (placeholder - implement when user approval system exists)
-            pending_count = 0  # TODO: Implement pending user count when approval system is added
+            pending_count = len(self.reservation_queue.get_pending_reservations())
             
+            config = get_test_mode()
+
             # Create admin menu keyboard
-            reply_markup = TelegramUI.create_admin_menu_keyboard(pending_count)
+            reply_markup = TelegramUI.create_admin_menu_keyboard(
+                pending_count,
+                test_mode_enabled=config.enabled,
+            )
             
             # Display admin panel
             await query.edit_message_text(
@@ -1256,6 +1277,43 @@ class CallbackHandler:
         except Exception as e:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 
                                                    'Error accessing admin panel')
+
+    async def _handle_admin_toggle_test_mode(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Toggle test mode flags from the admin interface."""
+
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_toggle_test_mode')
+        query = update.callback_query
+        await self._safe_answer_callback(query)
+
+        current = get_test_mode()
+        if current.enabled:
+            new_config = update_test_mode(
+                enabled=False,
+                allow_within_48h=False,
+            )
+            status_text = "🛑 Test mode disabled.\n\nQueued reservations will now respect the 48-hour window and normal scheduling."  # noqa: E501
+        else:
+            new_config = update_test_mode(
+                enabled=True,
+                allow_within_48h=True,
+            )
+            status_text = (
+                "🧪 Test mode enabled!\n\n"
+                "Future queue bookings will bypass the 48-hour gate and execute after the configured delay."
+            )
+
+        pending_count = len(self.reservation_queue.get_pending_reservations())
+
+        reply_markup = TelegramUI.create_admin_menu_keyboard(
+            pending_count=pending_count,
+            test_mode_enabled=new_config.enabled,
+        )
+
+        await query.edit_message_text(
+            status_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup,
+        )
     
     async def _handle_queue_booking_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -1286,8 +1344,7 @@ class CallbackHandler:
         dates = []
         today = date.today()
         
-        # Import court hours from constants and timezone
-        from infrastructure.constants import COURT_HOURS, get_court_hours
+        config = get_test_mode()
         import pytz
         
         # Use Mexico City timezone for accurate calculations
@@ -1304,27 +1361,32 @@ class CallbackHandler:
         for i in range(self.QUEUE_BOOKING_WINDOW_DAYS):
             check_date = today + timedelta(days=i)
             
-            # Check if any time slot on this date is beyond 48 hours
             has_available_slots = False
             first_available_slot = None
             slots_checked = 0
-            
-            for hour_str in get_court_hours(check_date):
-                hour, minute = map(int, hour_str.split(':'))
-                # Create timezone-aware datetime for Mexico City
-                slot_datetime_naive = datetime.combine(check_date, datetime.min.time().replace(hour=hour, minute=minute))
-                slot_datetime = mexico_tz.localize(slot_datetime_naive)
-                
-                # Calculate hours until slot
-                time_diff = slot_datetime - current_time
-                hours_until_slot = time_diff.total_seconds() / 3600
-                slots_checked += 1
-                
-                if hours_until_slot > 48:
-                    has_available_slots = True
-                    if not first_available_slot:
-                        first_available_slot = f"{hour_str} ({hours_until_slot:.1f}h away)"
-                    break
+
+            if config.enabled and config.allow_within_48h:
+                has_available_slots = True
+                slots_checked = len(get_court_hours(check_date))
+                first_available_slot = "Test mode"
+            else:
+                for hour_str in get_court_hours(check_date):
+                    hour, minute = map(int, hour_str.split(':'))
+                    slot_datetime_naive = datetime.combine(
+                        check_date,
+                        datetime.min.time().replace(hour=hour, minute=minute),
+                    )
+                    slot_datetime = mexico_tz.localize(slot_datetime_naive)
+
+                    time_diff = slot_datetime - current_time
+                    hours_until_slot = time_diff.total_seconds() / 3600
+                    slots_checked += 1
+
+                    if hours_until_slot > 48:
+                        has_available_slots = True
+                        if not first_available_slot:
+                            first_available_slot = f"{hour_str} ({hours_until_slot:.1f}h away)"
+                        break
             
             # Log detailed info for this date
             self.logger.info(f"""Date check: {check_date.strftime('%A, %B %d, %Y')}
@@ -1497,30 +1559,38 @@ class CallbackHandler:
         # Use centralized court hours from constants
         all_court_hours = get_court_hours(selected_date)
         
-        # In test mode, allow all hours (skip 48h filtering for testing)
-        from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
-        
-        if TEST_MODE_ENABLED and TEST_MODE_ALLOW_WITHIN_48H:
-            # Test mode: show all available hours
-            available_hours = all_court_hours
-            self.logger.info(f"🧪 TEST MODE: Showing all {len(available_hours)} time slots for {selected_date}")
+        config = get_test_mode()
+
+        if config.enabled and config.allow_within_48h:
+            available_hours = list(all_court_hours)
+            availability_note = f"ℹ️ {len(available_hours)} time slots available (test mode)"
+            self.logger.info(
+                "🧪 TEST MODE: Allowing all %s time slots for %s", len(available_hours), selected_date
+            )
         else:
-            # Normal mode: filter out times within 48 hours
             import pytz
+
             mexico_tz = pytz.timezone('America/Mexico_City')
             current_time = datetime.now(mexico_tz)
             available_hours = []
-            
+
             for hour_str in all_court_hours:
                 hour, minute = map(int, hour_str.split(':'))
-                slot_datetime_naive = datetime.combine(selected_date, datetime.min.time().replace(hour=hour, minute=minute))
+                slot_datetime_naive = datetime.combine(
+                    selected_date,
+                    datetime.min.time().replace(hour=hour, minute=minute),
+                )
                 slot_datetime = mexico_tz.localize(slot_datetime_naive)
                 time_diff = slot_datetime - current_time
                 hours_until_slot = time_diff.total_seconds() / 3600
-                
+
                 if hours_until_slot > 48:
                     available_hours.append(hour_str)
-        
+
+            availability_note = (
+                f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
+            )
+
         # Check if we have any available time slots
         if not available_hours:
             await query.edit_message_text(
@@ -1547,7 +1617,7 @@ class CallbackHandler:
             f"⏰ **Queue Booking**\n\n"
             f"📅 Selected Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
             f"⏱️ Select a time for your queued reservation:\n"
-            f"ℹ️ {len(available_hours)} time slots available",
+            f"{availability_note}",
             parse_mode='Markdown',
             reply_markup=reply_markup
         )
@@ -1714,10 +1784,10 @@ class CallbackHandler:
                 context.user_data.pop('modifying_option', None)
                 
                 # Format courts text
-                if len(selected_courts) == len(self.AVAILABLE_COURTS):
-                    courts_text = "All Courts"
-                else:
-                    courts_text = ', '.join([f"Court {court}" for court in sorted(selected_courts)])
+                courts_text = self._format_court_preferences(
+                    selected_courts,
+                    self.AVAILABLE_COURTS,
+                )
                 
                 # Show success message
                 await query.edit_message_text(
@@ -1732,7 +1802,8 @@ class CallbackHandler:
                 return
         
         # Store selected courts in user context
-        context.user_data['queue_booking_courts'] = selected_courts
+        cleaned_courts = sorted(set(selected_courts))
+        context.user_data['queue_booking_courts'] = cleaned_courts
         
         # Retrieve stored booking details
         selected_date = context.user_data.get('queue_booking_date')
@@ -1751,14 +1822,18 @@ class CallbackHandler:
             'user_id': query.from_user.id,
             'target_date': selected_date.strftime('%Y-%m-%d'),
             'target_time': selected_time,
-            'court_preferences': selected_courts,
+            'court_preferences': cleaned_courts,
             'created_at': datetime.now().isoformat()
         }
-        
+
         # Create confirmation keyboard
         reply_markup = TelegramUI.create_queue_confirmation_keyboard()
-        
+
         # Show final confirmation
+        courts_text = self._format_court_preferences(
+            cleaned_courts,
+            self.AVAILABLE_COURTS,
+        )
         await query.edit_message_text(
             f"⏰ **Queue Booking Confirmation**\n\n"
             f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
@@ -1801,16 +1876,17 @@ class CallbackHandler:
             )
             return
         
+        config = get_test_mode()
+
         try:
             # Add reservation to the queue
             reservation_id = self.reservation_queue.add_reservation(booking_summary)
             
             # Format court list for display
-            courts = booking_summary['court_preferences']
-            if len(courts) == len(self.AVAILABLE_COURTS):
-                courts_text = "All Courts"
-            else:
-                courts_text = ', '.join([f"Court {court}" for court in sorted(courts)])
+            courts_text = self._format_court_preferences(
+                booking_summary['court_preferences'],
+                self.AVAILABLE_COURTS,
+            )
             
             # Clear queue booking state from context
             self._clear_queue_booking_state(context)
@@ -1818,14 +1894,10 @@ class CallbackHandler:
             # Create back to menu keyboard
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
             
-            # Import test mode constants
-            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
-            
             success_message = format_queue_reservation_added(
                 booking_summary,
                 reservation_id,
-                test_mode_enabled=TEST_MODE_ENABLED,
-                test_mode_delay_minutes=TEST_MODE_TRIGGER_DELAY_MINUTES,
+                test_mode_config=config,
             )
 
             await query.edit_message_text(
@@ -2402,11 +2474,11 @@ class CallbackHandler:
                     return
             
             # Check if date is more than 48h in future
-            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
+            config = get_test_mode()
             today = date.today()
             days_ahead = (selected_date - today).days
             
-            if days_ahead < 2 and not (TEST_MODE_ENABLED and TEST_MODE_ALLOW_WITHIN_48H):
+            if days_ahead < 2 and not (config.enabled and config.allow_within_48h):
                 # Date is within 48h, suggest immediate booking (unless in test mode)
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton("🏃‍♂️ Use Immediate Booking", callback_data='reserve_48h_immediate')],
@@ -2430,23 +2502,27 @@ class CallbackHandler:
             
             # Use centralized court hours from constants
             all_time_slots = get_court_hours(selected_date)
-            
-            # Calculate which times are available (must be 48+ hours from now)
-            import pytz
-            tz = pytz.timezone('America/Mexico_City')
-            now = datetime.now(tz)
-            available_time_slots = []
-            
-            for time_str in all_time_slots:
-                # Create datetime for this slot
-                hour, minute = map(int, time_str.split(':'))
-                slot_datetime = datetime.combine(selected_date, datetime.min.time().replace(hour=hour, minute=minute))
-                slot_datetime = tz.localize(slot_datetime)
-                
-                # Check if it's at least 48 hours from now
-                hours_until = (slot_datetime - now).total_seconds() / 3600
-                if hours_until >= 48:
-                    available_time_slots.append(time_str)
+
+            if config.enabled and config.allow_within_48h:
+                available_time_slots = list(all_time_slots)
+            else:
+                import pytz
+
+                tz = pytz.timezone('America/Mexico_City')
+                now = datetime.now(tz)
+                available_time_slots = []
+
+                for time_str in all_time_slots:
+                    hour, minute = map(int, time_str.split(':'))
+                    slot_datetime = datetime.combine(
+                        selected_date,
+                        datetime.min.time().replace(hour=hour, minute=minute),
+                    )
+                    slot_datetime = tz.localize(slot_datetime)
+
+                    hours_until = (slot_datetime - now).total_seconds() / 3600
+                    if hours_until >= 48:
+                        available_time_slots.append(time_str)
             
             # If no times available on this date, show error
             if not available_time_slots:
@@ -2502,10 +2578,9 @@ class CallbackHandler:
             # Parse the date
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
-            # Check if test mode allows within 48h booking
-            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_ALLOW_WITHIN_48H
-            
-            if TEST_MODE_ENABLED and TEST_MODE_ALLOW_WITHIN_48H:
+            config = get_test_mode()
+
+            if config.enabled and config.allow_within_48h:
                 # In test mode, allow queue booking for within 48h dates
                 self.logger.info(f"""BLOCKED DATE CLICKED (TEST MODE)
                 User: {query.from_user.id}
@@ -3048,9 +3123,6 @@ class CallbackHandler:
             else:
                 court_str = f"Court: {courts}"
             
-            # Check test mode
-            from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
-            
             # Get scheduled execution time if available
             scheduled_time_str = ""
             if 'scheduled_execution' in reservation:
@@ -3072,10 +3144,15 @@ class CallbackHandler:
 
 """
             
-            if TEST_MODE_ENABLED:
-                message += f"🧪 *TEST MODE:* Will execute in {TEST_MODE_TRIGGER_DELAY_MINUTES} minutes after creation\n"
+            config = get_test_mode()
+            if config.enabled:
+                message += (
+                    f"🧪 *TEST MODE:* Will execute in {config.trigger_delay_minutes} minutes after creation\n"
+                )
             else:
-                message += "This reservation will be automatically booked when the 48-hour booking window opens.\n"
+                message += (
+                    "This reservation will be automatically booked when the 48-hour booking window opens.\n"
+                )
             
             # Create action buttons
             keyboard = [

@@ -22,3 +22,4 @@ Telegram application layer. Wires the async bot, registers command/handler route
 ## Operational Notes
 - Modules rely on `users.manager.UserManager` for authorization decisions.
 - Update handler registration lives in `commands/register_core_handlers`; when adding features, extend routers rather than modifying `app.py` directly.
+- The admin panel now includes a "Test Mode" toggle that flips the runtime configuration exposed via `infrastructure.settings.update_test_mode`.

@@ -15,6 +15,7 @@ Core Playwright automation logic. Modules here drive browser orchestration, scra
 - `__init__.py`: Exposes package-level helpers for consumers.
 - `availability/time_grouping.py`: Groups raw Playwright button elements into chronological orderings.
 - `browser/browser_health_checker.py`: Evaluates browser readiness before a booking flow begins.
+- `browser/lifecycle.py`: Shared shutdown helpers that close browser pools and tear down lingering Playwright processes.
 - `executors/booking_orchestrator.py`: Entry point that wires availability, request building, and flow execution.
 - `forms/acuity_booking_form.py`: Form object encapsulating field selectors and submission helpers.
 

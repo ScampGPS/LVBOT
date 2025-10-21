@@ -10,6 +10,7 @@ from tracking import t
 
 from automation.shared.booking_contracts import BookingResult
 from botapp.ui.telegram_ui import TelegramUI
+from infrastructure.settings import TestModeConfig
 
 
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
@@ -72,8 +73,7 @@ def format_queue_reservation_added(
     booking_summary: Dict[str, object],
     reservation_id: str,
     *,
-    test_mode_enabled: bool,
-    test_mode_delay_minutes: int,
+    test_mode_config: TestModeConfig,
 ) -> str:
     """Build the confirmation message when a queue reservation is added."""
 
@@ -97,11 +97,11 @@ def format_queue_reservation_added(
         "",
     ]
 
-    if test_mode_enabled:
+    if test_mode_config.enabled:
         message_lines.extend(
             [
                 "🧪 **TEST MODE ACTIVE**",
-                f"This reservation will be executed in {test_mode_delay_minutes} minutes!",
+                f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!",
                 "",
             ]
         )

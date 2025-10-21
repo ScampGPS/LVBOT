@@ -46,6 +46,16 @@ class AppSettings:
     data_directory: str
 
 
+@dataclass(frozen=True)
+class TestModeConfig:
+    """Configuration toggles that control test-mode behaviour."""
+
+    enabled: bool
+    allow_within_48h: bool
+    trigger_delay_minutes: float
+    retain_failed_reservations: bool
+
+
 def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     """Load configuration from the environment and fall back to defaults."""
     t('infrastructure.settings.load_settings')
@@ -91,3 +101,73 @@ def get_settings() -> AppSettings:
     t('infrastructure.settings.get_settings')
 
     return load_settings()
+
+
+def load_test_mode(env: Optional[Mapping[str, str]] = None) -> TestModeConfig:
+    """Load test-mode configuration with sensible defaults."""
+
+    t('infrastructure.settings.load_test_mode')
+
+    if env is None:
+        if load_dotenv is not None:
+            load_dotenv(override=False)
+        env = os.environ
+
+    enabled = _to_bool(env.get('TEST_MODE_ENABLED', 'false'))
+    allow_within_48h = _to_bool(env.get('TEST_MODE_ALLOW_WITHIN_48H', 'false'))
+
+    try:
+        trigger_delay_minutes = float(env.get('TEST_MODE_TRIGGER_DELAY_MINUTES', '0.25'))
+    except (TypeError, ValueError):
+        trigger_delay_minutes = 0.25
+
+    retain_failed = _to_bool(
+        env.get('TEST_MODE_RETAIN_FAILED', 'true' if enabled else 'false'),
+        default=enabled,
+    )
+
+    return TestModeConfig(
+        enabled=enabled,
+        allow_within_48h=allow_within_48h,
+        trigger_delay_minutes=trigger_delay_minutes,
+        retain_failed_reservations=retain_failed,
+    )
+
+
+_TEST_MODE_CONFIG: Optional[TestModeConfig] = None
+
+
+def get_test_mode(refresh: bool = False) -> TestModeConfig:
+    """Return the cached :class:`TestModeConfig` snapshot."""
+
+    t('infrastructure.settings.get_test_mode')
+
+    global _TEST_MODE_CONFIG
+    if _TEST_MODE_CONFIG is None or refresh:
+        _TEST_MODE_CONFIG = load_test_mode()
+    return _TEST_MODE_CONFIG
+
+
+def set_test_mode(config: TestModeConfig) -> TestModeConfig:
+    """Explicitly override the in-process test mode configuration."""
+
+    t('infrastructure.settings.set_test_mode')
+
+    global _TEST_MODE_CONFIG
+    _TEST_MODE_CONFIG = config
+    return _TEST_MODE_CONFIG
+
+
+def update_test_mode(**kwargs: object) -> TestModeConfig:
+    """Update selected fields on the cached test mode configuration."""
+
+    t('infrastructure.settings.update_test_mode')
+
+    current = get_test_mode()
+    new_config = TestModeConfig(
+        enabled=kwargs.get('enabled', current.enabled),
+        allow_within_48h=kwargs.get('allow_within_48h', current.allow_within_48h),
+        trigger_delay_minutes=kwargs.get('trigger_delay_minutes', current.trigger_delay_minutes),
+        retain_failed_reservations=kwargs.get('retain_failed_reservations', current.retain_failed_reservations),
+    )
+    return set_test_mode(new_config)

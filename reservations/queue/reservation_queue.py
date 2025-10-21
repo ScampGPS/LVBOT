@@ -19,6 +19,7 @@ from reservations.queue.reservation_transitions import (
     add_to_waitlist as mark_waitlisted,
     apply_status_update,
 )
+from infrastructure.settings import get_test_mode
 
 
 class ReservationStatus(Enum):
@@ -79,8 +80,7 @@ class ReservationQueue:
         t('reservations.queue.reservation_queue.ReservationQueue.add_reservation')
         from datetime import datetime, timedelta
         import pytz
-        from infrastructure.constants import TEST_MODE_ENABLED, TEST_MODE_TRIGGER_DELAY_MINUTES
-        
+
         # Log detailed reservation request
         self.logger.info(f"""NEW RESERVATION REQUEST
         User ID: {reservation_data.get('user_id')}
@@ -114,22 +114,22 @@ class ReservationQueue:
         # Calculate scheduled execution time
         tz = pytz.timezone('America/Guatemala')
         
-        if TEST_MODE_ENABLED:
-            # In test mode, schedule execution X minutes from now
-            scheduled_time = datetime.now(tz) + timedelta(minutes=TEST_MODE_TRIGGER_DELAY_MINUTES)
+        config = get_test_mode()
+        if config.enabled:
+            delay = max(config.trigger_delay_minutes, 0)
+            scheduled_time = datetime.now(tz) + timedelta(minutes=delay)
             reservation['status'] = 'scheduled'
-            self.logger.info(f"TEST MODE: Scheduling execution in {TEST_MODE_TRIGGER_DELAY_MINUTES} minutes")
+            self.logger.info(
+                "TEST MODE: Scheduling execution in %s minutes", config.trigger_delay_minutes
+            )
         else:
-            # Normal mode: schedule 48 hours before the target time
             target_date = datetime.strptime(reservation_data['target_date'], '%Y-%m-%d').date()
             target_time = datetime.strptime(reservation_data['target_time'], '%H:%M').time()
             target_datetime = datetime.combine(target_date, target_time)
             target_datetime = tz.localize(target_datetime)
-            
-            # Schedule execution 30 seconds before 48-hour window opens
+
             scheduled_time = target_datetime - timedelta(hours=48) - timedelta(seconds=30)
-            
-            # If scheduled time is in the past, schedule immediately
+
             if scheduled_time <= datetime.now(tz):
                 scheduled_time = datetime.now(tz) + timedelta(minutes=1)
                 reservation['status'] = 'scheduled'

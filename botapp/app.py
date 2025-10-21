@@ -31,6 +31,7 @@ from .error_handler import ErrorHandler
 from .handlers.callback_handlers import CallbackHandler
 from .notifications import deliver_notification_with_menu
 from .ui.telegram_ui import TelegramUI
+from automation.browser.lifecycle import shutdown_all_browser_processes
 
 # Simple config
 # NOTE: Hardcoded per ops request; rotate and update here when token changes.
@@ -433,48 +434,13 @@ class CleanBot:
     
 
 
-def cleanup_browser_processes():
-    """Force kill all browser processes"""
+def cleanup_browser_processes(force: bool | None = None) -> None:
+    """Shut down browser resources gracefully, with optional force kill."""
+
     t('botapp.app.cleanup_browser_processes')
-    import subprocess
-    import platform
-    
+
     logger = logging.getLogger('Main')
-    system = platform.system()
-    
-    try:
-        force_kill = os.getenv("FORCE_PLAYWRIGHT_KILL") == "1"
-        if system == "Windows":
-            if force_kill:
-                processes = ['chrome.exe', 'chromium.exe', 'msedge.exe']
-                for process in processes:
-                    try:
-                        subprocess.run(
-                            ['taskkill', '/F', '/IM', process],
-                            capture_output=True,
-                            check=False,
-                        )
-                    except Exception:
-                        pass
-                logger.info("💥 Force killed browser processes on Windows (forced mode)")
-            else:
-                logger.info(
-                    "Skipping global browser termination on Windows. "
-                    "Set FORCE_PLAYWRIGHT_KILL=1 to enable forced cleanup."
-                )
-        else:
-            if force_kill:
-                subprocess.run(['pkill', '-9', '-f', 'chromium'], capture_output=True)
-                subprocess.run(['pkill', '-9', '-f', 'chrome-linux'], capture_output=True)
-                subprocess.run(['pkill', '-9', '-f', 'playwright'], capture_output=True)
-                logger.info("💥 Force killed Playwright browser processes on Unix")
-            else:
-                logger.info(
-                    "Skipping Playwright process kill on Unix. "
-                    "Set FORCE_PLAYWRIGHT_KILL=1 to enable."
-                )
-    except Exception as e:
-        logger.warning(f"Could not force kill browser processes: {e}")
+    shutdown_all_browser_processes(logger=logger, force=force)
 
 
 def signal_handler(signum, frame):
@@ -482,7 +448,7 @@ def signal_handler(signum, frame):
     t('botapp.app.signal_handler')
     logger = logging.getLogger('Main')
     logger.info(f"🚨 Received signal {signum}, initiating graceful shutdown...")
-    cleanup_browser_processes()
+    cleanup_browser_processes(force=True)
     exit(0)
 
 
@@ -503,13 +469,13 @@ def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Register cleanup function to run at exit
-    atexit.register(cleanup_browser_processes)
+    atexit.register(lambda: cleanup_browser_processes(force=True))
+
+    # Kill any orphaned Chromium processes from previous runs before bootstrapping
+    logger.info("🔄 Checking for orphaned browser processes before startup...")
+    cleanup_browser_processes(force=True)
 
     bot = CleanBot(BOT_TOKEN)
-
-    # Kill any orphaned Chromium processes from previous runs
-    logger.info("🔄 Cleaning up orphaned browser processes...")
-    cleanup_browser_processes()
 
     # Run the bot directly, letting app.run_polling() manage the event loop
     # No asyncio.run() here, as app.run_polling() handles it
@@ -523,7 +489,7 @@ def main() -> None:
     finally:
         # Ensure cleanup even on abnormal exit
         logger.info("🔄 Final cleanup...")
-        cleanup_browser_processes()
+        cleanup_browser_processes(force=True)
 
 
 if __name__ == '__main__':

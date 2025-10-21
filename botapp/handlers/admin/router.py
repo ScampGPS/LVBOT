@@ -17,4 +17,5 @@ def build_routes(handler) -> Dict[str, CallbackFn]:
         'admin_view_my_reservations': handler._handle_admin_my_reservations,
         'admin_view_users_list': handler._handle_admin_users_list,
         'admin_view_all_reservations': handler._handle_admin_all_reservations,
+        'admin_toggle_test_mode': handler._handle_admin_toggle_test_mode,
     }

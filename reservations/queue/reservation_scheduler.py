@@ -39,6 +39,7 @@ from reservations.queue.scheduler import (
 from reservations.queue.request_builder import build_request_from_reservation
 from reservations.queue.persistence import persist_queue_outcome
 from botapp.notifications import format_failure_message, format_success_message
+from infrastructure.settings import get_test_mode
 
 
 def _booking_result_to_dict(result: BookingResult) -> Dict[str, Any]:
@@ -814,18 +815,25 @@ class ReservationScheduler:
         self.queue.update_reservation_status(reservation_id, 'failed', error=error)
         self.stats.record_failure()
         
-        # In test mode, don't remove failed reservations to allow retry
-        from infrastructure.constants import TEST_MODE_ENABLED
-        if TEST_MODE_ENABLED:
-            self.logger.info(f"🧪 TEST MODE: Keeping failed reservation {reservation_id[:8]}... in queue for retry")
+        config = get_test_mode()
+        if config.enabled and config.retain_failed_reservations:
+            self.logger.info(
+                "🧪 TEST MODE: Keeping failed reservation %s... in queue for retry",
+                reservation_id[:8],
+            )
+            return
+
+        removed = self.queue.remove_reservation(reservation_id)
+
+        if removed:
+            self.logger.info(
+                "✅ Failed reservation %s... successfully removed from queue", reservation_id[:8]
+            )
         else:
-            # Remove failed reservation from queue
-            removed = self.queue.remove_reservation(reservation_id)
-            
-            if removed:
-                self.logger.info(f"✅ Failed reservation {reservation_id[:8]}... successfully removed from queue")
-            else:
-                self.logger.warning(f"⚠️ Could not remove failed reservation {reservation_id[:8]}... from queue (may have been already removed)")
+            self.logger.warning(
+                "⚠️ Could not remove failed reservation %s... from queue (may have been already removed)",
+                reservation_id[:8],
+            )
     
     async def _notify_booking_results(self, results: Dict[str, Any]):
         """Send notifications to users about booking results"""
@@ -1086,9 +1094,9 @@ class ReservationScheduler:
         t('reservations.queue.reservation_scheduler.ReservationScheduler._check_startup_reservations')
         self.logger.info("🔍 Checking for existing reservations at startup...")
         
-        # In test mode, get ALL reservations (including failed ones for retry)
-        from infrastructure.constants import TEST_MODE_ENABLED
-        if TEST_MODE_ENABLED:
+        config = get_test_mode()
+
+        if config.enabled:
             # Get all reservations regardless of status
             all_reservations = self.queue.queue  # Direct access to all reservations
             self.logger.info(f"🧪 TEST MODE: Checking all reservations including failed ones")
@@ -1111,8 +1119,7 @@ class ReservationScheduler:
             target_time = reservation.get('target_time', 'Unknown')
             status = reservation.get('status', 'Unknown')
             
-            # In test mode, reset failed reservations to scheduled for retry
-            if TEST_MODE_ENABLED and status == 'failed':
+            if config.enabled and config.retain_failed_reservations and status == 'failed':
                 failed_count += 1
                 self.logger.info(f"🔄 TEST MODE: Resetting failed reservation {reservation_id[:8]}... to scheduled status")
                 self.queue.update_reservation_status(reservation_id, 'scheduled')
@@ -1150,7 +1157,7 @@ class ReservationScheduler:
                 self.logger.info(f"📋 Reservation {reservation_id[:8]}... ({target_date} {target_time}) - Status: {status}")
         
         # Summary
-        if TEST_MODE_ENABLED and failed_count > 0:
+        if config.enabled and config.retain_failed_reservations and failed_count > 0:
             self.logger.info(f"🔄 TEST MODE: Reset {failed_count} failed reservations to scheduled status")
             
         if ready_count > 0:

@@ -15,4 +15,5 @@ Shared infrastructure primitives used across automation and bot layers, includin
 
 ## Operational Notes
 - Importing `logging_config` has side effects (handler registration); call it early in entry points.
+- `settings.get_test_mode()` exposes runtime toggles for queue/testing behaviour and can be changed dynamically via `update_test_mode`.
 - Keep settings definitions in sync with `config/.env.example` to avoid missing environment keys.
