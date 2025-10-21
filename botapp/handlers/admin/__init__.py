@@ -1,5 +1,5 @@
-"""Feature-specific callback router."""
+"""Callback handler exports."""
 
-from .router import build_routes
+from .handler import AdminHandler
 
-__all__ = ['build_routes']
+__all__ = ['AdminHandler']
