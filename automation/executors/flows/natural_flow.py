@@ -24,27 +24,15 @@ def apply_speed(delay_seconds: float) -> float:
     return max(0.1, delay_seconds / WORKING_SPEED_MULTIPLIER)
 
 
-async def human_type_with_mistakes(element, text: str, mistake_prob: float = 0.10) -> None:
-    """Simulate human typing with occasional mistakes."""
-    t('automation.executors.flows.natural_flow.human_type_with_mistakes')
+async def type_text_natural(element, text: str) -> None:
+    """Simulate deliberate human typing without introducing mistakes."""
+    t('automation.executors.flows.natural_flow.type_text_natural')
     await element.click()
     await asyncio.sleep(apply_speed(random.uniform(0.3, 0.8)))
     await element.fill("")
     await asyncio.sleep(apply_speed(random.uniform(0.2, 0.5)))
 
-    for i, char in enumerate(text):
-        adjusted_mistake_prob = mistake_prob / max(1, WORKING_SPEED_MULTIPLIER * 0.5)
-
-        if random.random() < adjusted_mistake_prob and i > 0:
-            wrong_chars = "abcdefghijklmnopqrstuvwxyz"
-            wrong_char = random.choice(wrong_chars)
-            if wrong_char != char.lower():
-                base_delay = random.randint(80, 180) / WORKING_SPEED_MULTIPLIER
-                await element.type(wrong_char, delay=max(20, int(base_delay)))
-                await asyncio.sleep(apply_speed(random.uniform(0.1, 0.4)))
-                await element.press("Backspace")
-                await asyncio.sleep(apply_speed(random.uniform(0.2, 0.6)))
-
+    for char in text:
         base_delay = random.randint(90, 220) / WORKING_SPEED_MULTIPLIER
         await element.type(char, delay=max(20, int(base_delay)))
 
@@ -79,13 +67,13 @@ async def fill_form(page: Page, user_info: Dict[str, str]) -> None:
     phone_field = await page.query_selector('input[name="client.phone"]')
 
     if first_name_field:
-        await human_type_with_mistakes(first_name_field, first_name)
+        await type_text_natural(first_name_field, first_name)
     if last_name_field:
-        await human_type_with_mistakes(last_name_field, last_name)
+        await type_text_natural(last_name_field, last_name)
     if email_field:
-        await human_type_with_mistakes(email_field, email)
+        await type_text_natural(email_field, email)
     if phone_field:
-        await human_type_with_mistakes(phone_field, phone)
+        await type_text_natural(phone_field, phone)
 
 
 async def execute_natural_flow(
@@ -162,7 +150,7 @@ async def execute_natural_flow(
 __all__ = [
     "WORKING_SPEED_MULTIPLIER",
     "apply_speed",
-    "human_type_with_mistakes",
+    "type_text_natural",
     "natural_mouse_movement",
     "fill_form",
     "execute_natural_flow",
