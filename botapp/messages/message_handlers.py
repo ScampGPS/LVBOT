@@ -7,6 +7,7 @@ from tracking import t
 from typing import Optional, Union, List, Dict, Any
 from telegram import Update, Message, CallbackQuery
 from telegram.constants import ParseMode
+from telegram.error import RetryAfter
 import logging
 import asyncio
 
@@ -67,7 +68,7 @@ class MessageHandlers:
         # Set default parse mode
         if 'parse_mode' not in kwargs:
             kwargs['parse_mode'] = ParseMode.MARKDOWN
-        
+
         try:
             if update.callback_query:
                 message = update.callback_query.message
@@ -86,7 +87,44 @@ class MessageHandlers:
                 await update.callback_query.message.reply_text(text, **kwargs)
             else:
                 await update.message.reply_text(text, **kwargs)
-    
+
+    @staticmethod
+    async def edit_callback_message(
+        callback_query: CallbackQuery,
+        text: str,
+        *,
+        retries: int = 1,
+        retry_padding: float = 0.5,
+        logger: Optional[logging.Logger] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Edit a callback message while gracefully handling rate limits."""
+        t('botapp.messages.message_handlers.MessageHandlers.edit_callback_message')
+
+        attempts = 0
+        wait_time = 0.0
+        target_logger = logger or logging.getLogger('MessageHandlers')
+
+        while attempts <= retries:
+            if wait_time > 0:
+                await asyncio.sleep(wait_time)
+
+            try:
+                await callback_query.edit_message_text(text, **kwargs)
+                return
+            except RetryAfter as exc:
+                attempts += 1
+                if attempts > retries:
+                    raise
+
+                wait_time = float(getattr(exc, 'retry_after', 1)) + max(retry_padding, 0)
+                target_logger.warning(
+                    'Telegram rate limit triggered while editing message; retrying in %.1fs',
+                    wait_time,
+                )
+            except Exception:
+                raise
+
     @staticmethod
     async def safe_answer_callback(callback_query: CallbackQuery, 
                                  text: Optional[str] = None, 

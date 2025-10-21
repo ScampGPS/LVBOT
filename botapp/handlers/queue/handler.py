@@ -18,6 +18,7 @@ from botapp.notifications import (
 )
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.error_handler import ErrorHandler
+from botapp.messages.message_handlers import MessageHandlers
 from automation.availability import DateTimeHelpers
 from infrastructure.settings import get_test_mode
 from infrastructure.constants import get_court_hours
@@ -43,6 +44,14 @@ class QueueHandler:
                 await query.answer()
         except Exception as exc:
             self.logger.warning('Failed to answer callback query: %s', exc)
+
+    async def _edit_callback_message(self, query, text: str, **kwargs) -> None:
+        await MessageHandlers.edit_callback_message(
+            query,
+            text,
+            logger=self.logger,
+            **kwargs,
+        )
 
     def _format_court_preferences(
         self,
@@ -158,7 +167,7 @@ class QueueHandler:
             # No dates available - all slots are within 48 hours
             self.logger.info("❌ NO DATES AVAILABLE - All slots within 48 hours")
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "⏰ Queue Booking\n\n"
                 "❌ No dates available for queue booking.\n\n"
                 "All available time slots are within the 48-hour booking window. "
@@ -176,7 +185,7 @@ class QueueHandler:
         # Create date selection keyboard
         keyboard = TelegramUI.create_date_selection_keyboard(dates)
 
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             "⏰ Queue Booking\n\n"
             "📅 Select a date for your queued reservation:\n\n"
             "ℹ️ Note: Only time slots more than 48 hours away will be shown.",
@@ -206,7 +215,7 @@ class QueueHandler:
             user_reservations = self.deps.reservation_queue.get_user_reservations(user_id)
 
             if not user_reservations:
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     "📋 **Queued Reservations**\n\n"
                     "You don't have any queued reservations.\n\n"
                     "Use '🎾 Reserve Court' → '📅 Reserve after 48h' to queue a booking!",
@@ -272,7 +281,7 @@ class QueueHandler:
 
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
@@ -315,7 +324,7 @@ class QueueHandler:
         if selected_date is None:
             date_str = callback_data.replace('date_', '') if callback_data.startswith('date_') else callback_data
             self.logger.error(f"Invalid date format in queue booking callback: {date_str}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 f"❌ Invalid date format received: {date_str}. Please try again."
             )
             return
@@ -357,7 +366,7 @@ class QueueHandler:
         # Check if we have any available time slots
         if not available_hours:
             self.logger.info("❌ NO TIME SLOTS AVAILABLE on this date")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 f"⚠️ **No time slots available**\n\n"
                 f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
                 f"All time slots on this date are within 48 hours.\n"
@@ -384,7 +393,7 @@ class QueueHandler:
         )
 
         # Show time selection interface
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             f"⏰ **Queue Booking**\n\n"
             f"📅 Selected Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
             f"⏱️ Select a time for your queued reservation:\n"
@@ -442,7 +451,7 @@ class QueueHandler:
 
         # Check if we have any available time slots
         if not available_hours:
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 f"⚠️ **No time slots available**\n\n"
                 f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
                 f"All time slots on this date are within 48 hours.\n"
@@ -462,7 +471,7 @@ class QueueHandler:
         )
 
         # Show time selection interface
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             f"⏰ **Queue Booking**\n\n"
             f"📅 Selected Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
             f"⏱️ Select a time for your queued reservation:\n"
@@ -506,7 +515,7 @@ class QueueHandler:
             callback_date = datetime.strptime(callback_date_str, '%Y-%m-%d').date()
         except (ValueError, IndexError) as e:
             self.logger.error(f"Invalid queue time callback format: {callback_data}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 f"❌ Invalid time selection format received: {callback_data}. Please try again."
             )
             return
@@ -527,7 +536,7 @@ class QueueHandler:
                 context.user_data.pop('modifying_option', None)
 
                 # Show success message
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     f"✅ **Time Updated!**\n\n"
                     f"Your reservation time has been changed to {selected_time}.",
                     parse_mode='Markdown',
@@ -545,7 +554,7 @@ class QueueHandler:
         selected_date = context.user_data.get('queue_booking_date')
         if selected_date is None:
             self.logger.error("Missing queue_booking_date in user context")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Session expired. Please start the booking process again."
             )
             return
@@ -561,7 +570,7 @@ class QueueHandler:
         reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
 
         # Show court selection interface
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             f"⏰ **Queue Booking**\n\n"
             f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
             f"⏱️ Time: {selected_time}\n\n"
@@ -606,13 +615,13 @@ class QueueHandler:
                     raise ValueError(f"Invalid court number: {court_number}")
             except ValueError as e:
                 self.logger.error(f"Invalid queue court callback: {callback_data}")
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     f"❌ Invalid court selection received: {callback_data}. Please try again."
                 )
                 return
         else:
             self.logger.error(f"Unrecognized queue court callback: {callback_data}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Invalid court selection. Please try again."
             )
             return
@@ -639,7 +648,7 @@ class QueueHandler:
                 )
 
                 # Show success message
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     f"✅ **Courts Updated!**\n\n"
                     f"Your court preference has been changed to: {courts_text}",
                     parse_mode='Markdown',
@@ -660,7 +669,7 @@ class QueueHandler:
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details in user context")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Session expired. Please start the booking process again."
             )
             return
@@ -682,7 +691,7 @@ class QueueHandler:
                 ', '.join(missing_fields),
             )
             reply_markup = TelegramUI.create_profile_keyboard()
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ **Profile Incomplete**\n\n"
                 "Please update your profile before adding a reservation to the queue.\n"
                 f"Missing fields: {', '.join(missing_fields)}",
@@ -714,7 +723,7 @@ class QueueHandler:
             cleaned_courts,
             self.AVAILABLE_COURTS,
         )
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             f"⏰ **Queue Booking Confirmation**\n\n"
             f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
             f"⏱️ Time: {selected_time}\n"
@@ -751,7 +760,7 @@ class QueueHandler:
         booking_summary = context.user_data.get('queue_booking_summary')
         if not booking_summary:
             self.logger.error("Missing queue_booking_summary in user context")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Session expired. Please start the booking process again."
             )
             return
@@ -780,7 +789,7 @@ class QueueHandler:
                 test_mode_config=config,
             )
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 success_message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
@@ -795,7 +804,7 @@ class QueueHandler:
 
             duplicate_message = format_duplicate_reservation_message(str(e))
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 duplicate_message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
@@ -853,7 +862,7 @@ class QueueHandler:
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
 
         # Show cancellation message
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             "❌ **Queue Booking Cancelled**\n\n"
             "Your reservation request has been cancelled. "
             "No changes have been made to your queue.\n\n"
@@ -887,7 +896,7 @@ class QueueHandler:
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details when going back to court selection")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Session expired. Please start the booking process again.",
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
@@ -897,7 +906,7 @@ class QueueHandler:
         reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
 
         # Show court selection interface again
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             f"⏰ **Queue Booking**\n\n"
             f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
             f"⏱️ Time: {selected_time}\n\n"
@@ -942,7 +951,7 @@ class QueueHandler:
                     reservation['source'] = 'tracker'
 
             if not reservation:
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     "❌ Reservation not found.\n\nIt may have been cancelled or expired.",
                     reply_markup=TelegramUI.create_back_to_menu_keyboard()
                 )
@@ -1005,7 +1014,7 @@ class QueueHandler:
 
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
@@ -1013,7 +1022,7 @@ class QueueHandler:
 
         except Exception as e:
             self.logger.error(f"Error managing reservation: {e}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Error loading reservation details.",
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
@@ -1038,7 +1047,7 @@ class QueueHandler:
             reservation = self.deps.reservation_queue.get_reservation(reservation_id)
 
             if not reservation:
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     "❌ Reservation not found.",
                     reply_markup=TelegramUI.create_back_to_menu_keyboard()
                 )
@@ -1107,7 +1116,7 @@ class QueueHandler:
 
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 message,
                 parse_mode='Markdown',
                 reply_markup=reply_markup
@@ -1115,7 +1124,7 @@ class QueueHandler:
 
         except Exception as e:
             self.logger.error(f"Error managing queued reservation: {e}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Error loading reservation details.",
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
@@ -1176,7 +1185,7 @@ class QueueHandler:
                     cancelled = self.deps.reservation_tracker.cancel_reservation(reservation_id)
 
             if cancelled:
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     "✅ **Reservation Cancelled**\n\n"
                     "Your reservation has been cancelled successfully.",
                     parse_mode='Markdown',
@@ -1233,7 +1242,7 @@ class QueueHandler:
                 [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')]
             ]
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "✏️ **Modify Reservation**\n\n"
                 "What would you like to change?",
                 parse_mode='Markdown',
@@ -1241,7 +1250,7 @@ class QueueHandler:
             )
         else:
             # For immediate/completed reservations, show coming soon
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "✏️ **Modify Reservation**\n\n"
                 "Modification of confirmed bookings is coming soon!\n\n"
                 "For now, you can cancel this reservation and create a new one.",
@@ -1342,7 +1351,7 @@ class QueueHandler:
         if option == 'date':
             # Show year selection for date modification
             keyboard = TelegramUI.create_year_selection_keyboard()
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "📅 **Select New Year**\n\n"
                 "Choose the year for your reservation:",
                 parse_mode='Markdown',
@@ -1351,7 +1360,7 @@ class QueueHandler:
         elif option == 'time':
             # Show time selection
             keyboard = TelegramUI.create_time_selection_keyboard_simple(reservation.date)
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "⏰ **Select New Time**\n\n"
                 "Choose your preferred time:",
                 parse_mode='Markdown',
@@ -1360,7 +1369,7 @@ class QueueHandler:
         elif option == 'courts':
             # Show court selection
             keyboard = TelegramUI.create_court_selection_keyboard()
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "🏃 **Select New Courts**\n\n"
                 "Choose your court preferences:",
                 parse_mode='Markdown',
@@ -1393,7 +1402,7 @@ class QueueHandler:
             context.user_data.pop('modifying_option', None)
 
             # Show success message
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 f"✅ **Time Updated!**\n\n"
                 f"Your reservation time has been changed to {time_str}.",
                 parse_mode='Markdown',
@@ -1435,7 +1444,7 @@ class QueueHandler:
 
             if not all_reservations:
                 user_name = self._get_user_name(target_user_id)
-                await query.edit_message_text(
+                await self._edit_callback_message(query,
                     f"📅 **Reservations for {user_name}**\n\n"
                     f"No active reservations found.",
                     parse_mode='Markdown',
@@ -1499,7 +1508,7 @@ class QueueHandler:
                 [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')]
             ])
 
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 message,
                 parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup(keyboard)
@@ -1507,7 +1516,7 @@ class QueueHandler:
 
         except Exception as e:
             self.logger.error(f"Error displaying user reservations: {e}")
-            await query.edit_message_text(
+            await self._edit_callback_message(query,
                 "❌ Error loading reservations.",
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
@@ -1574,7 +1583,7 @@ class QueueHandler:
             [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')]
         ]
 
-        await query.edit_message_text(
+        await self._edit_callback_message(query,
             message,
             parse_mode='Markdown',
             reply_markup=InlineKeyboardMarkup(keyboard)

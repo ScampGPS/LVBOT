@@ -8,7 +8,9 @@ import logging
 from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
+from telegram.error import RetryAfter
 from .ui.telegram_ui import TelegramUI
+from botapp.messages.message_handlers import MessageHandlers
 
 
 class ErrorHandler:
@@ -48,12 +50,28 @@ class ErrorHandler:
         
         # Log comprehensive error details
         logger.error(f"Telegram error occurred: {type(error).__name__}: {error}", exc_info=True)
-        
+
         # Extract user info for logging context
         if update and update.effective_user:
             user_id = update.effective_user.id
             logger.error(f"Error context - User ID: {user_id}")
-        
+
+        # Gracefully handle Telegram rate limits
+        if isinstance(error, RetryAfter):
+            retry_seconds = float(getattr(error, 'retry_after', 0))
+            logger.warning(
+                "Telegram rate limit triggered. Retry suggested in %.1fs.",
+                retry_seconds,
+            )
+
+            if update and update.callback_query:
+                await MessageHandlers.safe_answer_callback(
+                    update.callback_query,
+                    text="⚠️ Too many requests. Please wait a few seconds and try again.",
+                    show_alert=True,
+                )
+            return
+
         try:
             # Create fallback navigation
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
