@@ -7,15 +7,19 @@ from typing import Any, Callable, Tuple
 
 from reservations.services import ReservationService
 
+from botapp.config import BotAppConfig
+
 
 NotificationCallback = Callable[[int, str], Any]
 
 
 def build_reservation_components(
-    config,
+    config: BotAppConfig,
     notification_callback: NotificationCallback,
     user_manager,
     browser_pool,
+    *,
+    queue=None,
 ) -> Tuple[ReservationService, Any, Any]:
     """Create the reservation service along with queue and scheduler handles."""
 
@@ -24,6 +28,7 @@ def build_reservation_components(
     service = ReservationService(
         config=config,
         notification_callback=notification_callback,
+        queue=queue,
         user_manager=user_manager,
         browser_pool=browser_pool,
     )

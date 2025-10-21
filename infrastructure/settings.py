@@ -41,6 +41,10 @@ class AppSettings:
     timezone: str
     browser_pool_size: int
     browser_refresh_interval: int
+    low_resource_mode: bool
+    reservation_check_interval: int
+    reservation_max_retry_attempts: int
+    reservation_booking_window_hours: int
     queue_file: str
     users_file: str
     data_directory: str
@@ -77,6 +81,11 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
 
     browser_pool_size = int(env.get("BROWSER_POOL_SIZE", "3"))
     browser_refresh_interval = int(env.get("BROWSER_REFRESH_INTERVAL", "180"))
+    low_resource_mode = _to_bool(env.get("BROWSER_LOW_RESOURCE_MODE", "false"))
+
+    reservation_check_interval = int(env.get("RESERVATION_CHECK_INTERVAL", "30"))
+    reservation_max_retry_attempts = int(env.get("RESERVATION_MAX_RETRY_ATTEMPTS", "3"))
+    reservation_booking_window_hours = int(env.get("RESERVATION_BOOKING_WINDOW_HOURS", "48"))
 
     queue_file = env.get("QUEUE_FILE", "data/queue.json")
     users_file = env.get("USERS_FILE", "data/users.json")
@@ -89,6 +98,10 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
         timezone=timezone,
         browser_pool_size=browser_pool_size,
         browser_refresh_interval=browser_refresh_interval,
+        low_resource_mode=low_resource_mode,
+        reservation_check_interval=reservation_check_interval,
+        reservation_max_retry_attempts=reservation_max_retry_attempts,
+        reservation_booking_window_hours=reservation_booking_window_hours,
         queue_file=queue_file,
         users_file=users_file,
         data_directory=data_directory,

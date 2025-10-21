@@ -1,35 +1,54 @@
-# Bot Refactor Plan
+# Callback Handler Refactor Plan
 
-## Architecture Direction
-- Extract a dedicated application shell: move Telegram-specific wiring out of `botapp/app.py` into `botapp/runtime/bot_application.py` (new `BotApplication` that only knows about handlers). `CleanBot` becomes a thin façade delegating to this runtime.
-- Introduce a dependency container in `botapp/bootstrap/container.py` that composes `browser_pool`, `reservation_service`, `availability_checker`, etc., instead of instantiating them inline (`botapp/app.py:72-96`). Accept injectable factories so tests and alternative front-ends (CLI, HTTP) can reuse the same components.
-- Create a lifecycle controller under `botapp/runtime/lifecycle.py` to own `_post_init`, `_post_stop`, `_graceful_shutdown`, metrics loop, and browser cleanup (`botapp/app.py:117-418`). `BotApplication` should request lifecycle services rather than mutate global state.
-- Separate configuration by adding `botapp/config/__init__.py` with dataclasses for bot token, scheduler settings, and resource paths, replacing hard-coded constants like `BOT_TOKEN` and `BotConfig` defaults (`botapp/app.py:36-61`). Load from environment variables or files so other entry points can share them.
+## Current State
+The Telegram callback layer (`botapp/handlers/callback_handlers.py`) is a 3,500+ line class that handles every inline button the bot exposes. It mixes routing, state mutation, UI composition, and domain orchestration inside a single `CallbackHandler`. Even though per-feature route builders exist in `botapp/handlers/{booking,queue,profile,admin}/router.py`, all callbacks still funnel through one massive `handle_callback` method with dozens of `if startswith(...)` blocks. Conversational state lives in raw `context.user_data` keys such as `queue_booking_date`, `name_input`, or `modifying_option`, making flows brittle and hard to test.
 
-## Directory Restructure
-```
-botapp/
-  app.py                  # becomes thin adapter that imports the new runner
-  config/
-    __init__.py           # config models + loader
-  bootstrap/
-    __init__.py
-    container.py          # builds dependency graph
-  runtime/
-    __init__.py
-    bot_application.py    # Telegram Application wiring
-    lifecycle.py          # start/stop/metrics orchestration
-    cli.py                # signal handling + main entry point
-```
-- Move signal/cleanup helpers (`botapp/app.py:402-475`) into `botapp/runtime/cli.py`, keeping `run_bot.py` as the CLI that calls `cli.main()`.
-- Expose a booking façade (e.g., `automation/facade/booking_client.py`) for the fluent `browser.navigate(court)` API and wire it through the container so UI layers stay thin.
+## Refactor Objectives
+- Make callback routing declarative and easy to extend.
+- Separate booking, queue, profile, and admin flows into focused handler classes with explicit dependencies.
+- Encapsulate per-flow conversation state in typed structures instead of loose `user_data` keys.
+- Centralize message formatting and keyboard composition so UI fragments are reusable.
+- Align callback logic with the new configuration and dependency container introduced during the main bot refactor.
+- Modernize the testing harness so callback modules have dedicated unit/async tests that run with the project’s pytest configuration.
 
-## Refactor Steps
-1. Carve out configuration module, replacing direct constants with injected `AppConfig`; update `build_browser_resources` and `build_reservation_components` to accept config objects.
-2. Implement `DependencyContainer` returning typed services (browser manager, reservation service, availability checker); update callers to use injected dependencies.
-3. Port lifecycle methods into `LifecycleManager` exposing `startup()` / `shutdown()` async methods. `BotApplication` registers them with Telegram’s `post_init`/`post_stop`, while the CLI handles signals and delegates to lifecycle cleanup.
-4. Shrink `CleanBot` to a thin adaptor or remove it; command handlers become standalone objects wired with injected services.
-5. Update `register_core_handlers` to accept handler callables rather than the whole bot instance, reinforcing separation of concerns.
+## Proposed Approach
+1. **Declarative Router**
+   - Introduce a `CallbackRouter` that supports exact and prefix routes, replacing the large `if`/`startswith` ladder in `handle_callback`.
+   - Keep route definitions inside the existing `build_routes()` helpers, but have them register `CallbackRoute` objects (token/pattern, handler, optional guard).
+   - Provide a single place to handle unknown callbacks and telemetry.
 
-## Process Note
-After completing this refactor, continue tracing the runtime flow to identify the next major module in need of restructuring. Repeat this review-refactor cycle until the entire codebase matches the modular, reusable design goals.
+2. **Flow-Specific Handler Classes**
+   - Break the monolithic `CallbackHandler` into focused classes, e.g.:
+     - `BookingMenuHandler` – reserve/playback menus, availability checks.
+     - `QueueBookingHandler` – queue-specific date/time/court flows.
+     - `ProfileHandler` – profile editing, keypad inputs, validation.
+     - `AdminHandler` – admin dashboards, test-mode toggles.
+   - Each class receives only the dependencies it actually needs (availability checker, reservation queue, user manager, notifications, etc.) from the `DependencyContainer`.
+   - The router composes these classes and exposes a thin `CallbackDispatcher` object to Telegram.
+
+3. **Typed Conversation State**
+   - Define small dataclasses (e.g., `QueueBookingState`, `ProfileEditState`) that capture the fields currently stored in `context.user_data`.
+   - Add helpers to read/write these dataclasses from `context.user_data`, wrapping serialization details and reducing key-name drift.
+   - Update handlers to depend on these helpers rather than touching `user_data` directly.
+
+4. **Reusable UI Helpers**
+   - Extract repeated message/keyboard assembly (queue summaries, profile prompts, admin lists) into dedicated functions under `botapp/ui/`.
+   - Handlers then call a single `render_*` helper and send the returned `(text, keyboard)` tuple, improving readability and consistency.
+
+5. **Config-Driven Behaviour**
+   - Remove module-level globals such as `PRODUCTION_MODE`. Read toggles from the injected config (`BotAppConfig`) or the test-mode helpers in `infrastructure/settings`.
+   - Ensure admin handlers that mutate test mode (`_handle_admin_toggle_test_mode`) use the DI-friendly path.
+
+6. **Testing & Non-Functional Updates**
+   - Add unit/async tests per handler class (queue flow state transitions, profile edits, booking confirmation, etc.).
+   - Extend the pytest harness (fixtures, async helpers, project configuration) so callback tests run in isolation with fake updates/context.
+   - Document the new structure in README and `docs/refactor_roadmap.md`, highlighting how to register new callbacks or extend flows.
+
+## Deliverables
+- New router and handler classes under `botapp/handlers/` that replace the monolithic `CallbackHandler`.
+- Updated dependency container wiring to provide handler instances to the router.
+- State helper utilities and UI formatting functions extracted from the legacy class.
+- Expanded test harness + unit tests covering the refactored flows.
+- Documentation updates summarizing the new callback architecture.
+
+Implementing these steps will turn the callback layer into modular, testable pieces that match the professionalism and maintainability of the newly refactored bot runtime.

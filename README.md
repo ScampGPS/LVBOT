@@ -35,43 +35,27 @@ latest structure until the refactor concludes.
 
 ### Core Components
 
-#### 1. **Telegram Bot Interface** (`run_bot.py`)
-The main entry point providing user interaction through Telegram:
-- **BotConfig**: Central configuration with hardcoded users and settings
-- **UserProfile**: User data management (name, email, phone, preferences)
-- **ReservationQueue**: Manages pending bookings with scheduling
-- **AuthorizationManager**: Controls user access and permissions
-- **ReservationScheduler**: Thread-based executor for timed reservations
+#### 1. **Telegram Runtime** (`botapp/runtime/bot_application.py`)
+Modern entrypoint that orchestrates the bot:
+- `BotApplication` wires handlers, browser services, and the dependency container.
+- `LifecycleManager` owns startup, shutdown, and periodic metrics collection.
+- `CleanBot` (in `botapp/app.py`) subclasses `BotApplication` to keep legacy imports working, and `run_bot.py` simply loads config then delegates to it.
 
-#### 2. **Web Automation Engine** (`playwright_bot.py`)
-Core automation using Playwright for web interactions:
-- **TennisBot**: Main automation class handling the booking flow
-- **IframeHandler**: Specialized handler for iframe navigation with retries
-- Speed optimization with configurable multipliers (1x-200x)
-- Smart waiting mechanisms for dynamic content
-- Complete reservation workflow automation
+#### 2. **Configuration & Dependency Wiring** (`botapp/config/`, `botapp/bootstrap/`)
+- `BotAppConfig` dataclasses load environment-driven settings via `infrastructure/settings.py`.
+- `DependencyContainer` materialises browser pools, reservation services, and callback handlers for the runtime layer.
 
-#### 3. **Browser Pool System** (`browser_pool.py` and variants)
-Advanced browser instance management:
-- **BrowserPool**: Maintains pre-warmed browser instances
-- **BrowserInstance**: Wrapper with health monitoring
-- Automatic instance recycling and health checks
-- Variants: `browser_pool_persistent.py`, `browser/pools/specialized.py`
-- Dramatic performance improvements by eliminating startup time
+#### 3. **Automation Stack** (`automation/`)
+Playwright automation helpers that execute bookings and availability checks:
+- Browser pools under `automation/browser/` handle pooling, health, and recovery.
+- Executors under `automation/executors/` coordinate booking flows.
+- Availability parsing lives in `automation/availability/`.
 
-#### 4. **Court Assignment Logic** (`court_assignment_manager.py`)
-Intelligent court allocation for multiple users:
-- **CourtAssignmentManager**: Conflict-free court distribution
-- Priority system: Admin > Premium > Regular users
-- Overflow handling for high-demand timeslots
-- Fair allocation based on user preferences
+#### 4. **Reservation Domain** (`reservations/`)
+Dataclasses, queue management, and the scheduler pipeline powering deferred bookings.
 
-#### 5. **Performance Monitoring** (`performance_monitor.py`)
-Real-time system health tracking:
-- **WebsitePerformanceMonitor**: Tracks response times and health
-- **SmartTimeoutManager**: Adaptive timeout adjustments
-- Alert system for performance degradation
-- Historical tracking and trend analysis
+#### 5. **Monitoring & Tracking** (`monitoring/`, `tracking/`)
+Operational instrumentation, real-time monitors, and runtime telemetry helpers.
 
 ### Additional Components
 
@@ -95,43 +79,23 @@ Real-time system health tracking:
 
 ```
 LVBot/
-├── Core Bot Files
-│   ├── run_bot.py                      # Main Telegram bot launcher
-│   ├── playwright_bot.py               # Core web automation
-│   ├── browser_pool.py                 # Browser instance pooling
-│   ├── court_assignment_manager.py     # Court allocation logic
-│   └── performance_monitor.py          # Performance tracking
-│
-├── Bot Variants
-│   ├── telegram_bot_enhanced.py        # Enhanced with pooling
-│   ├── telegram_bot_ultimate.py        # All optimizations
-│   ├── telegram_bot_performance.py     # Performance-focused
-│   └── botapp/                         # Telegram bot modules
-│
-├── Configuration & Data
-│   ├── config/.env.example             # Environment variable template
-│   ├── data/authorized_users.json      # Authorized user IDs
-│   ├── data/users.json                 # User profile storage
-│   ├── data/queue.json                 # Reservation queue
-│   └── requirements.txt                # Python dependencies
-│
-├── Deployment
-│   ├── Dockerfile                      # Container configuration
-│   ├── docker-compose.yml              # Multi-container setup
-│   ├── deploy-to-gcp.sh               # GCP deployment script
-│   ├── quick-deploy.sh                # Quick deployment script
-│   ├── startup-script.sh              # VM startup configuration
-│   └── DEPLOY.md                      # Deployment documentation
-│
-├── Testing & Performance
-│   ├── performance_test_*.py          # Performance test variants
-│   ├── test_all_features.py           # Feature testing
-│   ├── test_simple.py                 # Basic tests
-│   └── test_playwright_real.py        # Real browser tests
-│
-└── Documentation
-    ├── README.md                      # This file
-    └── TODO.md                        # Development tasks
+├── botapp/
+│   ├── runtime/                # BotApplication + lifecycle orchestration
+│   ├── config/                 # Structured bot configuration dataclasses
+│   ├── bootstrap/              # Dependency container and factories
+│   ├── handlers/, commands/, ui/  # Telegram UI and handler modules
+│   └── app.py                  # Backwards-compatible CleanBot wrapper
+├── automation/                 # Browser pools, executors, availability parsing
+├── reservations/               # Queue models, scheduler, services
+├── monitoring/                 # Background monitors for courts and health
+├── tracking/                   # Instrumentation helpers and telemetry
+├── infrastructure/             # Settings, logging config, persistence helpers
+├── users/                      # User manager and tier logic
+├── config/, data/, logs/       # Environment templates, JSON state, log output
+├── docs/                       # Architecture notes, roadmaps, manifests
+├── scripts/                    # Operational tooling
+├── tests/                      # Unit and integration test suites
+└── run_bot.py                  # CLI entrypoint that boots BotApplication
 ```
 
 ## Technical Details
