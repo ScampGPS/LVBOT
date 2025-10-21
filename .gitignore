@@ -42,6 +42,7 @@ wheels/
 # Logs
 *.log
 logs/
+!logs/manifest.md
 
 # User data
 authorized_users.json
@@ -57,3 +58,6 @@ Thumbs.db
 # Environment overrides
 .env
 config/.env
+
+# Tracking
+tracking/function_call_counts.json

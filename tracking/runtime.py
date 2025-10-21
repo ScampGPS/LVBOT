@@ -1,63 +1,74 @@
-"""Runtime helpers for tracking which functions execute in production."""
+"""Runtime helpers for tracking how often functions execute in production."""
 
 from __future__ import annotations
 
+import json
 import threading
 from pathlib import Path
-from typing import Set
+from tempfile import NamedTemporaryFile
+from typing import Dict, Optional
 
 _LOCK = threading.RLock()
 _TRACKING_DIR = Path(__file__).resolve().parent
-_TRACKING_FILE = _TRACKING_DIR / "functions_in_use.txt"
-_LEGACY_TRACKING_FILE = _TRACKING_DIR.parent / "logs" / "functions_in_use.txt"
-_SEEN: Set[str] = set()
+_TRACKING_FILE = _TRACKING_DIR / "function_call_counts.json"
+_COUNTS: Dict[str, int] = {}
 
 
-def _read_existing_entries(path: Path) -> Set[str]:
-    if not path.exists():
-        return set()
+def _load_counts() -> None:
+    if not _TRACKING_FILE.exists():
+        return
+
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            return {line.strip() for line in handle if line.strip()}
-    except OSError:
-        return set()
+        with _TRACKING_FILE.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return
 
+    if not isinstance(data, dict):
+        return
 
-def _initialize_seen_cache() -> None:
-    current_entries = _read_existing_entries(_TRACKING_FILE)
-    legacy_entries = _read_existing_entries(_LEGACY_TRACKING_FILE)
-    _SEEN.update(current_entries)
-    _SEEN.update(legacy_entries)
-
-    missing_in_current = _SEEN.difference(current_entries)
-    if missing_in_current:
-        _TRACKING_FILE.parent.mkdir(parents=True, exist_ok=True)
+    for name, raw_count in data.items():
+        if not name:
+            continue
         try:
-            with _TRACKING_FILE.open("a", encoding="utf-8") as handle:
-                for name in sorted(missing_in_current):
-                    handle.write(f"{name}\n")
-        except OSError:
-            # If we cannot persist the merged cache we still keep it in-memory.
-            pass
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            continue
+        _COUNTS[str(name)] = max(count, 0)
 
 
-_initialize_seen_cache()
+def _persist_counts_locked() -> None:
+    """Persist the in-memory counts to disk. Caller must hold ``_LOCK``."""
+    _TRACKING_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp_path: Optional[Path] = None
+    try:
+        with NamedTemporaryFile(
+            "w", encoding="utf-8", dir=_TRACKING_FILE.parent, delete=False
+        ) as handle:
+            json.dump(_COUNTS, handle, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            tmp_path = Path(handle.name)
+
+        if tmp_path is not None:
+            tmp_path.replace(_TRACKING_FILE)
+    except OSError:
+        if tmp_path is not None:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
 
 
 def t(func_name: str) -> None:
-    """Record the provided function name the first time it runs in this process."""
+    """Record the provided function name each time it runs."""
     if not func_name:
         return
 
     with _LOCK:
-        if func_name in _SEEN:
-            return
+        _COUNTS[func_name] = _COUNTS.get(func_name, 0) + 1
+        _persist_counts_locked()
 
-        _TRACKING_FILE.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with _TRACKING_FILE.open("a", encoding="utf-8") as handle:
-                handle.write(f"{func_name}\n")
-        except OSError:
-            return
 
-        _SEEN.add(func_name)
+_load_counts()
