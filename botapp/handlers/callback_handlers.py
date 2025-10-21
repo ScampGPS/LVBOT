@@ -1816,14 +1816,45 @@ class CallbackHandler:
             )
             return
         
+        user_id = query.from_user.id
+        user_profile = self.user_manager.get_user(user_id)
+
+        required_fields = ('first_name', 'last_name', 'email', 'phone')
+        missing_fields: List[str] = []
+        if not user_profile:
+            missing_fields = list(required_fields)
+        else:
+            missing_fields = [field for field in required_fields if not user_profile.get(field)]
+
+        if missing_fields:
+            self.logger.warning(
+                "User %s missing required fields for queued booking: %s",
+                user_id,
+                ', '.join(missing_fields),
+            )
+            reply_markup = TelegramUI.create_profile_keyboard()
+            await query.edit_message_text(
+                "❌ **Profile Incomplete**\n\n"
+                "Please update your profile before adding a reservation to the queue.\n"
+                f"Missing fields: {', '.join(missing_fields)}",
+                parse_mode='Markdown',
+                reply_markup=reply_markup,
+            )
+            return
+
         # Store complete reservation details for final confirmation
         # Aligned with FEATURE_SPECS.md Queue Entry Structure
         context.user_data['queue_booking_summary'] = {
-            'user_id': query.from_user.id,
+            'user_id': user_id,
+            'first_name': user_profile.get('first_name'),
+            'last_name': user_profile.get('last_name'),
+            'email': user_profile.get('email'),
+            'phone': user_profile.get('phone'),
+            'tier': user_profile.get('tier_name') or user_profile.get('tier'),
             'target_date': selected_date.strftime('%Y-%m-%d'),
             'target_time': selected_time,
             'court_preferences': cleaned_courts,
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
         }
 
         # Create confirmation keyboard
