@@ -22,5 +22,31 @@
     "time": "07:00",
     "confirmation_id": null,
     "confirmation_url": null
+  },
+  "imm_20251021122805_125763357": {
+    "id": "imm_20251021122805_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "failed",
+    "created_at": "2025-10-21T12:28:05.209649",
+    "court": "2",
+    "date": "2025-10-23",
+    "time": "10:00",
+    "message": "Time slot 10:00 not found",
+    "errors": [
+      "Time slot 10:00 not found",
+      "Booking confirmation not detected"
+    ],
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-23",
+      "target_time": "10:00",
+      "court_number": 2,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "TennisExecutor",
+      "flow": "fallback"
+    }
   }
 }
