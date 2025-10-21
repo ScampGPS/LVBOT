@@ -433,7 +433,7 @@ class SpecializedBrowserPool:
                         while (parent && depth > 0) {{
                             const parentText = parent.textContent || '';
                             if (parentText.includes('TENNIS CANCHA')) {{
-                                const match = parentText.match(/TENNIS CANCHA (\d)/);
+                                const match = parentText.match(/TENNIS CANCHA (\\d)/);
                                 if (match) {{
                                     courtInfo = {{
                                         courtNumber: parseInt(match[1]),
