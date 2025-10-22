@@ -43,6 +43,12 @@ from .profile import (
     format_user_profile_message as _format_user_profile_message,
     format_user_tier_badge as _format_user_tier_badge,
 )
+from .queue import (
+    format_time_selection_prompt as _format_time_selection_prompt,
+    format_no_time_slots_message as _format_no_time_slots_message,
+    format_confirmation_message as _format_queue_confirmation_message,
+    format_cancellation_message as _format_queue_cancellation_message,
+)
 
 
 class TelegramUI:
@@ -87,6 +93,10 @@ class TelegramUI:
     format_interactive_availability_message = staticmethod(_format_interactive_availability_message)
     format_user_profile_message = staticmethod(_format_user_profile_message)
     format_user_tier_badge = staticmethod(_format_user_tier_badge)
+    format_queue_time_prompt = staticmethod(_format_time_selection_prompt)
+    format_queue_no_times = staticmethod(_format_no_time_slots_message)
+    format_queue_confirmation_message = staticmethod(_format_queue_confirmation_message)
+    format_queue_cancellation_message = staticmethod(_format_queue_cancellation_message)
 
 
 __all__ = ['TelegramUI']

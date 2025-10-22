@@ -3,6 +3,7 @@ import pytest
 
 from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.queue.handler import QueueHandler
+from botapp.handlers.queue import session as queue_session
 from botapp.handlers.state import get_session_state
 
 
@@ -103,11 +104,11 @@ async def test_queue_confirm_success_clears_state(deps):
     handler = QueueHandler(deps)
     context = DummyContext()
     # prepopulate state as booking flow would
-    context.user_data['queue_booking_summary'] = {
+    queue_session.set_summary(context, {
         'court_preferences': [1, 2],
         'target_date': '2025-10-23',
         'target_time': '13:00',
-    }
+    })
 
     update = DummyUpdate('queue_confirm')
 
@@ -127,11 +128,11 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
     deps.reservation_queue = DummyReservationQueue(duplicate=True)
     handler = QueueHandler(deps)
     context = DummyContext()
-    context.user_data['queue_booking_summary'] = {
+    queue_session.set_summary(context, {
         'court_preferences': [1, 2, 3],
         'target_date': '2025-10-23',
         'target_time': '13:00',
-    }
+    })
 
     update = DummyUpdate('queue_confirm')
 

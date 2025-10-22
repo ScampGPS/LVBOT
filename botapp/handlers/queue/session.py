@@ -1,0 +1,236 @@
+"""Typed helpers for storing queue booking session data."""
+
+from __future__ import annotations
+from tracking import t
+
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any, Dict, List, Optional
+
+from telegram.ext import ContextTypes
+
+from botapp.handlers.state import get_session_state
+
+
+@dataclass
+class QueueSessionData:
+    """Represents the queue booking session values stored in user data."""
+
+    selected_date: Optional[date] = None
+    selected_time: Optional[str] = None
+    selected_courts: List[int] = field(default_factory=list)
+    summary: Dict[str, Any] = field(default_factory=dict)
+    modifying_reservation_id: Optional[str] = None
+    modifying_option: Optional[str] = None
+
+
+LEGACY_DATE_KEY = 'queue_booking_date'
+LEGACY_TIME_KEY = 'queue_booking_time'
+LEGACY_COURTS_KEY = 'queue_booking_courts'
+LEGACY_SUMMARY_KEY = 'queue_booking_summary'
+LEGACY_MODIFY_ID_KEY = 'modifying_reservation_id'
+LEGACY_MODIFY_OPTION_KEY = 'modifying_option'
+
+
+def _ensure_state(context: ContextTypes.DEFAULT_TYPE) -> QueueSessionData:
+    """Return a mutable data object backed by the typed session state."""
+
+    t('botapp.handlers.queue.session._ensure_state')
+    state = get_session_state(context).queue
+    data = QueueSessionData(
+        selected_date=_coerce_date(state.booking_date),
+        selected_time=state.booking_time,
+        selected_courts=list(state.courts or []),
+        summary=dict(state.summary or {}),
+        modifying_reservation_id=state.modifying_reservation_id,
+        modifying_option=state.modifying_option,
+    )
+    user_data = context.user_data
+    if data.selected_date is None and LEGACY_DATE_KEY in user_data:
+        data.selected_date = _coerce_date(user_data.get(LEGACY_DATE_KEY))
+    if data.selected_time is None and LEGACY_TIME_KEY in user_data:
+        data.selected_time = user_data.get(LEGACY_TIME_KEY)
+    if not data.selected_courts and LEGACY_COURTS_KEY in user_data:
+        data.selected_courts = list(user_data.get(LEGACY_COURTS_KEY) or [])
+    if not data.summary and LEGACY_SUMMARY_KEY in user_data:
+        raw_summary = user_data.get(LEGACY_SUMMARY_KEY) or {}
+        if isinstance(raw_summary, dict):
+            data.summary = dict(raw_summary)
+    if data.modifying_reservation_id is None and LEGACY_MODIFY_ID_KEY in user_data:
+        data.modifying_reservation_id = user_data.get(LEGACY_MODIFY_ID_KEY)
+    if data.modifying_option is None and LEGACY_MODIFY_OPTION_KEY in user_data:
+        data.modifying_option = user_data.get(LEGACY_MODIFY_OPTION_KEY)
+    return data
+
+
+def _persist_state(context: ContextTypes.DEFAULT_TYPE, data: QueueSessionData) -> None:
+    """Persist the provided data into both typed state and legacy keys."""
+
+    t('botapp.handlers.queue.session._persist_state')
+    state = get_session_state(context).queue
+    state.booking_date = data.selected_date.isoformat() if data.selected_date else None
+    state.booking_time = data.selected_time
+    state.courts = list(data.selected_courts)
+    state.summary = dict(data.summary)
+    state.modifying_reservation_id = data.modifying_reservation_id
+    state.modifying_option = data.modifying_option
+
+    user_data = context.user_data
+    if data.selected_date is not None:
+        user_data[LEGACY_DATE_KEY] = data.selected_date
+    else:
+        user_data.pop(LEGACY_DATE_KEY, None)
+
+    if data.selected_time is not None:
+        user_data[LEGACY_TIME_KEY] = data.selected_time
+    else:
+        user_data.pop(LEGACY_TIME_KEY, None)
+
+    if data.selected_courts:
+        user_data[LEGACY_COURTS_KEY] = list(data.selected_courts)
+    else:
+        user_data.pop(LEGACY_COURTS_KEY, None)
+
+    if data.summary:
+        user_data[LEGACY_SUMMARY_KEY] = dict(data.summary)
+    else:
+        user_data.pop(LEGACY_SUMMARY_KEY, None)
+
+    if data.modifying_reservation_id:
+        user_data[LEGACY_MODIFY_ID_KEY] = data.modifying_reservation_id
+    else:
+        user_data.pop(LEGACY_MODIFY_ID_KEY, None)
+
+    if data.modifying_option:
+        user_data[LEGACY_MODIFY_OPTION_KEY] = data.modifying_option
+    else:
+        user_data.pop(LEGACY_MODIFY_OPTION_KEY, None)
+
+
+def _coerce_date(value: Optional[Any]) -> Optional[date]:
+    """Convert stored date representations into `date` objects."""
+
+    t('botapp.handlers.queue.session._coerce_date')
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def set_selected_date(context: ContextTypes.DEFAULT_TYPE, selected_date: Optional[date]) -> None:
+    """Persist the selected queue booking date."""
+
+    t('botapp.handlers.queue.session.set_selected_date')
+    data = _ensure_state(context)
+    data.selected_date = selected_date
+    _persist_state(context, data)
+
+
+def get_selected_date(context: ContextTypes.DEFAULT_TYPE) -> Optional[date]:
+    """Return the selected queue booking date if any."""
+
+    t('botapp.handlers.queue.session.get_selected_date')
+    return _ensure_state(context).selected_date
+
+
+def set_selected_time(context: ContextTypes.DEFAULT_TYPE, selected_time: Optional[str]) -> None:
+    """Persist the selected queue booking time."""
+
+    t('botapp.handlers.queue.session.set_selected_time')
+    data = _ensure_state(context)
+    data.selected_time = selected_time
+    _persist_state(context, data)
+
+
+def get_selected_time(context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
+    """Return the selected queue booking time if any."""
+
+    t('botapp.handlers.queue.session.get_selected_time')
+    return _ensure_state(context).selected_time
+
+
+def set_selected_courts(context: ContextTypes.DEFAULT_TYPE, courts: List[int]) -> None:
+    """Persist the selected courts for the booking."""
+
+    t('botapp.handlers.queue.session.set_selected_courts')
+    data = _ensure_state(context)
+    data.selected_courts = sorted(set(courts))
+    _persist_state(context, data)
+
+
+def get_selected_courts(context: ContextTypes.DEFAULT_TYPE) -> List[int]:
+    """Return the selected courts, defaulting to an empty list."""
+
+    t('botapp.handlers.queue.session.get_selected_courts')
+    return list(_ensure_state(context).selected_courts)
+
+
+def set_summary(context: ContextTypes.DEFAULT_TYPE, summary: Dict[str, Any]) -> None:
+    """Persist the prepared booking summary."""
+
+    t('botapp.handlers.queue.session.set_summary')
+    data = _ensure_state(context)
+    data.summary = dict(summary)
+    _persist_state(context, data)
+
+
+def get_summary(context: ContextTypes.DEFAULT_TYPE) -> Dict[str, Any]:
+    """Return the queued booking summary, empty if unset."""
+
+    t('botapp.handlers.queue.session.get_summary')
+    return dict(_ensure_state(context).summary)
+
+
+def clear_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Remove the stored booking summary."""
+
+    t('botapp.handlers.queue.session.clear_summary')
+    data = _ensure_state(context)
+    data.summary = {}
+    _persist_state(context, data)
+
+
+def set_modification(context: ContextTypes.DEFAULT_TYPE, reservation_id: Optional[str], option: Optional[str]) -> None:
+    """Store modification context identifiers."""
+
+    t('botapp.handlers.queue.session.set_modification')
+    data = _ensure_state(context)
+    data.modifying_reservation_id = reservation_id
+    data.modifying_option = option
+    _persist_state(context, data)
+
+
+def get_modification(context: ContextTypes.DEFAULT_TYPE) -> tuple[Optional[str], Optional[str]]:
+    """Return the modification reservation id and option."""
+
+    t('botapp.handlers.queue.session.get_modification')
+    data = _ensure_state(context)
+    return data.modifying_reservation_id, data.modifying_option
+
+
+def clear_all(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Clear all queue booking session data."""
+
+    t('botapp.handlers.queue.session.clear_all')
+    data = QueueSessionData()
+    _persist_state(context, data)
+
+
+__all__ = [
+    'get_selected_date',
+    'set_selected_date',
+    'get_selected_time',
+    'set_selected_time',
+    'get_selected_courts',
+    'set_selected_courts',
+    'get_summary',
+    'set_summary',
+    'clear_summary',
+    'set_modification',
+    'get_modification',
+    'clear_all',
+]

@@ -12,6 +12,7 @@ from telegram.ext import ContextTypes
 
 from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.state import get_session_state, reset_flow
+from botapp.handlers.queue import session as queue_session
 from botapp.notifications import (
     format_duplicate_reservation_message,
     format_queue_reservation_added,
@@ -86,14 +87,12 @@ class QueueHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu')
         query = update.callback_query
 
-        # Safely answer the callback query
-        try:
-            await query.answer()
-        except Exception as e:
-            self.logger.warning(f"Failed to answer queue booking menu callback: {e}")
+        await self._safe_answer_callback(query)
 
-        # Set state for queue booking flow
+        # Set flow and reset any previous queue state
+        reset_flow(context, 'queue_booking')
         context.user_data['current_flow'] = 'queue_booking'
+        queue_session.clear_all(context)
 
         # For queue booking, only show dates that have slots beyond 48 hours
         dates = []
@@ -329,8 +328,8 @@ class QueueHandler:
             )
             return
 
-        # Store selected date in user context
-        context.user_data['queue_booking_date'] = selected_date
+        # Store selected date in session context
+        queue_session.set_selected_date(context, selected_date)
 
         config = get_test_mode()
 
@@ -373,15 +372,13 @@ class QueueHandler:
         # Check if we have any available time slots
         if not available_hours:
             self.logger.info("❌ NO TIME SLOTS AVAILABLE on this date")
-            await self._edit_callback_message(query,
-                f"⚠️ **No time slots available**\n\n"
-                f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
-                f"All time slots on this date are within 48 hours.\n"
-                f"Please select a later date for queue booking.",
+            await self._edit_callback_message(
+                query,
+                TelegramUI.format_queue_no_times(selected_date),
                 parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Dates", callback_data="queue_booking")
-                ]])
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back to Dates", callback_data="queue_booking")]
+                ]),
             )
             return
 
@@ -400,13 +397,12 @@ class QueueHandler:
         )
 
         # Show time selection interface
-        await self._edit_callback_message(query,
-            f"⏰ **Queue Booking**\n\n"
-            f"📅 Selected Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
-            f"⏱️ Select a time for your queued reservation:\n"
-            f"ℹ️ {len(available_hours)} time slots available (48+ hours away)",
+        availability_note = f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
+        await self._edit_callback_message(
+            query,
+            TelegramUI.format_queue_time_prompt(selected_date, availability_note),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     async def _show_queue_time_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: date) -> None:
@@ -458,15 +454,13 @@ class QueueHandler:
 
         # Check if we have any available time slots
         if not available_hours:
-            await self._edit_callback_message(query,
-                f"⚠️ **No time slots available**\n\n"
-                f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
-                f"All time slots on this date are within 48 hours.\n"
-                f"Please select a later date for queue booking.",
+            await self._edit_callback_message(
+                query,
+                TelegramUI.format_queue_no_times(selected_date),
                 parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Dates", callback_data="queue_booking")
-                ]])
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back to Dates", callback_data="queue_booking")]
+                ]),
             )
             return
 
@@ -478,13 +472,11 @@ class QueueHandler:
         )
 
         # Show time selection interface
-        await self._edit_callback_message(query,
-            f"⏰ **Queue Booking**\n\n"
-            f"📅 Selected Date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
-            f"⏱️ Select a time for your queued reservation:\n"
-            f"{availability_note}",
+        await self._edit_callback_message(
+            query,
+            TelegramUI.format_queue_time_prompt(selected_date, availability_note),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     async def handle_queue_booking_time_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -528,8 +520,7 @@ class QueueHandler:
             return
 
         # Check if this is a modification flow
-        modifying_id = context.user_data.get('modifying_reservation_id')
-        modifying_option = context.user_data.get('modifying_option')
+        modifying_id, modifying_option = queue_session.get_modification(context)
 
         if modifying_id and modifying_option == 'time':
             # Update the reservation time
@@ -539,8 +530,7 @@ class QueueHandler:
                 self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
                 # Clear modification context
-                context.user_data.pop('modifying_reservation_id', None)
-                context.user_data.pop('modifying_option', None)
+                queue_session.set_modification(context, None, None)
 
                 # Show success message
                 await self._edit_callback_message(query,
@@ -554,11 +544,10 @@ class QueueHandler:
                 )
                 return
 
-        # Store selected time in user context
-        context.user_data['queue_booking_time'] = selected_time
+        queue_session.set_selected_time(context, selected_time)
 
         # Use stored date as primary source (callback date for validation only)
-        selected_date = context.user_data.get('queue_booking_date')
+        selected_date = queue_session.get_selected_date(context)
         if selected_date is None:
             self.logger.error("Missing queue_booking_date in user context")
             await self._edit_callback_message(query,
@@ -577,13 +566,16 @@ class QueueHandler:
         reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
 
         # Show court selection interface
-        await self._edit_callback_message(query,
-            f"⏰ **Queue Booking**\n\n"
-            f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
-            f"⏱️ Time: {selected_time}\n\n"
-            f"🎾 Select your preferred court(s) for the reservation:",
+        await self._edit_callback_message(
+            query,
+            (
+                "⏰ **Queue Booking**\n\n"
+                f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
+                f"⏱️ Time: {selected_time}\n\n"
+                "🎾 Select your preferred court(s) for the reservation:"
+            ),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     async def handle_queue_booking_court_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -634,8 +626,7 @@ class QueueHandler:
             return
 
         # Check if this is a modification flow
-        modifying_id = context.user_data.get('modifying_reservation_id')
-        modifying_option = context.user_data.get('modifying_option')
+        modifying_id, modifying_option = queue_session.get_modification(context)
 
         if modifying_id and modifying_option == 'courts':
             # Update the reservation courts
@@ -645,8 +636,7 @@ class QueueHandler:
                 self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
                 # Clear modification context
-                context.user_data.pop('modifying_reservation_id', None)
-                context.user_data.pop('modifying_option', None)
+                queue_session.set_modification(context, None, None)
 
                 # Format courts text
                 courts_text = self._format_court_preferences(
@@ -668,11 +658,11 @@ class QueueHandler:
 
         # Store selected courts in user context
         cleaned_courts = sorted(set(selected_courts))
-        context.user_data['queue_booking_courts'] = cleaned_courts
+        queue_session.set_selected_courts(context, cleaned_courts)
 
         # Retrieve stored booking details
-        selected_date = context.user_data.get('queue_booking_date')
-        selected_time = context.user_data.get('queue_booking_time')
+        selected_date = queue_session.get_selected_date(context)
+        selected_time = queue_session.get_selected_time(context)
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details in user context")
@@ -709,7 +699,7 @@ class QueueHandler:
 
         # Store complete reservation details for final confirmation
         # Aligned with FEATURE_SPECS.md Queue Entry Structure
-        context.user_data['queue_booking_summary'] = {
+        queue_session.set_summary(context, {
             'user_id': user_id,
             'first_name': user_profile.get('first_name'),
             'last_name': user_profile.get('last_name'),
@@ -720,7 +710,7 @@ class QueueHandler:
             'target_time': selected_time,
             'court_preferences': cleaned_courts,
             'created_at': datetime.now().isoformat(),
-        }
+        })
 
         # Create confirmation keyboard
         reply_markup = TelegramUI.create_queue_confirmation_keyboard()
@@ -730,15 +720,15 @@ class QueueHandler:
             cleaned_courts,
             self.AVAILABLE_COURTS,
         )
-        await self._edit_callback_message(query,
-            f"⏰ **Queue Booking Confirmation**\n\n"
-            f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
-            f"⏱️ Time: {selected_time}\n"
-            f"🎾 Courts: {courts_text}\n\n"
-            f"🤖 This reservation will be queued and automatically booked when the booking window opens.\n\n"
-            f"**Confirm to add this reservation to your queue?**",
+        await self._edit_callback_message(
+            query,
+            TelegramUI.format_queue_confirmation_message(
+                selected_date,
+                selected_time,
+                courts_text,
+            ),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     async def handle_queue_booking_confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -764,7 +754,7 @@ class QueueHandler:
             self.logger.warning(f"Failed to answer booking confirmation callback: {e}")
 
         # Retrieve the complete booking summary
-        booking_summary = context.user_data.get('queue_booking_summary')
+        booking_summary = queue_session.get_summary(context)
         if not booking_summary:
             self.logger.error("Missing queue_booking_summary in user context")
             await self._edit_callback_message(query,
@@ -785,7 +775,8 @@ class QueueHandler:
             )
 
             # Clear queue booking state from context
-            self.clear_queue_booking_state(context)
+            queue_session.clear_all(context)
+            context.user_data.pop('current_flow', None)
 
             # Create back to menu keyboard
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
@@ -818,7 +809,8 @@ class QueueHandler:
             )
 
             # Clear queue booking state
-            self.clear_queue_booking_state(context)
+            queue_session.clear_all(context)
+            context.user_data.pop('current_flow', None)
 
         except Exception as e:
             await ErrorHandler.handle_booking_error(update, context, 'booking_failed', 
@@ -828,16 +820,13 @@ class QueueHandler:
     def clear_queue_booking_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
 
-        session = get_session_state(context)
-        session.queue = session.queue.__class__()
-        for key in ['queue_booking_date', 'queue_booking_time', 'queue_booking_courts',
-                     'queue_booking_summary', 'selected_date', 'selected_month', 'selected_year',
-                     'complete_matrix', 'available_dates', 'modifying_reservation_id',
-                     'modifying_option']:
-            context.user_data.pop(key, None)
+        t('botapp.handlers.queue.QueueHandler.clear_queue_booking_state')
+        queue_session.clear_all(context)
+        context.user_data.pop('current_flow', None)
 
     def _clear_queue_booking_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Backward-compatibility wrapper."""
+        t('botapp.handlers.queue.QueueHandler._clear_queue_booking_state')
         self.clear_queue_booking_state(context)
 
     async def handle_queue_booking_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -869,13 +858,11 @@ class QueueHandler:
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
 
         # Show cancellation message
-        await self._edit_callback_message(query,
-            "❌ **Queue Booking Cancelled**\n\n"
-            "Your reservation request has been cancelled. "
-            "No changes have been made to your queue.\n\n"
-            "You can start a new booking anytime using the main menu.",
+        await self._edit_callback_message(
+            query,
+            TelegramUI.format_queue_cancellation_message(),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
     async def handle_back_to_queue_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -898,8 +885,8 @@ class QueueHandler:
         await self._safe_answer_callback(query)
 
         # Retrieve stored booking details
-        selected_date = context.user_data.get('queue_booking_date')
-        selected_time = context.user_data.get('queue_booking_time')
+        selected_date = queue_session.get_selected_date(context)
+        selected_time = queue_session.get_selected_time(context)
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details when going back to court selection")
@@ -1238,7 +1225,7 @@ class QueueHandler:
         # For queued reservations, allow modification
         if is_queued:
             # Store reservation ID in context for modification flow
-            context.user_data['modifying_reservation_id'] = reservation_id
+            queue_session.set_modification(context, reservation_id, None)
 
             # Show modification options
             keyboard = [
@@ -1346,8 +1333,7 @@ class QueueHandler:
             return
 
         # Store modification context
-        context.user_data['modifying_reservation_id'] = reservation_id
-        context.user_data['modifying_option'] = option
+        queue_session.set_modification(context, reservation_id, option)
 
         # Get the reservation
         reservation = self.deps.reservation_queue.get_reservation(reservation_id)
@@ -1393,7 +1379,7 @@ class QueueHandler:
         time_str = query.data.replace('queue_time_modify_', '')
 
         # Get the reservation being modified
-        modifying_id = context.user_data.get('modifying_reservation_id')
+        modifying_id, _ = queue_session.get_modification(context)
         if not modifying_id:
             await query.answer("Session expired. Please try again.")
             return
@@ -1405,8 +1391,7 @@ class QueueHandler:
             self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
             # Clear modification context
-            context.user_data.pop('modifying_reservation_id', None)
-            context.user_data.pop('modifying_option', None)
+            queue_session.set_modification(context, None, None)
 
             # Show success message
             await self._edit_callback_message(query,
