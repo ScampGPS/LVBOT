@@ -332,6 +332,13 @@ class QueueHandler:
         # Store selected date in user context
         context.user_data['queue_booking_date'] = selected_date
 
+        config = get_test_mode()
+
+        # Use specialized path when test mode allows within 48 hours
+        if config.enabled and config.allow_within_48h:
+            await self._show_queue_time_selection(update, context, selected_date)
+            return
+
         # Use centralized court hours from constants
         all_court_hours = get_court_hours(selected_date)
 

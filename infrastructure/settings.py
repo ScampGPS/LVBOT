@@ -130,7 +130,7 @@ def load_test_mode(env: Optional[Mapping[str, str]] = None) -> TestModeConfig:
     allow_within_48h = _to_bool(env.get('TEST_MODE_ALLOW_WITHIN_48H', 'false'))
 
     try:
-        trigger_delay_minutes = float(env.get('TEST_MODE_TRIGGER_DELAY_MINUTES', '0.25'))
+        trigger_delay_minutes = float(env.get('TEST_MODE_TRIGGER_DELAY_MINUTES', '1'))
     except (TypeError, ValueError):
         trigger_delay_minutes = 0.25
 
