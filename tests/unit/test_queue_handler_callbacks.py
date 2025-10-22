@@ -140,3 +140,55 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
 
     assert 'queue_booking_summary' not in context.user_data
     assert update.callback_query.edits[-1][0].startswith('dup:')
+
+
+@pytest.mark.asyncio
+async def test_blocked_date_allows_selection_in_test_mode(monkeypatch, deps):
+    handler = QueueHandler(deps)
+
+    class Config:
+        enabled = True
+        allow_within_48h = True
+
+    monkeypatch.setattr('botapp.handlers.queue.handler.get_test_mode', lambda: Config)
+
+    captured = []
+
+    async def fake_show(update, context, selected_date):
+        captured.append(selected_date)
+
+    monkeypatch.setattr(handler, '_show_queue_time_selection', fake_show)
+
+    update = DummyUpdate('blocked_date_2025-10-22')
+    context = DummyContext()
+
+    await handler.handle_blocked_date_selection(update, context)
+
+    assert captured and captured[0].isoformat() == '2025-10-22'
+    assert queue_session.get_selected_date(context).isoformat() == '2025-10-22'
+    assert context.user_data.get('current_flow') == 'queue_booking'
+
+
+@pytest.mark.asyncio
+async def test_blocked_date_rejected_when_not_allowed(monkeypatch, deps):
+    handler = QueueHandler(deps)
+
+    class Config:
+        enabled = False
+        allow_within_48h = False
+
+    monkeypatch.setattr('botapp.handlers.queue.handler.get_test_mode', lambda: Config)
+
+    messages = []
+
+    async def fake_edit(query, text, **kwargs):
+        messages.append(text)
+
+    monkeypatch.setattr(handler, '_edit_callback_message', fake_edit)
+
+    update = DummyUpdate('blocked_date_2025-10-22')
+    context = DummyContext()
+
+    await handler.handle_blocked_date_selection(update, context)
+
+    assert messages and any('48' in msg for msg in messages)

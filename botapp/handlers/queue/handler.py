@@ -833,6 +833,41 @@ class QueueHandler:
         t('botapp.handlers.queue.QueueHandler._clear_queue_booking_state')
         self.clear_queue_booking_state(context)
 
+    async def handle_blocked_date_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Allow selecting within-48h dates when test mode permits."""
+
+        t('botapp.handlers.queue.QueueHandler.handle_blocked_date_selection')
+        query = update.callback_query
+        config = get_test_mode()
+
+        if not (config.enabled and config.allow_within_48h):
+            await self._edit_callback_message(
+                query,
+                "⚠️ This date is within the 48-hour booking window. Enable test mode to queue it.",
+                parse_mode='Markdown',
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+            )
+            return
+
+        date_str = query.data.replace('blocked_date_', '')
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            await self._edit_callback_message(
+                query,
+                "❌ Invalid date selection received. Please try again.",
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+            )
+            return
+
+        reset_flow(context, 'queue_booking')
+        queue_session.set_selected_date(context, selected_date)
+        queue_session.set_selected_time(context, None)
+        queue_session.set_selected_courts(context, [])
+        context.user_data['current_flow'] = 'queue_booking'
+
+        await self._show_queue_time_selection(update, context, selected_date)
+
     async def handle_queue_booking_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle cancellation of queue booking reservation

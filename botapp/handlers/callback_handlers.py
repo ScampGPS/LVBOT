@@ -91,7 +91,7 @@ class CallbackHandler:
         self.router.add_prefix('year_', self.booking.handle_year_selection)
         self.router.add_prefix('month_', self.booking.handle_month_selection)
         self.router.add_prefix('future_date_', self.booking.handle_future_date_selection)
-        self.router.add_prefix('blocked_date_', self.booking.handle_blocked_date_selection)
+        self.router.add_prefix('blocked_date_', self.queue.handle_blocked_date_selection)
         self.router.add_prefix('back_to_month_', self.booking.handle_back_to_month)
         self.router.add_prefix('cycle_day_', self.booking.handle_day_cycling)
         self.router.add_prefix('queue_court_', self.queue.handle_queue_booking_court_selection)
