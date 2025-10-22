@@ -759,10 +759,10 @@ class ReservationScheduler:
         self,
         assignment: Dict,
         reservation: Dict,
-        target_date: date,
         index: int,
         total: int,
         *,
+        target_date: date,
         prebuilt_request: Optional[BookingRequest] = None,
     ) -> Dict:
         """Execute a single queued booking using the unified booking contracts."""

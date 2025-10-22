@@ -74,48 +74,6 @@ def build_executor_request(
     )
 
 
-def build_tennis_booking_request(
-    *,
-    tennis_config: Any,
-    target_date: date,
-    metadata: Optional[Dict[str, Any]] = None,
-    executor_config: Optional[Dict[str, Any]] = None,
-) -> BookingRequest:
-    """Construct a booking request for tennis automation flows."""
-
-    courts = tennis_config.court_preference or [1]
-    time_slot = tennis_config.preferred_times[0] if tennis_config.preferred_times else tennis_config.preferred_time
-
-    user_info = {
-        "user_id": tennis_config.user_id,
-        "first_name": tennis_config.first_name,
-        "last_name": tennis_config.last_name,
-        "email": tennis_config.email,
-        "phone": tennis_config.phone,
-        "tier": getattr(tennis_config, "tier", None),
-    }
-
-    base_metadata = {
-        "source": BookingSource.TENNIS.value,
-        "target_date": target_date.isoformat(),
-        "target_time": time_slot,
-        "fallback_times": list(getattr(tennis_config, "fallback_times", [])),
-    }
-    if metadata:
-        base_metadata.update(metadata)
-
-    return build_executor_request(
-        source=BookingSource.TENNIS,
-        user_info=user_info,
-        target_date=target_date,
-        time_slot=time_slot,
-        courts=courts,
-        request_id=getattr(tennis_config, "request_id", None),
-        metadata=base_metadata,
-        executor_config=executor_config,
-    )
-
-
 def build_retry_request(
     *,
     original_request: BookingRequest,

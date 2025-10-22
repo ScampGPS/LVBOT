@@ -12,6 +12,7 @@ import pytz
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 from infrastructure.constants import get_court_hours
+from infrastructure.settings import get_test_mode
 
 
 def create_court_selection_keyboard(available_courts: List[int]) -> ReplyKeyboardMarkup:
@@ -76,6 +77,7 @@ def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immed
     selectable_dates: List[str] = []
 
     if flow_type == 'queue_booking':
+        config = get_test_mode()
         mexico_tz = pytz.timezone('America/Mexico_City')
         current_time = datetime.now(mexico_tz)
         logger.info(
@@ -101,19 +103,9 @@ def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immed
             if flow_type == 'queue_booking':
                 mexico_tz = pytz.timezone('America/Mexico_City')
                 current_time = datetime.now(mexico_tz)
-                has_available_slot = False
-                for hour_str in get_court_hours(current_date):
-                    hour, minute = map(int, hour_str.split(':'))
-                    slot_datetime_naive = datetime.combine(
-                        current_date,
-                        datetime.min.time().replace(hour=hour, minute=minute),
-                    )
-                    slot_datetime = mexico_tz.localize(slot_datetime_naive)
-                    if (slot_datetime - current_time).total_seconds() > 48 * 3600:
-                        has_available_slot = True
-                        break
+                allow_within_48h = config.enabled and config.allow_within_48h
 
-                if has_available_slot:
+                if allow_within_48h:
                     selectable_dates.append(current_date.strftime('%Y-%m-%d'))
                     row.append(
                         InlineKeyboardButton(
@@ -122,12 +114,33 @@ def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immed
                         )
                     )
                 else:
-                    row.append(
-                        InlineKeyboardButton(
-                            "🚫",
-                            callback_data=f"blocked_date_{year}-{month:02d}-{day_num:02d}",
+                    has_available_slot = False
+                    for hour_str in get_court_hours(current_date):
+                        hour, minute = map(int, hour_str.split(':'))
+                        slot_datetime_naive = datetime.combine(
+                            current_date,
+                            datetime.min.time().replace(hour=hour, minute=minute),
                         )
-                    )
+                        slot_datetime = mexico_tz.localize(slot_datetime_naive)
+                        if (slot_datetime - current_time).total_seconds() > 48 * 3600:
+                            has_available_slot = True
+                            break
+
+                    if has_available_slot:
+                        selectable_dates.append(current_date.strftime('%Y-%m-%d'))
+                        row.append(
+                            InlineKeyboardButton(
+                                str(day_num),
+                                callback_data=f'future_date_{year}-{month:02d}-{day_num:02d}',
+                            )
+                        )
+                    else:
+                        row.append(
+                            InlineKeyboardButton(
+                                "🚫",
+                                callback_data=f"blocked_date_{year}-{month:02d}-{day_num:02d}",
+                            )
+                        )
             else:
                 selectable_dates.append(current_date.strftime('%Y-%m-%d'))
                 row.append(

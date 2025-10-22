@@ -147,12 +147,10 @@ def setup_logging() -> None:
     if PRODUCTION_MODE:
         # Production mode - only essential logs
         logging.getLogger('TelegramBot').setLevel(logging.INFO)
-        logging.getLogger('TennisBot').setLevel(logging.INFO)
         logging.getLogger('IframeHandler').setLevel(logging.WARNING)
         logging.getLogger('SpecializedBrowserPool').setLevel(logging.WARNING)
         logging.getLogger('ReservationScheduler').setLevel(logging.INFO)
         logging.getLogger('AvailabilityCheckAdapter').setLevel(logging.WARNING)
-        logging.getLogger('AsyncTennisExecutor').setLevel(logging.INFO)
         logging.getLogger('UserDatabase').setLevel(logging.WARNING)
         logging.getLogger('ReservationQueue').setLevel(logging.INFO)
         logging.getLogger('BookingOrchestrator').setLevel(logging.INFO)
@@ -161,12 +159,10 @@ def setup_logging() -> None:
     else:
         # Development mode - full debug logging
         logging.getLogger('TelegramBot').setLevel(logging.DEBUG)
-        logging.getLogger('TennisBot').setLevel(logging.DEBUG)
         logging.getLogger('IframeHandler').setLevel(logging.DEBUG)
         logging.getLogger('SpecializedBrowserPool').setLevel(logging.DEBUG)
         logging.getLogger('ReservationScheduler').setLevel(logging.DEBUG)
         logging.getLogger('AvailabilityCheckAdapter').setLevel(logging.DEBUG)
-        logging.getLogger('AsyncTennisExecutor').setLevel(logging.DEBUG)
         logging.getLogger('UserDatabase').setLevel(logging.DEBUG)
         logging.getLogger('ReservationQueue').setLevel(logging.DEBUG)
         logging.getLogger('BookingOrchestrator').setLevel(logging.DEBUG)

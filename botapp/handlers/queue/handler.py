@@ -75,6 +75,35 @@ class QueueHandler:
 
         return ", ".join(f"Court {court}" for court in sorted(courts))
 
+    def _available_time_slots(self, selected_date: date) -> List[str]:
+        """Return available queue time slots for a given date respecting test mode."""
+
+        t('botapp.handlers.queue.QueueHandler._available_time_slots')
+        config = get_test_mode()
+        all_slots = get_court_hours(selected_date)
+
+        if config.enabled and config.allow_within_48h:
+            return list(all_slots)
+
+        import pytz
+
+        tz = pytz.timezone('America/Mexico_City')
+        now = datetime.now(tz)
+        available: List[str] = []
+
+        for time_str in all_slots:
+            hour, minute = map(int, time_str.split(':'))
+            slot_dt = datetime.combine(
+                selected_date,
+                datetime.min.time().replace(hour=hour, minute=minute),
+            )
+            slot_dt = tz.localize(slot_dt)
+            hours_until = (slot_dt - now).total_seconds() / 3600
+            if hours_until > 48:
+                available.append(time_str)
+
+        return available
+
     async def handle_queue_booking_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle Queue Booking menu option
@@ -335,43 +364,21 @@ class QueueHandler:
         # Store selected date in session context
         queue_session.set_selected_date(context, selected_date)
 
+        available_hours = self._available_time_slots(selected_date)
         config = get_test_mode()
 
-        # Use specialized path when test mode allows within 48 hours
         if config.enabled and config.allow_within_48h:
-            await self._show_queue_time_selection(update, context, selected_date)
-            return
-
-        # Use centralized court hours from constants
-        all_court_hours = get_court_hours(selected_date)
-
-        # Filter out time slots that are within 48 hours
-        import pytz
-        mexico_tz = pytz.timezone('America/Mexico_City')
-        current_time = datetime.now(mexico_tz)
-        available_hours = []
-
-        self.logger.info(f"""QUEUE TIME SLOT FILTERING
-        Selected date: {selected_date}
-        Current time (Mexico): {current_time}
-        Checking {len(all_court_hours)} time slots
-        """)
-
-        for hour_str in all_court_hours:
-            # Create datetime for this slot
-            hour, minute = map(int, hour_str.split(':'))
-            slot_datetime_naive = datetime.combine(selected_date, datetime.min.time().replace(hour=hour, minute=minute))
-            slot_datetime = mexico_tz.localize(slot_datetime_naive)
-
-            # Check if more than 48 hours away
-            time_diff = slot_datetime - current_time
-            hours_until_slot = time_diff.total_seconds() / 3600
-
-            if hours_until_slot > 48:
-                available_hours.append(hour_str)
-                self.logger.info(f"✅ {hour_str} - {hours_until_slot:.1f}h away - AVAILABLE")
-            else:
-                self.logger.info(f"❌ {hour_str} - {hours_until_slot:.1f}h away - TOO SOON")
+            self.logger.info(
+                "QUEUE TIME SLOT FILTERING (TEST MODE)\nSelected date: %s\nSlots available: %s",
+                selected_date,
+                available_hours,
+            )
+        else:
+            self.logger.info(
+                "QUEUE TIME SLOT FILTERING\nSelected date: %s\nSlots available: %s",
+                selected_date,
+                available_hours,
+            )
 
         # Check if we have any available time slots
         if not available_hours:
@@ -401,7 +408,10 @@ class QueueHandler:
         )
 
         # Show time selection interface
-        availability_note = f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
+        if config.enabled and config.allow_within_48h:
+            availability_note = f"🧪 Test mode: {len(available_hours)} time slots available"
+        else:
+            availability_note = f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
         await self._edit_callback_message(
             query,
             TelegramUI.format_queue_time_prompt(selected_date, availability_note),
@@ -421,40 +431,16 @@ class QueueHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._show_queue_time_selection')
         query = update.callback_query
 
-        # Use centralized court hours from constants
-        all_court_hours = get_court_hours(selected_date)
-
         config = get_test_mode()
+        available_hours = self._available_time_slots(selected_date)
 
         if config.enabled and config.allow_within_48h:
-            available_hours = list(all_court_hours)
-            availability_note = f"ℹ️ {len(available_hours)} time slots available (test mode)"
             self.logger.info(
                 "🧪 TEST MODE: Allowing all %s time slots for %s", len(available_hours), selected_date
             )
+            availability_note = f"🧪 Test mode: {len(available_hours)} time slots available"
         else:
-            import pytz
-
-            mexico_tz = pytz.timezone('America/Mexico_City')
-            current_time = datetime.now(mexico_tz)
-            available_hours = []
-
-            for hour_str in all_court_hours:
-                hour, minute = map(int, hour_str.split(':'))
-                slot_datetime_naive = datetime.combine(
-                    selected_date,
-                    datetime.min.time().replace(hour=hour, minute=minute),
-                )
-                slot_datetime = mexico_tz.localize(slot_datetime_naive)
-                time_diff = slot_datetime - current_time
-                hours_until_slot = time_diff.total_seconds() / 3600
-
-                if hours_until_slot > 48:
-                    available_hours.append(hour_str)
-
-            availability_note = (
-                f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
-            )
+            availability_note = f"ℹ️ {len(available_hours)} time slots available (48+ hours away)"
 
         # Check if we have any available time slots
         if not available_hours:

@@ -45,8 +45,8 @@
       "trigger": "immediate_handler",
       "callback_action": "confirm",
       "telegram_user_id": 125763357,
-      "executor": "TennisExecutor",
-      "flow": "fallback"
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
     }
   }
 }

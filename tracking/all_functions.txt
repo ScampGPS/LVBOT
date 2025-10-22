@@ -220,16 +220,6 @@ automation.executors.request_factory._normalise_user
 automation.executors.request_factory.build_booking_result_from_execution
 automation.executors.request_factory.build_executor_request
 automation.executors.request_factory.build_retry_request
-automation.executors.request_factory.build_tennis_booking_request
-automation.executors.tennis.TennisConfig.__post_init__
-automation.executors.tennis.TennisExecutor.__init__
-automation.executors.tennis.TennisExecutor._build_pooled_executor
-automation.executors.tennis.TennisExecutor._execute_direct
-automation.executors.tennis.TennisExecutor._run_sync_bot
-automation.executors.tennis.TennisExecutor.execute
-automation.executors.tennis.TennisExecutor.is_pool_available
-automation.executors.tennis.TennisExecutor.set_browser_pool
-automation.executors.tennis.create_tennis_config_from_user_info
 automation.forms.actions.check_booking_success
 automation.forms.actions.check_validation_errors
 automation.forms.actions.fill_booking_form

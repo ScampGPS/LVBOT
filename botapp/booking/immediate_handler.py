@@ -12,10 +12,6 @@ import logging
 
 from automation.executors import AsyncExecutorConfig, UnifiedAsyncBookingExecutor
 from automation.executors.request_factory import build_booking_result_from_execution
-from automation.executors.tennis import (
-    TennisExecutor,
-    create_tennis_config_from_user_info,
-)
 from automation.shared.booking_contracts import BookingRequest, BookingResult
 
 from ..callbacks.parser import CallbackParser
@@ -252,28 +248,23 @@ class ImmediateBookingHandler:
         return await self._run_booking_attempts(booking_request)
 
     async def _run_booking_attempts(self, booking_request: BookingRequest) -> BookingResult:
-        """Attempt natural booking flow, then fall back to tennis executor."""
+        """Attempt the natural booking flow and return its result."""
 
         t('botapp.booking.immediate_handler.ImmediateBookingHandler._run_booking_attempts')
 
         user_info = self._build_executor_user_info(booking_request)
         natural_result = await self._attempt_natural_flow(booking_request, user_info)
-        if natural_result and natural_result.success:
+        if natural_result is not None:
             return natural_result
 
-        fallback_result = await self._attempt_tennis_flow(booking_request)
-
-        if not fallback_result.success and natural_result and not natural_result.success:
-            combined_errors = tuple({*natural_result.errors, *fallback_result.errors})
-            return BookingResult.failure_result(
-                booking_request.user,
-                booking_request.request_id,
-                message=fallback_result.message,
-                errors=combined_errors,
-                metadata=dict(fallback_result.metadata),
-            )
-
-        return fallback_result
+        failure_message = "Browser pool unavailable for natural booking"
+        return BookingResult.failure_result(
+            booking_request.user,
+            booking_request.request_id,
+            message=failure_message,
+            errors=[failure_message],
+            metadata={'executor': 'UnifiedAsyncBookingExecutor', 'flow': 'natural', 'reason': 'browser_pool_unavailable'},
+        )
 
     async def _attempt_natural_flow(
         self,
@@ -312,36 +303,6 @@ class ImmediateBookingHandler:
         except Exception as exc:  # pragma: no cover - fallback guard
             self.logger.error("❌ Natural flow execution error: %s", exc)
             return None
-
-    async def _attempt_tennis_flow(self, booking_request: BookingRequest) -> BookingResult:
-        t('botapp.booking.immediate_handler.ImmediateBookingHandler._attempt_tennis_flow')
-
-        self.logger.info("Falling back to TennisExecutor flow")
-        executor = TennisExecutor(browser_pool=self.browser_pool)
-        tennis_config = create_tennis_config_from_user_info(
-            {
-                'email': booking_request.user.email,
-                'first_name': booking_request.user.first_name,
-                'last_name': booking_request.user.last_name,
-                'phone': booking_request.user.phone,
-                'user_id': booking_request.user.user_id,
-                'court_preference': booking_request.court_preference.as_list(),
-                'preferred_times': [booking_request.target_time],
-                'target_time': booking_request.target_time,
-            }
-        )
-        target_datetime = datetime.combine(booking_request.target_date, datetime.min.time())
-        execution = await executor.execute(
-            tennis_config,
-            target_datetime,
-            check_availability_48h=False,
-            get_dates=False,
-        )
-        return build_booking_result_from_execution(
-            booking_request,
-            execution,
-            metadata={'executor': 'TennisExecutor', 'flow': 'fallback'},
-        )
 
     async def _handle_successful_booking(
         self,

@@ -11,6 +11,7 @@
 
 - **Callback Handler modularization** – introduced `CallbackRouter`, split booking/queue/profile/admin handlers, added `CallbackDependencies`, and retired the monolithic dispatcher (validated by `py -m pytest`).
 - **Queue Handler restructure** – introduced typed session helpers, shared UI formatters, and trimmed queue flow handlers into single-purpose methods with updated harness coverage requirements.
+- **Removed TennisExecutor fallback** – unified immediate bookings on the natural Playwright flow and removed the legacy tennis executor path.
 
 ## Next Major Refactor
 

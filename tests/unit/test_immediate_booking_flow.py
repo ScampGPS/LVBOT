@@ -71,11 +71,6 @@ async def test_handle_booking_confirmation_success_flow(monkeypatch):
 
     monkeypatch.setattr(handler_module, "UnifiedAsyncBookingExecutor", StubExecutor)
 
-    def unexpected_fallback(*args, **kwargs):  # pragma: no cover - sanity guard
-        raise AssertionError("Fallback executor should not be invoked on success")
-
-    monkeypatch.setattr(handler_module, "TennisExecutor", lambda *args, **kwargs: SimpleNamespace(execute=unexpected_fallback))
-
     recorded = {}
 
     def fake_persist_success(request, result, tracker=None):
@@ -139,13 +134,7 @@ async def test_handle_booking_confirmation_failure_flow(monkeypatch):
         async def execute_booking(self, court_number, time_slot, user_info, target_date):
             return ExecutionResult(success=False, error_message="No slots available")
 
-    class FallbackExecutor:
-        async def execute(self, tennis_config, target_date, check_availability_48h=False, get_dates=False):
-            return ExecutionResult(success=False, error_message="Form submission failed")
-
     monkeypatch.setattr(handler_module, "UnifiedAsyncBookingExecutor", FailingExecutor)
-    monkeypatch.setattr(handler_module, "TennisExecutor", lambda *args, **kwargs: FallbackExecutor())
-    monkeypatch.setattr(handler_module, "create_tennis_config_from_user_info", lambda data: data)
 
     recorded = {}
 
@@ -176,7 +165,7 @@ async def test_handle_booking_confirmation_failure_flow(monkeypatch):
     request, result = recorded["persist_failures"][0]
     assert request.court_preference.primary == 2
     assert result.success is False
-    assert "No slots" in result.message or "Form submission failed" in result.message
+    assert "No slots available" in result.message
     assert "queue_execution_time_seconds" not in result.metadata  # immediate flow metadata
 
     notif_user_id, notif_result = recorded["notification"]
