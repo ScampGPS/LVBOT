@@ -5,7 +5,9 @@ from tracking import t
 
 import os
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Set
+
+import pytz
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
@@ -20,6 +22,7 @@ from botapp.notifications import (
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.error_handler import ErrorHandler
 from botapp.messages.message_handlers import MessageHandlers
+from reservations.queue.request_builder import build_reservation_request_from_summary
 from automation.availability import DateTimeHelpers
 from infrastructure.settings import get_test_mode
 from infrastructure.constants import get_court_hours
@@ -75,29 +78,113 @@ class QueueHandler:
 
         return ", ".join(f"Court {court}" for court in sorted(courts))
 
-    def _available_time_slots(self, selected_date: date) -> List[str]:
-        """Return available queue time slots for a given date respecting test mode."""
+    async def _available_time_slots(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        selected_date: date,
+    ) -> List[str]:
+        """Return available queue time slots respecting test mode rules."""
 
         t('botapp.handlers.queue.QueueHandler._available_time_slots')
         config = get_test_mode()
+        tz = pytz.timezone('America/Mexico_City')
+        now = datetime.now(tz)
         all_slots = get_court_hours(selected_date)
 
         if config.enabled and config.allow_within_48h:
-            return list(all_slots)
+            start_of_day = tz.localize(
+                datetime.combine(selected_date, datetime.min.time())
+            )
+            within_48h = start_of_day < now + timedelta(hours=48)
 
-        import pytz
+            if within_48h:
+                live_slots = await self._get_live_time_slots(context, selected_date, tz, now)
+                if live_slots is not None:
+                    return live_slots
 
-        tz = pytz.timezone('America/Mexico_City')
-        now = datetime.now(tz)
+        return self._filter_slots_beyond_48_hours(all_slots, selected_date, tz, now)
+
+    async def _get_live_time_slots(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        selected_date: date,
+        tz,
+        now: datetime,
+    ) -> List[str] | None:
+        """Fetch live availability for dates within 48h when test mode allows it."""
+
+        checker = getattr(self.deps, 'availability_checker', None)
+        if checker is None:
+            self.logger.warning(
+                "Test mode within-48h requested live availability but checker is unavailable; falling back to static slots."
+            )
+            return None
+
+        # Cache per-date results in user data to avoid duplicate lookups during the same flow
+        cache_value = context.user_data.setdefault('queue_live_time_cache', {})
+        if not isinstance(cache_value, dict):
+            cache_value = {}
+            context.user_data['queue_live_time_cache'] = cache_value
+        cache: Dict[str, List[str]] = cache_value
+        date_key = selected_date.isoformat()
+        if date_key in cache:
+            return cache[date_key]
+
+        try:
+            availability_results = await checker.check_availability()
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error(
+                "Failed to fetch live availability for %s: %s", date_key, exc
+            )
+            return None
+
+        unique_times: Set[str] = set()
+        for court_data in availability_results.values():
+            if isinstance(court_data, dict) and "error" in court_data:
+                continue
+            times = court_data.get(date_key)
+            if times:
+                unique_times.update(times)
+
+        if not unique_times:
+            cache[date_key] = []
+            return []
+
+        base = datetime.combine(selected_date, datetime.min.time())
+        filtered_times: List[str] = []
+        for time_str in sorted(unique_times):
+            try:
+                hour, minute = map(int, time_str.split(':'))
+            except ValueError:
+                continue
+
+            slot_dt = tz.localize(base.replace(hour=hour, minute=minute))
+            if slot_dt <= now:
+                continue
+            filtered_times.append(time_str)
+
+        cache[date_key] = filtered_times
+        return filtered_times
+
+    @staticmethod
+    def _filter_slots_beyond_48_hours(
+        all_slots: Sequence[str],
+        selected_date: date,
+        tz,
+        now: datetime,
+    ) -> List[str]:
+        """Return slots strictly more than 48h away from the reference time."""
+
         available: List[str] = []
+        base = datetime.combine(selected_date, datetime.min.time())
 
         for time_str in all_slots:
-            hour, minute = map(int, time_str.split(':'))
-            slot_dt = datetime.combine(
-                selected_date,
-                datetime.min.time().replace(hour=hour, minute=minute),
-            )
-            slot_dt = tz.localize(slot_dt)
+            try:
+                hour, minute = map(int, time_str.split(':'))
+            except ValueError:
+                continue
+
+            slot_dt = tz.localize(base.replace(hour=hour, minute=minute))
             hours_until = (slot_dt - now).total_seconds() / 3600
             if hours_until > 48:
                 available.append(time_str)
@@ -126,13 +213,13 @@ class QueueHandler:
         reset_flow(context, 'queue_booking')
         context.user_data['current_flow'] = 'queue_booking'
         queue_session.clear_all(context)
+        context.user_data.pop('queue_live_time_cache', None)
 
         # For queue booking, only show dates that have slots beyond 48 hours
         dates = []
         today = date.today()
 
         config = get_test_mode()
-        import pytz
 
         # Use Mexico City timezone for accurate calculations
         mexico_tz = pytz.timezone('America/Mexico_City')
@@ -364,7 +451,7 @@ class QueueHandler:
         # Store selected date in session context
         queue_session.set_selected_date(context, selected_date)
 
-        available_hours = self._available_time_slots(selected_date)
+        available_hours = await self._available_time_slots(context, selected_date)
         config = get_test_mode()
 
         if config.enabled and config.allow_within_48h:
@@ -432,7 +519,7 @@ class QueueHandler:
         query = update.callback_query
 
         config = get_test_mode()
-        available_hours = self._available_time_slots(selected_date)
+        available_hours = await self._available_time_slots(context, selected_date)
 
         if config.enabled and config.allow_within_48h:
             self.logger.info(
@@ -756,7 +843,8 @@ class QueueHandler:
 
         try:
             # Add reservation to the queue
-            reservation_id = self.deps.reservation_queue.add_reservation(booking_summary)
+            reservation_request = build_reservation_request_from_summary(booking_summary)
+            reservation_id = self.deps.reservation_queue.add_reservation_request(reservation_request)
 
             # Format court list for display
             courts_text = self._format_court_preferences(
