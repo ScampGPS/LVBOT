@@ -34,10 +34,12 @@ class QueueHandler:
     """Handles queue booking flows and reservation management."""
 
     def __init__(self, deps: CallbackDependencies) -> None:
+        t('botapp.handlers.queue.QueueHandler.__init__')
         self.deps = deps
         self.logger = deps.logger
 
     async def _safe_answer_callback(self, query, text: str | None = None) -> None:
+        t('botapp.handlers.queue.QueueHandler._safe_answer_callback')
         try:
             if text:
                 await query.answer(text)
@@ -47,6 +49,7 @@ class QueueHandler:
             self.logger.warning('Failed to answer callback query: %s', exc)
 
     async def _edit_callback_message(self, query, text: str, **kwargs) -> None:
+        t('botapp.handlers.queue.QueueHandler._edit_callback_message')
         await MessageHandlers.edit_callback_message(
             query,
             text,
@@ -61,6 +64,7 @@ class QueueHandler:
     ) -> str:
         """Create a readable label for court selections."""
 
+        t('botapp.handlers.queue.QueueHandler._format_court_preferences')
         courts = list(selected_courts)
         if not courts:
             return "No Courts Selected"
