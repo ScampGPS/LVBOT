@@ -3,7 +3,7 @@
 Reservation Scheduler with Dynamic Booking Orchestration
 Manages the execution of queued reservations with 3 browsers and staggered refresh
 """
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from functools import partial
 
 from tracking import t
@@ -14,7 +14,7 @@ import os
 import threading
 import time
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pytz
 
@@ -96,6 +96,18 @@ def _failure_result_from_reservation(reservation: Dict[str, Any], message: str, 
         errors=errors or [message],
         metadata=metadata,
     )
+
+
+@dataclass
+class EnrichedReservation:
+    """Lightweight structure used for booking plan generation."""
+
+    id: str
+    user_id: Any
+    courts: List[int]
+    time: str
+    created_at: Optional[datetime]
+    priority: int
 
 
 class ReservationScheduler:
@@ -311,98 +323,127 @@ class ReservationScheduler:
     async def _scheduler_loop(self):
         """Main scheduler loop that checks for reservations to execute"""
         t('reservations.queue.reservation_scheduler.ReservationScheduler._scheduler_loop')
+        poll_interval = self._poll_interval_seconds()
         while self.running:
             try:
-                tz = pytz.timezone(self.config.timezone)
-                now = datetime.now(tz)
+                now = datetime.now(pytz.timezone(self.config.timezone))
+                evaluation = self._evaluate_queue(now)
+                await self._handle_health_check_batches(evaluation.requires_health_check)
+                await self._execute_ready_batches(evaluation.ready_for_execution)
+                await asyncio.sleep(poll_interval)
+            except Exception as exc:  # pragma: no cover - defensive guard
+                self.logger.error("Scheduler error: %s", exc)
+                await asyncio.sleep(max(poll_interval * 2, 30))
 
-                evaluation = pull_ready_reservations(
-                    self.queue,
-                    now=now,
-                    logger=self.logger,
+    def _poll_interval_seconds(self) -> float:
+        """Return the interval between scheduler iterations."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._poll_interval_seconds')
+        return 15.0
+
+    def _evaluate_queue(self, now: datetime):
+        """Evaluate pending reservations and bucket them for execution."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._evaluate_queue')
+        return pull_ready_reservations(
+            self.queue,
+            now=now,
+            logger=self.logger,
+        )
+
+    async def _handle_health_check_batches(self, batches: Iterable[Any]) -> None:
+        """Run pre-execution health checks for near-term reservations."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._handle_health_check_batches')
+        for batch in batches:
+            if not getattr(batch, 'reservations', None):
+                continue
+            self.logger.info(
+                "🏥 Performing health check for %s reservations (group: %s)",
+                len(batch.reservations),
+                batch.time_key,
+            )
+            await self._perform_pre_execution_health_check(batch.reservations)
+
+    async def _execute_ready_batches(self, batches: Iterable[Any]) -> None:
+        """Hydrate and execute each batch ready for booking."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_ready_batches')
+        for batch in batches:
+            if not getattr(batch, 'reservations', None):
+                continue
+
+            reservations, prepared_requests = self._prepare_execution_inputs(batch)
+            if reservations:
+                await self._execute_reservation_group(
+                    reservations,
+                    prepared_requests=prepared_requests,
                 )
 
-                for batch in evaluation.requires_health_check:
-                    if not batch.reservations:
-                        continue
-                    self.logger.info(
-                        "🏥 Performing health check for %s reservations (group: %s)",
-                        len(batch.reservations),
-                        batch.time_key,
-                    )
-                    await self._perform_pre_execution_health_check(batch.reservations)
+    def _prepare_execution_inputs(
+        self,
+        batch: Any,
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, BookingRequest]]:
+        """Hydrate a reservation batch and return executable reservations and requests."""
 
-                for batch in evaluation.ready_for_execution:
-                    if not batch.reservations:
-                        continue
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._prepare_execution_inputs')
 
-                    hydrated = hydrate_reservation_batch(
-                        batch,
-                        executor_config=asdict(self.executor_config)
-                        if self.executor_config
-                        else None,
-                        logger=self.logger,
-                    )
+        hydrated = hydrate_reservation_batch(
+            batch,
+            executor_config=asdict(self.executor_config)
+            if self.executor_config
+            else None,
+            logger=self.logger,
+        )
 
-                    if hydrated.failures:
-                        failed_ids = {
-                            str(failure.reservation.get('id'))
-                            for failure in hydrated.failures
-                            if failure.reservation.get('id') is not None
-                        }
-                        for failure in hydrated.failures:
-                            raw_id = failure.reservation.get('id')
-                            if raw_id is None:
-                                continue
-                            reservation_id = str(raw_id)
-                            error_message = f"Failed to prepare booking request: {failure.error}"
-                            failure_result = _failure_result_from_reservation(
-                                failure.reservation,
-                                error_message,
-                                errors=[str(failure.error)],
-                            )
-                            persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                            self._update_reservation_failed(reservation_id, error_message)
-                        filtered_reservations = [
-                            reservation
-                            for reservation in batch.reservations
-                            if str(reservation.get('id')) not in failed_ids
-                        ]
-                    else:
-                        filtered_reservations = list(batch.reservations)
+        filtered_reservations: List[Dict[str, Any]]
+        if hydrated.failures:
+            failed_ids = {
+                str(failure.reservation.get('id'))
+                for failure in hydrated.failures
+                if failure.reservation.get('id') is not None
+            }
+            for failure in hydrated.failures:
+                raw_id = failure.reservation.get('id')
+                if raw_id is None:
+                    continue
+                reservation_id = str(raw_id)
+                error_message = f"Failed to prepare booking request: {failure.error}"
+                failure_result = _failure_result_from_reservation(
+                    failure.reservation,
+                    error_message,
+                    errors=[str(failure.error)],
+                )
+                persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                self._update_reservation_failed(reservation_id, error_message)
+            filtered_reservations = [
+                reservation
+                for reservation in batch.reservations
+                if str(reservation.get('id')) not in failed_ids
+            ]
+        else:
+            filtered_reservations = list(batch.reservations)
 
-                    prepared_requests: Dict[str, BookingRequest] = {}
-                    if hydrated.requests:
-                        self.logger.debug(
-                            "Prepared %s booking requests for batch %s",
-                            len(hydrated.requests),
-                            batch.time_key,
-                        )
-                        filtered_ids = {
-                            str(reservation.get('id'))
-                            for reservation in filtered_reservations
-                            if reservation.get('id') is not None
-                        }
-                        prepared_requests = {
-                            str(request.request_id): request
-                            for request in hydrated.requests
-                            if request.request_id is not None
-                            and str(request.request_id) in filtered_ids
-                        }
+        prepared_requests: Dict[str, BookingRequest] = {}
+        if hydrated.requests:
+            self.logger.debug(
+                "Prepared %s booking requests for batch %s",
+                len(hydrated.requests),
+                batch.time_key,
+            )
+            filtered_ids = {
+                str(reservation.get('id'))
+                for reservation in filtered_reservations
+                if reservation.get('id') is not None
+            }
+            prepared_requests = {
+                str(request.request_id): request
+                for request in hydrated.requests
+                if request.request_id is not None
+                and str(request.request_id) in filtered_ids
+            }
 
-                    if filtered_reservations:
-                        await self._execute_reservation_group(
-                            filtered_reservations,
-                            prepared_requests=prepared_requests,
-                        )
-
-                # Sleep before next check
-                await asyncio.sleep(15)  # Check every 15 seconds
-                
-            except Exception as e:
-                self.logger.error(f"Scheduler error: {e}")
-                await asyncio.sleep(30)  # Wait longer on error
-    
+        return filtered_reservations, prepared_requests
     async def _execute_reservation_group(
         self,
         reservations: List[Any],
@@ -416,129 +457,183 @@ class ReservationScheduler:
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_reservation_group')
         if not reservations:
             return
-        
-        # Ensure browser pool is initialized
+        if not await self._refresh_browser_pool():
+            return
+
+        target_date, time_slot = self._extract_time_slot(reservations)
+        self.logger.info(
+            """🎯 EXECUTING RESERVATION GROUP
+        Time slot: %s %s
+        Number of reservations: %s
+        Reservation IDs: %s
+        """,
+            target_date.isoformat(),
+            time_slot,
+            len(reservations),
+            [r.get('id', 'unknown')[:8] + '...' for r in reservations],
+        )
+
+        enriched_reservations = self._enrich_reservations(reservations)
+        booking_plan = self.orchestrator.create_booking_plan(
+            enriched_reservations,
+            time_slot,
+            self.user_db,
+        )
+
+        self.logger.info(
+            """BOOKING PLAN CREATED
+        Confirmed (will book): %s
+        Waitlisted: %s
+        Browser assignments: %s
+        """,
+            len(booking_plan['confirmed_users']),
+            len(booking_plan['waitlisted_users']),
+            len(booking_plan.get('browser_assignments', [])),
+        )
+
+        await self._execute_booking_plan(
+            booking_plan,
+            target_date,
+            reservations,
+            prepared_requests=prepared_requests,
+        )
+
+        if booking_plan['waitlisted_users']:
+            await self._handle_waitlisted_users(
+                booking_plan['waitlisted_users'],
+                target_date.isoformat(),
+                time_slot,
+            )
+
+    async def _refresh_browser_pool(self) -> bool:
+        """Ensure the browser pool is available and refreshed before booking."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._refresh_browser_pool')
+
         await self.browser_lifecycle.ensure_browser_pool()
         if not self.browser_pool:
             self.logger.error("Browser pool not available")
-            return
-        
-        # CRITICAL: Refresh browser pages before booking to prevent staleness
+            return False
+
         try:
             self.logger.info("🔄 PRE-BOOKING REFRESH: Refreshing browser pages to prevent staleness")
             refresh_start_time = time.time()
-            
-            # Check if browser pool has the refresh method (SpecializedBrowserPool)
+
             if hasattr(self.browser_pool, 'refresh_browser_pages'):
                 refresh_results = await self.browser_pool.refresh_browser_pages()
-                
                 refresh_duration = time.time() - refresh_start_time
                 successful_refreshes = sum(1 for success in refresh_results.values() if success)
                 total_browsers = len(refresh_results)
-                
-                self.logger.info(f"🔄 PRE-BOOKING REFRESH COMPLETE: {successful_refreshes}/{total_browsers} browsers refreshed in {refresh_duration:.2f}s")
-                
-                # If most browsers failed to refresh, proceed with caution
+
+                self.logger.info(
+                    "🔄 PRE-BOOKING REFRESH COMPLETE: %s/%s browsers refreshed in %.2fs",
+                    successful_refreshes,
+                    total_browsers,
+                    refresh_duration,
+                )
+
                 if successful_refreshes == 0 and total_browsers > 0:
                     self.logger.error("⚠️ WARNING: All browser refreshes failed - browsers may be stale!")
                 elif successful_refreshes < total_browsers * 0.5:
-                    self.logger.warning(f"⚠️ WARNING: Only {successful_refreshes}/{total_browsers} browsers refreshed successfully")
+                    self.logger.warning(
+                        "⚠️ WARNING: Only %s/%s browsers refreshed successfully",
+                        successful_refreshes,
+                        total_browsers,
+                    )
             else:
                 self.logger.warning("⚠️ Browser pool doesn't support page refresh - using stale browsers")
-                
-        except Exception as e:
-            self.logger.error(f"❌ PRE-BOOKING REFRESH FAILED: {e} - proceeding with potentially stale browsers")
-            # Continue execution even if refresh fails - booking is still possible
-        
-        # Health checks are handled separately in the scheduler loop
-        # Browser refresh is performed before each booking group to prevent staleness
-        # This method is only called when reservations are ready for execution
-        
-        # Get time slot info from first reservation
-        first_res = reservations[0]
-        time_slot = self._get_reservation_field(first_res, 'target_time')
-        target_date_str = self._get_reservation_field(first_res, 'target_date')
-        # Handle both string and date objects
-        if isinstance(target_date_str, str):
-            target_date = datetime.fromisoformat(target_date_str).date()
-        elif isinstance(target_date_str, date):
-            target_date = target_date_str
+
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error(
+                "❌ PRE-BOOKING REFRESH FAILED: %s - proceeding with potentially stale browsers",
+                exc,
+            )
+
+        return True
+
+    def _extract_time_slot(self, reservations: List[Dict[str, Any]]) -> Tuple[date, str]:
+        """Extract the target date and time slot from the reservation batch."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._extract_time_slot')
+
+        first_reservation = reservations[0]
+        time_slot = str(self._get_reservation_field(first_reservation, 'target_time'))
+        raw_date = self._get_reservation_field(first_reservation, 'target_date')
+
+        if isinstance(raw_date, date):
+            target_date = raw_date
+        elif isinstance(raw_date, str):
+            try:
+                target_date = datetime.fromisoformat(raw_date).date()
+            except ValueError:
+                self.logger.warning(
+                    "Invalid target_date format %s, using current date as fallback",
+                    raw_date,
+                )
+                target_date = datetime.now().date()
         else:
-            self.logger.warning(f"Invalid target_date type: {type(target_date_str)} - using current date as fallback")
+            self.logger.warning(
+                "Invalid target_date type %s, using current date as fallback",
+                type(raw_date),
+            )
             target_date = datetime.now().date()
-        
-        self.logger.info(f"""🎯 EXECUTING RESERVATION GROUP
-        Time slot: {target_date_str} {time_slot}
-        Number of reservations: {len(reservations)}
-        Reservation IDs: {[r.get('id', 'unknown')[:8] + '...' for r in reservations]}
-        """)
-        
-        # Enrich reservations with priority information
-        # Create a simple class to hold reservation data as attributes
-        class ReservationData:
-            def __init__(self, data):
-                t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_reservation_group.ReservationData.__init__')
-                self.__dict__.update(data)
-        
-        enriched_reservations = []
-        for res in reservations:
-            user_id = self._get_reservation_field(res, 'user_id')
-            
-            # Create enriched data
-            enriched_data = {
-                'id': self._get_reservation_field(res, 'id'),
-                'user_id': user_id,
-                'courts': self._get_reservation_field(res, 'court_preferences', []),
-                'time': self._get_reservation_field(res, 'target_time'),
-                'created_at': self._parse_datetime_field(res, 'created_at'),
-                'priority': self._get_reservation_field(res, 'priority', 2)  # Default to regular if not set
-            }
-            
-            # Override priority based on user status if not already set
-            if 'priority' not in res or res.get('priority') is None:
-                if self.user_db.is_admin(user_id):
-                    enriched_data['priority'] = 0  # Admin
-                elif self.user_db.is_vip(user_id):
-                    enriched_data['priority'] = 1  # VIP
+
+        return target_date, time_slot
+
+    def _enrich_reservations(self, reservations: List[Dict[str, Any]]) -> List[EnrichedReservation]:
+        """Prepare reservation data for booking plan generation."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._enrich_reservations')
+
+        enriched: List[EnrichedReservation] = []
+        for reservation in reservations:
+            user_id = self._get_reservation_field(reservation, 'user_id')
+            priority = self._get_reservation_field(reservation, 'priority', None)
+
+            if priority is None and self.user_db is not None:
+                if hasattr(self.user_db, 'is_admin') and self.user_db.is_admin(user_id):
+                    priority = 0
+                elif hasattr(self.user_db, 'is_vip') and self.user_db.is_vip(user_id):
+                    priority = 1
                 else:
-                    enriched_data['priority'] = 2  # Regular
-            
-            # Create object with attributes
-            enriched_obj = ReservationData(enriched_data)
-            enriched_reservations.append(enriched_obj)
-        
-        # Create booking plan using orchestrator with user manager for tier lookup
-        booking_plan = self.orchestrator.create_booking_plan(enriched_reservations, time_slot, self.user_db)
-        
-        # Log the booking plan details
-        self.logger.info(f"""BOOKING PLAN CREATED
-        Confirmed (will book): {len(booking_plan['confirmed_users'])}
-        Waitlisted: {len(booking_plan['waitlisted_users'])}
-        Browser assignments: {len(booking_plan.get('browser_assignments', []))}
-        """)
-        
-        # Log browser pool status
-        if hasattr(self.browser_pool, 'is_ready'):
-            pool_ready = self.browser_pool.is_ready()
-            self.logger.info(f"Browser pool status: {'READY' if pool_ready else 'NOT READY'}")
-        
-        # Execute bookings using persistent pool
-        self.logger.info("🚀 STARTING PARALLEL BOOKING EXECUTION")
+                    priority = 2
+            elif priority is None:
+                priority = 2
+
+            enriched.append(
+                EnrichedReservation(
+                    id=str(self._get_reservation_field(reservation, 'id')),
+                    user_id=user_id,
+                    courts=list(self._get_reservation_field(reservation, 'court_preferences', [])),
+                    time=str(self._get_reservation_field(reservation, 'target_time')),
+                    created_at=self._parse_datetime_field(reservation, 'created_at'),
+                    priority=int(priority),
+                )
+            )
+
+        return enriched
+
+    async def _execute_booking_plan(
+        self,
+        booking_plan: Dict[str, Any],
+        target_date: date,
+        reservations: List[Dict[str, Any]],
+        *,
+        prepared_requests: Optional[Dict[str, BookingRequest]] = None,
+    ) -> None:
+        """Execute the booking plan and handle results/notifications."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_booking_plan')
         await self._execute_with_persistent_pool(
             booking_plan,
             target_date,
             reservations,
             prepared_requests=prepared_requests,
         )
-        
-        # Handle waitlisted users
-        if booking_plan['waitlisted_users']:
-            await self._handle_waitlisted_users(booking_plan['waitlisted_users'], target_date_str, time_slot)
-    
     async def _execute_with_persistent_pool(
         self,
         booking_plan: Dict[str, Any],
-        target_date: datetime,
+        target_date: date,
         reservations: List[Dict[str, Any]],
         *,
         prepared_requests: Optional[Dict[str, BookingRequest]] = None,
@@ -547,29 +642,65 @@ class ReservationScheduler:
         Execute bookings using persistent browser pool with smart court assignment
         """
         t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_with_persistent_pool')
-        browser_assignments = booking_plan['browser_assignments']
-        
-        # Create lookup for reservations by ID for efficient access
-        reservation_lookup = {
-            str(self._get_reservation_field(res, 'id')): res for res in reservations
-        }
-        
         prepared_requests = prepared_requests or {}
+        jobs, reservation_lookup, initial_results = self._build_dispatch_jobs(
+            booking_plan.get('browser_assignments', []),
+            reservations,
+            prepared_requests,
+        )
+
+        results = dict(initial_results)
+        if jobs:
+            execute_single = partial(self._execute_single_booking, target_date=target_date)
+            dispatch_results, timeouts = await dispatch_to_executors(
+                jobs,
+                execute_single=execute_single,
+                logger=self.logger,
+            )
+            results.update(dispatch_results)
+            await self._handle_dispatch_results(
+                reservation_lookup,
+                results,
+                timeouts,
+            )
+
+        overflow_count = booking_plan.get('overflow_count', 0)
+        if overflow_count > 0:
+            self.logger.info("Processing %s overflow reservations", overflow_count)
+
+        self.logger.info("Booking execution complete: %s", self.orchestrator.get_booking_summary())
+        self.logger.info("📊 Results dictionary before notification: %s", results)
+        await self._notify_booking_results(results)
+
+    def _build_dispatch_jobs(
+        self,
+        assignments: List[Dict[str, Any]],
+        reservations: List[Dict[str, Any]],
+        prepared_requests: Dict[str, BookingRequest],
+    ) -> Tuple[List[DispatchJob], Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+        """Build dispatch jobs and supporting lookups for booking execution."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._build_dispatch_jobs')
+
+        reservation_lookup = {
+            str(self._get_reservation_field(reservation, 'id')): reservation
+            for reservation in reservations
+        }
 
         results: Dict[str, Dict[str, Any]] = {}
         jobs: List[DispatchJob] = []
-        total_assignments = len(browser_assignments)
+        total_assignments = len(assignments)
 
-        for index, assignment in enumerate(browser_assignments, 1):
-            attempt = assignment['attempt']
-            reservation_id = str(attempt.reservation_id)
+        for index, assignment in enumerate(assignments, start=1):
+            attempt = assignment.get('attempt')
+            if not attempt:
+                continue
 
+            reservation_id = str(getattr(attempt, 'reservation_id', None))
             reservation = reservation_lookup.get(reservation_id)
+
             if not reservation:
-                self.logger.error(
-                    "❌ Reservation %s not found in lookup",
-                    reservation_id[:8],
-                )
+                self.logger.error("❌ Reservation %s not found in lookup", reservation_id[:8])
                 results[reservation_id] = {
                     'success': False,
                     'error': 'Reservation not found',
@@ -587,64 +718,48 @@ class ReservationScheduler:
                 )
             )
 
-        if jobs:
-            execute_single = partial(self._execute_single_booking, target_date=target_date)
-            dispatch_results, timeouts = await dispatch_to_executors(
-                jobs,
-                execute_single=execute_single,
-                logger=self.logger,
-            )
-            results.update(dispatch_results)
+        return jobs, reservation_lookup, results
 
-            if timeouts:
-                # Ensure critical operation flag is cleared to keep pool healthy
-                if hasattr(self.browser_pool, 'set_critical_operation'):
-                    try:
-                        await self.browser_pool.set_critical_operation(False)
-                        self.logger.info(
-                            "✅ Critical operation flag forcibly cleared after task cancellation",
-                        )
-                    except Exception as cleanup_error:  # pragma: no cover - defensive guard
-                        self.logger.error(
-                            "❌ Failed to clear critical operation flag after cancellation: %s",
-                            cleanup_error,
-                        )
+    async def _handle_dispatch_results(
+        self,
+        reservation_lookup: Dict[str, Dict[str, Any]],
+        results: Dict[str, Dict[str, Any]],
+        timeouts: Dict[str, str],
+    ) -> None:
+        """Persist results, handle timeouts, and update orchestrator state."""
 
-                for reservation_id, timeout_message in timeouts.items():
-                    reservation_data = reservation_lookup.get(reservation_id, {})
-                    failure_result = _failure_result_from_reservation(
-                        reservation_data,
-                        timeout_message,
-                        errors=[timeout_message],
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._handle_dispatch_results')
+
+        if timeouts:
+            if hasattr(self.browser_pool, 'set_critical_operation'):
+                try:
+                    await self.browser_pool.set_critical_operation(False)
+                    self.logger.info("✅ Critical operation flag forcibly cleared after task cancellation")
+                except Exception as cleanup_error:  # pragma: no cover - defensive guard
+                    self.logger.error(
+                        "❌ Failed to clear critical operation flag after cancellation: %s",
+                        cleanup_error,
                     )
-                    persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                    results[reservation_id] = _booking_result_to_dict(failure_result)
+
+            for reservation_id, timeout_message in timeouts.items():
+                reservation_data = reservation_lookup.get(reservation_id, {})
+                failure_result = _failure_result_from_reservation(
+                    reservation_data,
+                    timeout_message,
+                    errors=[timeout_message],
+                )
+                persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
+                results[reservation_id] = _booking_result_to_dict(failure_result)
 
         for reservation_id, result in results.items():
             record_outcome(self, reservation_id, result)
-        
-        # Handle overflow users if any
-        overflow_count = booking_plan.get('overflow_count', 0)
-        if overflow_count > 0:
-            self.logger.info(f"Processing {overflow_count} overflow reservations")
-            # Overflow users will be processed as browsers become available
-        
-        # Log summary
-        summary = self.orchestrator.get_booking_summary()
-        self.logger.info(f"Booking execution complete: {summary}")
-        
-        # Debug: Log results before notification
-        self.logger.info(f"📊 Results dictionary before notification: {results}")
-        
-        # Notify users of results
-        await self._notify_booking_results(results)
-    
+
     
     async def _execute_single_booking(
         self,
         assignment: Dict,
         reservation: Dict,
-        target_date: datetime,
+        target_date: date,
         index: int,
         total: int,
         *,
