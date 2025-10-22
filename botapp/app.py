@@ -5,6 +5,7 @@ Async telegram bot - entrypoint wrappers around the runtime application.
 from tracking import t
 
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -37,6 +38,38 @@ def cleanup_browser_processes(force: bool | None = None) -> None:
     shutdown_all_browser_processes(logger=logger, force=force)
 
 
+def terminate_duplicate_bot_processes(logger: logging.Logger) -> None:
+    """Terminate other LVBot python processes that might conflict with polling."""
+
+    t('botapp.app.terminate_duplicate_bot_processes')
+    try:
+        import psutil  # type: ignore
+    except ImportError:
+        logger.debug("psutil not installed; skipping duplicate process check")
+        return
+
+    current_pid = os.getpid()
+    markers = {'run_bot.py', 'botapp/app.py', 'botapp\\app.py'}
+
+    for proc in psutil.process_iter(['pid', 'cmdline']):
+        pid = proc.info.get('pid')
+        if pid in {None, current_pid}:
+            continue
+
+        cmdline = proc.info.get('cmdline') or []
+        joined = ' '.join(cmdline)
+        if not joined:
+            continue
+
+        if any(marker in joined for marker in markers):
+            logger.warning("Terminating leftover bot process pid=%s cmd=%s", pid, joined)
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception as exc:  # pragma: no cover - best effort cleanup
+                logger.error("Failed to terminate process %s: %s", pid, exc)
+
+
 def signal_handler(signum, frame):
     """Handle SIGINT/SIGTERM signals for graceful shutdown."""
     t('botapp.app.signal_handler')
@@ -64,6 +97,8 @@ def main() -> None:
 
     logger.info("🔄 Checking for orphaned browser processes before startup...")
     cleanup_browser_processes(force=True)
+
+    terminate_duplicate_bot_processes(logger)
 
     config = load_bot_config()
     bot = CleanBot(config)

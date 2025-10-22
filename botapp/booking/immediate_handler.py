@@ -243,6 +243,14 @@ class ImmediateBookingHandler:
             'tier': user.tier,
         }
 
+    async def execute_queue_booking(self, booking_request: BookingRequest) -> BookingResult:
+        """Compatibility wrapper used by the reservation scheduler."""
+        return await self._run_booking_attempts(booking_request)
+
+    async def _execute_booking(self, booking_request: BookingRequest) -> BookingResult:
+        """Legacy entrypoint used by older scheduler paths and tests."""
+        return await self._run_booking_attempts(booking_request)
+
     async def _run_booking_attempts(self, booking_request: BookingRequest) -> BookingResult:
         """Attempt natural booking flow, then fall back to tennis executor."""
 

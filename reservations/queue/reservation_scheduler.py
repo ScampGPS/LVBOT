@@ -644,10 +644,10 @@ class ReservationScheduler:
         self,
         assignment: Dict,
         reservation: Dict,
+        target_date: datetime,
         index: int,
         total: int,
         *,
-        target_date: datetime,
         prebuilt_request: Optional[BookingRequest] = None,
     ) -> Dict:
         """Execute a single queued booking using the unified booking contracts."""
@@ -722,7 +722,10 @@ class ReservationScheduler:
             return _booking_result_to_dict(failure)
 
         try:
-            booking_result = await self.immediate_booking_handler._execute_booking(booking_request)
+            if hasattr(self.immediate_booking_handler, 'execute_queue_booking'):
+                booking_result = await self.immediate_booking_handler.execute_queue_booking(booking_request)
+            else:  # Backwards compatibility with older handlers/tests
+                booking_result = await self.immediate_booking_handler._execute_booking(booking_request)
         except Exception as exc:  # pragma: no cover - defensive guard
             self.logger.error(
                 "❌ Immediate booking execution error for %s: %s",
