@@ -9,6 +9,10 @@ from typing import Any, Dict, List, Optional
 from tracking import t
 
 from automation.shared.booking_contracts import BookingRequest
+from reservations.queue.request_builder import (
+    DEFAULT_BUILDER,
+    ReservationRequestBuilder,
+)
 
 
 @dataclass
@@ -156,19 +160,19 @@ def hydrate_reservation_batch(
     *,
     executor_config: Optional[Dict[str, Any]] = None,
     logger: Optional[Any] = None,
+    builder: Optional[ReservationRequestBuilder] = None,
 ) -> HydratedBatch:
     """Convert reservations in a batch into booking requests."""
 
     t("reservations.queue.scheduler.pipeline.hydrate_reservation_batch")
 
+    builder = builder or DEFAULT_BUILDER
     requests: List[BookingRequest] = []
     failures: List[HydrationFailure] = []
 
     for reservation in batch.reservations:
         try:
-            from reservations.queue.request_builder import build_request_from_reservation
-
-            request = build_request_from_reservation(
+            request = builder.from_dict(
                 reservation,
                 executor_config=executor_config,
             )

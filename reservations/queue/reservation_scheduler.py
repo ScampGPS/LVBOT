@@ -40,7 +40,7 @@ from reservations.queue.scheduler.services import (
     ReservationHydrator,
     SchedulerPipeline,
 )
-from reservations.queue.request_builder import build_request_from_reservation
+from reservations.queue.request_builder import ReservationRequestBuilder
 from reservations.queue.persistence import persist_queue_outcome
 from botapp.notifications import format_failure_message, format_success_message
 from infrastructure.settings import get_test_mode
@@ -175,6 +175,7 @@ class ReservationScheduler:
         self.stats = SchedulerStats()
 
         executor_config_dict = asdict(self.executor_config) if self.executor_config else None
+        self.request_builder = ReservationRequestBuilder()
         self.hydrator = ReservationHydrator(
             logger=self.logger,
             executor_config=executor_config_dict,
@@ -182,6 +183,7 @@ class ReservationScheduler:
             persist_queue_outcome=persist_queue_outcome,
             failure_builder=_failure_result_from_reservation,
             on_failure=self._update_reservation_failed,
+            builder=self.request_builder,
         )
         self.pipeline = SchedulerPipeline(
             logger=self.logger,
@@ -712,7 +714,7 @@ class ReservationScheduler:
                     metadata={**prebuilt_request.metadata, **base_metadata},
                 )
             else:
-                booking_request = build_request_from_reservation(
+                booking_request = self.request_builder.from_dict(
                     reservation,
                     user_profile=user_profile,
                     metadata=base_metadata,

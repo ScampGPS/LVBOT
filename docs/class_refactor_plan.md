@@ -83,6 +83,10 @@
 3. Introduce `QueueRecordSerializer` in `reservation_queue.py` to manage JSON storage (serialize/deserialize). Remove inline dict creation in `add_reservation` and the manual dataclass reconstruction in `list_reservations`.
 4. After the serializer is in place, remove the legacy branch that stores dicts when a `ReservationRequest` is already available. `add_reservation` can accept only dataclasses (with an adapter for any remaining dict callers), reducing branching and line count.
 
+### Status
+- ✅ `ReservationRequestBuilder` now owns all queue reservation conversions; callers instantiate and reuse it instead of module-level helpers.
+- ✅ `QueueRecordSerializer` centralises dataclass ↔ storage logic and is used by `ReservationQueue` for persistence and hydration.
+
 ## Phase 5 – Additional High-LOC Targets
 1. `botapp/handlers/booking/handler.py` (1,234 LOC)
    - Shared templates for availability prompts, error messages, and confirmation flows can move into a `BookingUIFactory` class.

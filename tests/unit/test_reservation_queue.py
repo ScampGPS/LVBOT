@@ -66,6 +66,7 @@ def test_duplicate_reservation_detection(tmp_path):
             "user_id": 99,
             "target_date": "2025-01-01",
             "target_time": "08:00",
+            "court_preferences": [1],
         }
     )
 
@@ -75,5 +76,6 @@ def test_duplicate_reservation_detection(tmp_path):
                 "user_id": 99,
                 "target_date": "2025-01-01",
                 "target_time": "08:00",
+                "court_preferences": [1],
             }
         )

@@ -12,6 +12,7 @@ from reservations.queue.scheduler.pipeline import (
     ReservationBatch,
     hydrate_reservation_batch,
 )
+from reservations.queue.request_builder import ReservationRequestBuilder, DEFAULT_BUILDER
 from reservations.queue.scheduler import outcome as outcome_module
 from tracking import t
 
@@ -36,6 +37,7 @@ class ReservationHydrator:
         persist_queue_outcome: Callable[[str, BookingResult, Any], None],
         failure_builder: Callable[..., BookingResult],
         on_failure: Callable[[str, str], None],
+        builder: ReservationRequestBuilder = DEFAULT_BUILDER,
     ) -> None:
         self._logger = logger
         self._executor_config = executor_config
@@ -43,6 +45,7 @@ class ReservationHydrator:
         self._persist_queue_outcome = persist_queue_outcome
         self._failure_builder = failure_builder
         self._on_failure = on_failure
+        self._builder = builder
 
     def hydrate(self, batch: ReservationBatch) -> HydratedReservations:
         """Return filtered reservations and their prepared booking requests."""
@@ -52,6 +55,7 @@ class ReservationHydrator:
             batch,
             executor_config=self._executor_config,
             logger=self._logger,
+            builder=self._builder,
         )
 
         reservations = self._filter_failures(batch, hydrated.failures)

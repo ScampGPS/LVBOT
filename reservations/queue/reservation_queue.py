@@ -9,17 +9,20 @@ from tracking import t
 import uuid
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Mapping, Optional, Union
 from enum import Enum
 
-from reservations.models import ReservationRequest, UserProfile
+from reservations.models import ReservationRequest
 from reservations.queue.reservation_repository import ReservationRepository
 from reservations.queue.reservation_validation import ensure_unique_slot
 from reservations.queue.reservation_transitions import (
     add_to_waitlist as mark_waitlisted,
     apply_status_update,
 )
-from reservations.queue.request_builder import reservation_request_to_payload
+from reservations.queue.request_builder import (
+    ReservationRequestBuilder,
+    DEFAULT_BUILDER,
+)
 from infrastructure.settings import get_test_mode
 
 
@@ -37,6 +40,26 @@ class ReservationStatus(Enum):
     EXPIRED = "expired"                   # Waitlist expired
 
 
+class QueueRecordSerializer:
+    """Serialize and hydrate queue reservation records."""
+
+    def __init__(
+        self,
+        builder: ReservationRequestBuilder = DEFAULT_BUILDER,
+    ) -> None:
+        self._builder = builder
+
+    def to_storage(self, reservation: ReservationRequest) -> Dict[str, Any]:
+        return dict(self._builder.to_payload(reservation))
+
+    def from_storage(self, payload: Mapping[str, Any]) -> ReservationRequest:
+        return self._builder.record_from_payload(payload)
+
+    def normalise_payload(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
+        record = self.from_storage(payload)
+        return self.to_storage(record)
+
+
 class ReservationQueue:
     """
     Manages the storage, retrieval, and status updates of reservation requests.
@@ -50,7 +73,12 @@ class ReservationQueue:
         logger (logging.Logger): Logger instance for this class
     """
     
-    def __init__(self, file_path: str = 'data/queue.json'):
+    def __init__(
+        self,
+        file_path: str = 'data/queue.json',
+        *,
+        builder: ReservationRequestBuilder | None = None,
+    ):
         """
         Initialize the ReservationQueue.
 
@@ -59,6 +87,8 @@ class ReservationQueue:
         """
         t('reservations.queue.reservation_queue.ReservationQueue.__init__')
         self.logger = logging.getLogger('ReservationQueue')
+        self._builder = builder or ReservationRequestBuilder()
+        self._serializer = QueueRecordSerializer(self._builder)
         self.repository = ReservationRepository(file_path, logger=self.logger)
         self.file_path = file_path
         self.queue = self.repository.load()
@@ -83,9 +113,9 @@ class ReservationQueue:
         import pytz
 
         if isinstance(reservation_data, ReservationRequest):
-            payload = reservation_request_to_payload(reservation_data)
+            payload = self._serializer.to_storage(reservation_data)
         else:
-            payload = dict(reservation_data)
+            payload = self._serializer.normalise_payload(dict(reservation_data))
 
         # Log detailed reservation request
         self.logger.info(f"""NEW RESERVATION REQUEST
@@ -167,31 +197,7 @@ class ReservationQueue:
         """Return reservations as dataclasses."""
         t('reservations.queue.reservation_queue.ReservationQueue.list_reservations')
 
-        results: List[ReservationRequest] = []
-        for item in self.queue:
-            user = UserProfile(
-                user_id=item.get('user_id'),
-                first_name=item.get('first_name', ''),
-                last_name=item.get('last_name', ''),
-                email=item.get('email', ''),
-                phone=item.get('phone', ''),
-                tier=item.get('tier'),
-            )
-            request = ReservationRequest(
-                request_id=item.get('id'),
-                user=user,
-                target_date=datetime.fromisoformat(item['target_date']).date()
-                if isinstance(item.get('target_date'), str)
-                else item.get('target_date'),
-                target_time=item.get('target_time'),
-                court_preferences=item.get('court_preferences', []),
-                created_at=datetime.fromisoformat(item['created_at'])
-                if isinstance(item.get('created_at'), str)
-                else item.get('created_at'),
-                status=item.get('status', 'pending'),
-            )
-            results.append(request)
-        return results
+        return [self._serializer.from_storage(item) for item in self.queue]
     
     def get_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         """

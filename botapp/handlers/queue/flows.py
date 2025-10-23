@@ -23,7 +23,7 @@ from botapp.handlers.queue.guards import (
 from botapp.handlers.queue.messages import QueueMessageFactory
 from botapp.handlers.state import reset_flow
 from infrastructure.constants import get_court_hours
-from reservations.queue.request_builder import build_reservation_request_from_summary
+from reservations.queue.request_builder import DEFAULT_BUILDER, ReservationRequestBuilder
 from botapp.ui.telegram_ui import TelegramUI
 
 
@@ -57,12 +57,15 @@ class QueueFlowBase:
         messages: QueueMessageFactory,
         safe_answer: SafeAnswer,
         edit_message: EditCallback,
+        *,
+        request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
         self.deps = deps
         self.logger = deps.logger
         self.messages = messages
         self._safe_answer = safe_answer
         self._edit_message = edit_message
+        self._request_builder = request_builder or DEFAULT_BUILDER
 
     async def answer_callback(self, query, text: str | None = None) -> None:
         """Safely answer callback queries using the provided helper."""
@@ -96,8 +99,16 @@ class QueueBookingFlow(QueueFlowBase):
         format_queue_reservation_added,
         format_duplicate_reservation_message,
         show_time_selection,
+        *,
+        request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
-        super().__init__(deps, messages, safe_answer, edit_message)
+        super().__init__(
+            deps,
+            messages,
+            safe_answer,
+            edit_message,
+            request_builder=request_builder,
+        )
         self._get_test_mode = get_test_mode
         self._format_queue_reservation_added = format_queue_reservation_added
         self._format_duplicate_reservation_message = format_duplicate_reservation_message
@@ -369,7 +380,7 @@ class QueueBookingFlow(QueueFlowBase):
         config = self._get_test_mode()
 
         try:
-            reservation_request = build_reservation_request_from_summary(booking_summary)
+            reservation_request = self._request_builder.from_summary(booking_summary)
             reservation_id = self.deps.reservation_queue.add_reservation_request(reservation_request)
 
             queue_session.clear_all(context)
@@ -672,8 +683,16 @@ class QueueReservationManager(QueueFlowBase):
         safe_answer: SafeAnswer,
         edit_message: EditCallback,
         get_test_mode,
+        *,
+        request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
-        super().__init__(deps, messages, safe_answer, edit_message)
+        super().__init__(
+            deps,
+            messages,
+            safe_answer,
+            edit_message,
+            request_builder=request_builder,
+        )
         self._get_test_mode = get_test_mode
 
     async def show_user_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
