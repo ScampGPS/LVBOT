@@ -14,6 +14,9 @@
 - **Removed TennisExecutor fallback** – unified immediate bookings on the natural Playwright flow and removed the legacy tennis executor path.
 - **Acuity form service rollout** – replaced the procedural helpers with `AcuityFormService`, updated `automation/forms/acuity_booking_form.py` and `automation/browser/pools/specialized.py` to depend on the service, and deleted the legacy functions.
 - **Queue reservation builder overhaul** – introduced `ReservationRequestBuilder`, rewired scheduler/queue flows to depend on it, and added a `QueueRecordSerializer` for consistent persistence wiring.
+- **Booking UI & health runners** – extracted `BookingUIFactory`, introduced `HealthCheckRunner` for pool/court checks, modularised emergency fallback helpers, and split message-handling utilities into reusable components.
+- **Availability poller & monitoring cleanup** – added `AvailabilityPoller`, refactored realtime/court monitors to reuse it, and removed redundant, script-style polling scaffolding.
+- **Queue reservation builder overhaul** – introduced `ReservationRequestBuilder`, rewired scheduler/queue flows to depend on it, and added a `QueueRecordSerializer` for consistent persistence wiring.
 
 ## Next Major Refactor
 
@@ -32,11 +35,9 @@
 ## Future Refactor Candidates
 
 4. `automation/executors/request_factory.py` – replace the free functions with an `ExecutorRequestFactory` that owns user validation, metadata composition, and result translation.
-1. `botapp/handlers/booking/handler.py` (~1,200) – introduce small helpers for calendar management and message building.
-2. `automation/browser/pools/specialized.py` (~900) – break smart assignment/retry logic into strategies.
-3. `botapp/ui/booking.py` (~700) – keep UI components declarative and shared across flows.
-4. `automation/executors/booking_orchestrator.py` (~530) – split into `prepare → execute → finalise` steps.
-5. `reservations/queue/reservation_queue.py` (~450) – finish delegating persistence/validation/transition logic.
+1. `automation/browser/pools/specialized.py` (~900) – break smart assignment/retry logic into strategies.
+2. `botapp/ui/booking.py` (~700) – keep UI components declarative and shared across flows.
+3. `automation/executors/booking_orchestrator.py` (~530) – split into `prepare → execute → finalise` steps.
 6. `botapp/handlers/profile/handler.py` (~445) – centralize keypad and validation helpers.
 7. `botapp/handlers/admin/handler.py` (~435) – extract admin UI builders and data readers.
 8. `botapp/booking/immediate_handler.py` (~400) – isolate user lookup, flow execution, and result messaging.

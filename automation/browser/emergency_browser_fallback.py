@@ -5,7 +5,6 @@ Used as last resort when browser pool is completely unavailable
 """
 from tracking import t
 
-import asyncio
 import logging
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime, date
@@ -13,6 +12,196 @@ from dataclasses import dataclass
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 from playwright.async_api import TimeoutError as PlaywrightTimeout
+
+
+class EmergencyBrowserFactory:
+    """Creates and manages the single emergency Playwright browser/context."""
+
+    def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        self.logger = logger or logging.getLogger('EmergencyBrowserFallback')
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.playwright = None
+
+    async def create(self, timeouts: Dict[str, int]) -> Browser:
+        if not self.playwright:
+            self.playwright = await async_playwright().start()
+
+        self.browser = await self.playwright.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-gpu',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process',
+            ],
+        )
+
+        self.context = await self.browser.new_context(
+            viewport={'width': 1280, 'height': 720},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            locale='es-MX',
+            timezone_id='America/Denver',
+            ignore_https_errors=True,
+        )
+        self.context.set_default_timeout(timeouts['navigation'])
+        self.logger.info("Emergency browser created successfully")
+        return self.browser
+
+    async def cleanup(self) -> None:
+        try:
+            if self.context:
+                await self.context.close()
+        finally:
+            self.context = None
+
+        try:
+            if self.browser:
+                await self.browser.close()
+        finally:
+            self.browser = None
+
+        if self.playwright:
+            await self.playwright.stop()
+            self.playwright = None
+
+
+class EmergencyFormInteractor:
+    """Handles form navigation, visibility checks, and filling."""
+
+    def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        self.logger = logger or logging.getLogger('EmergencyBrowserFallback')
+
+    async def ensure_form_visible(self, page: Page) -> bool:
+        if await self._check_form_visible(page):
+            return True
+        await self._try_click_continue(page)
+        await page.wait_for_timeout(1000)
+        return await self._check_form_visible(page)
+
+    async def check_form_visible(self, page: Page) -> bool:
+        return await self._check_form_visible(page)
+
+    async def try_click_continue(self, page: Page) -> None:
+        await self._try_click_continue(page)
+
+    async def fill_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
+        try:
+            await page.fill('input[name="client.firstName"]', user_info.get('first_name', ''))
+            await page.fill('input[name="client.lastName"]', user_info.get('last_name', ''))
+            await page.fill('input[name="client.phone"]', user_info.get('phone', ''))
+            await page.fill('input[name="client.email"]', user_info.get('email', ''))
+
+            terms_checkbox = await page.query_selector('input[type="checkbox"][name="confirmed"]')
+            if terms_checkbox:
+                await terms_checkbox.check()
+
+            self.logger.info("Emergency form filled successfully")
+            return True
+        except Exception as exc:
+            self.logger.error("Failed to fill emergency form: %s", exc)
+            return False
+
+    async def _check_form_visible(self, page: Page) -> bool:
+        try:
+            field = await page.query_selector('input[name="client.firstName"]')
+            return field is not None
+        except Exception:
+            return False
+
+    async def _try_click_continue(self, page: Page) -> None:
+        try:
+            continue_btn = await page.query_selector('button:has-text("Continuar")')
+            if continue_btn:
+                await continue_btn.click()
+                await page.wait_for_timeout(1000)
+        except Exception:
+            pass
+
+
+class EmergencyConfirmationChecker:
+    """Submits booking and extracts confirmation/error state."""
+
+    def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        self.logger = logger or logging.getLogger('EmergencyBrowserFallback')
+
+    async def submit(self, page: Page) -> Dict[str, Any]:
+        try:
+            submit_btn = await page.query_selector('button[type="submit"]:has-text("Schedule")')
+            if not submit_btn:
+                submit_btn = await page.query_selector('button[type="submit"]:has-text("Agendar")')
+
+            if not submit_btn:
+                return {'success': False, 'error': 'Submit button not found'}
+
+            await submit_btn.click()
+            await page.wait_for_timeout(5000)
+
+            current_url = page.url
+            if '/confirmation/' in current_url:
+                confirmation_id = current_url.split('/confirmation/')[-1].split('/')[0].split('?')[0]
+                user_name = await self._extract_user_name(page)
+                self.logger.info("Emergency booking confirmed! ID: %s", confirmation_id)
+                return {
+                    'success': True,
+                    'confirmation_id': confirmation_id,
+                    'user_name': user_name,
+                }
+
+            error_msg = await self._check_for_errors(page)
+            if error_msg:
+                return {'success': False, 'error': error_msg}
+
+            return {'success': False, 'error': 'No confirmation received'}
+        except Exception as exc:
+            self.logger.error("Submit failed: %s", exc)
+            return {'success': False, 'error': str(exc)}
+
+    async def check_for_errors(self, page: Page) -> Optional[str]:
+        return await self._check_for_errors(page)
+
+    async def _extract_user_name(self, page: Page) -> Optional[str]:
+        try:
+            name_element = await page.query_selector('h1, h2, h3')
+            if not name_element:
+                return None
+            text = await name_element.text_content()
+            if text and '¡Tu cita está confirmada!' in text:
+                return text.split(',')[0].strip()
+        except Exception:
+            return None
+        return None
+
+    async def _check_for_errors(self, page: Page) -> Optional[str]:
+        selectors = [
+            '.alert-danger',
+            '.error-message',
+            'div[role="alert"]',
+            'p:has-text("error")',
+            'p:has-text("Error")',
+        ]
+
+        for selector in selectors:
+            try:
+                element = await page.query_selector(selector)
+                if element:
+                    text = await element.text_content()
+                    if text:
+                        return text.strip()
+            except Exception:
+                continue
+
+        try:
+            no_avail = await page.query_selector('text=/no.*disponib/i')
+            if no_avail:
+                return "No availability for selected time"
+        except Exception:
+            pass
+
+        return None
 
 
 @dataclass
@@ -38,9 +227,6 @@ class EmergencyBrowserFallback:
         """Initialize emergency fallback - no pool dependencies"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.__init__')
         self.logger = logging.getLogger('EmergencyBrowserFallback')
-        self.browser: Optional[Browser] = None
-        self.context: Optional[BrowserContext] = None
-        self.playwright = None
         self._initialized = False
         
         # Timeout configuration
@@ -52,44 +238,17 @@ class EmergencyBrowserFallback:
         }
         
         self.logger.info("Emergency Browser Fallback initialized")
-    
+        self._factory = EmergencyBrowserFactory(logger=self.logger)
+        self._form = EmergencyFormInteractor(logger=self.logger)
+        self._confirmation = EmergencyConfirmationChecker(logger=self.logger)
+
     async def create_browser(self) -> Browser:
         """Create a single browser instance directly with Playwright"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.create_browser')
         try:
-            if not self.playwright:
-                self.playwright = await async_playwright().start()
-                
-            # Create browser with simple configuration
-            self.browser = await self.playwright.chromium.launch(
-                headless=True,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage',
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-gpu',
-                    '--disable-web-security',
-                    '--disable-features=IsolateOrigins,site-per-process'
-                ]
-            )
-            
-            # Create context with basic settings
-            self.context = await self.browser.new_context(
-                viewport={'width': 1280, 'height': 720},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                locale='es-MX',
-                timezone_id='America/Denver',
-                ignore_https_errors=True
-            )
-            
-            # Set default timeout
-            self.context.set_default_timeout(self.TIMEOUTS['navigation'])
-            
+            browser = await self._factory.create(self.TIMEOUTS)
             self._initialized = True
-            self.logger.info("Emergency browser created successfully")
-            return self.browser
-            
+            return browser
         except Exception as e:
             self.logger.error(f"Failed to create emergency browser: {e}")
             await self.cleanup()
@@ -117,11 +276,14 @@ class EmergencyBrowserFallback:
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.book_reservation')
         if not self._initialized:
             await self.create_browser()
-            
-        page = None
+
+        if not self._factory.context:
+            raise RuntimeError("Emergency browser context not available")
+
+        page: Optional[Page] = None
         try:
             # Create new page for booking
-            page = await self.context.new_page()
+            page = await self._factory.context.new_page()
             
             # Build direct booking URL
             base_url = "https://clublavilla.as.me/schedule/7d558012/appointment/16021953/calendar/4291312"
@@ -140,29 +302,21 @@ class EmergencyBrowserFallback:
                 self.logger.warning("Navigation timeout - continuing anyway")
             
             # Check if we reached the form
-            form_visible = await self._check_form_visible(page)
-            if not form_visible:
-                # Try clicking continue if needed
-                await self._try_click_continue(page)
-                await page.wait_for_timeout(1000)
-                form_visible = await self._check_form_visible(page)
-            
-            if not form_visible:
+            if not await self._form.ensure_form_visible(page):
                 return EmergencyBookingResult(
                     success=False,
                     error_message="Could not reach booking form"
                 )
             
             # Fill the form
-            form_filled = await self._fill_booking_form(page, user_info)
-            if not form_filled:
+            if not await self._form.fill_form(page, user_info):
                 return EmergencyBookingResult(
                     success=False,
                     error_message="Failed to fill booking form"
                 )
             
             # Submit the booking
-            confirmation = await self._submit_booking(page)
+            confirmation = await self._confirmation.submit(page)
             
             if confirmation['success']:
                 return EmergencyBookingResult(
@@ -191,156 +345,39 @@ class EmergencyBrowserFallback:
                     await page.close()
                 except:
                     pass
-    
+
     async def _check_form_visible(self, page: Page) -> bool:
         """Check if booking form is visible"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_form_visible')
-        try:
-            # Check for form fields
-            first_name_field = await page.query_selector('input[name="client.firstName"]')
-            return first_name_field is not None
-        except:
-            return False
+        return await self._form.check_form_visible(page)
     
     async def _try_click_continue(self, page: Page):
         """Try to click continue button if present"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._try_click_continue')
-        try:
-            continue_btn = await page.query_selector('button:has-text("Continuar")')
-            if continue_btn:
-                await continue_btn.click()
-                await page.wait_for_timeout(1000)
-        except:
-            pass
+        await self._form.try_click_continue(page)
     
     async def _fill_booking_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
         """Fill the booking form with user information"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._fill_booking_form')
-        try:
-            # Fill form fields with proper field names
-            await page.fill('input[name="client.firstName"]', user_info.get('first_name', ''))
-            await page.fill('input[name="client.lastName"]', user_info.get('last_name', ''))
-            await page.fill('input[name="client.phone"]', user_info.get('phone', ''))
-            await page.fill('input[name="client.email"]', user_info.get('email', ''))
-            
-            # Accept terms if checkbox exists
-            try:
-                terms_checkbox = await page.query_selector('input[type="checkbox"][name="confirmed"]')
-                if terms_checkbox:
-                    await terms_checkbox.check()
-            except:
-                pass
-                
-            self.logger.info("Emergency form filled successfully")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to fill emergency form: {e}")
-            return False
+        return await self._form.fill_form(page, user_info)
     
     async def _submit_booking(self, page: Page) -> Dict[str, Any]:
         """Submit the booking and check for confirmation"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._submit_booking')
-        try:
-            # Find and click submit button
-            submit_btn = await page.query_selector('button[type="submit"]:has-text("Schedule")')
-            if not submit_btn:
-                submit_btn = await page.query_selector('button[type="submit"]:has-text("Agendar")')
-            
-            if not submit_btn:
-                return {'success': False, 'error': 'Submit button not found'}
-            
-            # Click submit
-            await submit_btn.click()
-            
-            # Wait for navigation or confirmation
-            await page.wait_for_timeout(5000)
-            
-            # Check for confirmation
-            current_url = page.url
-            if '/confirmation/' in current_url:
-                # Extract confirmation ID
-                conf_id = current_url.split('/confirmation/')[-1].split('/')[0].split('?')[0]
-                
-                # Try to get user name from confirmation
-                user_name = None
-                try:
-                    name_element = await page.query_selector('h1, h2, h3')
-                    if name_element:
-                        text = await name_element.text_content()
-                        if '¡Tu cita está confirmada!' in text:
-                            user_name = text.split(',')[0].strip()
-                except:
-                    pass
-                
-                self.logger.info(f"Emergency booking confirmed! ID: {conf_id}")
-                return {
-                    'success': True,
-                    'confirmation_id': conf_id,
-                    'user_name': user_name
-                }
-            
-            # Check for error messages
-            error_msg = await self._check_for_errors(page)
-            if error_msg:
-                return {'success': False, 'error': error_msg}
-                
-            return {'success': False, 'error': 'No confirmation received'}
-            
-        except Exception as e:
-            self.logger.error(f"Submit failed: {e}")
-            return {'success': False, 'error': str(e)}
+        return await self._confirmation.submit(page)
     
     async def _check_for_errors(self, page: Page) -> Optional[str]:
         """Check page for error messages"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_for_errors')
-        try:
-            # Common error selectors
-            error_selectors = [
-                '.alert-danger',
-                '.error-message',
-                'div[role="alert"]',
-                'p:has-text("error")',
-                'p:has-text("Error")'
-            ]
-            
-            for selector in error_selectors:
-                error_elem = await page.query_selector(selector)
-                if error_elem:
-                    error_text = await error_elem.text_content()
-                    return error_text.strip()
-                    
-            # Check for "no availability" messages
-            no_avail = await page.query_selector('text=/no.*disponib/i')
-            if no_avail:
-                return "No availability for selected time"
-                
-        except:
-            pass
-            
-        return None
+        return await self._confirmation.check_for_errors(page)
     
     async def cleanup(self):
         """Clean up browser resources"""
         t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.cleanup')
-        try:
-            if self.context:
-                await self.context.close()
-                self.context = None
-                
-            if self.browser:
-                await self.browser.close()
-                self.browser = None
-                
-            if self.playwright:
-                await self.playwright.stop()
-                self.playwright = None
-                
-            self._initialized = False
-            self.logger.info("Emergency browser cleaned up")
-            
-        except Exception as e:
-            self.logger.error(f"Cleanup error: {e}")
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.cleanup')
+        await self._factory.cleanup()
+        self._initialized = False
+        self.logger.info("Emergency browser cleaned up")
     
     async def __aenter__(self):
         """Context manager entry"""

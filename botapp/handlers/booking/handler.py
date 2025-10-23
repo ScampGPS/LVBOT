@@ -16,6 +16,7 @@ from botapp.error_handler import ErrorHandler
 from automation.availability import DateTimeHelpers
 from infrastructure.settings import get_test_mode
 from infrastructure.constants import get_court_hours
+from botapp.handlers.booking.ui_factory import BookingUIFactory
 
 
 class BookingHandler:
@@ -25,6 +26,7 @@ class BookingHandler:
     def __init__(self, deps: CallbackDependencies) -> None:
         self.deps = deps
         self.logger = deps.logger
+        self.ui_factory = BookingUIFactory()
 
     async def handle_reserve_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -43,17 +45,12 @@ class BookingHandler:
         self.logger.debug(f"_handle_reserve_menu: Method entry for user_id={user_id}")
 
         query = update.callback_query
-
-        # Create 48h booking type selection keyboard
-        keyboard = TelegramUI.create_48h_booking_type_keyboard()
+        view = self.ui_factory.booking_type_selection()
 
         # Debug: Log pre-message sending
         self.logger.debug(f"_handle_reserve_menu: About to send booking type selection to user_id={user_id}")
 
-        await query.edit_message_text(
-            "🎾 Reserve Court\n\nChoose booking type:",
-            reply_markup=keyboard
-        )
+        await query.edit_message_text(view.text, reply_markup=view.reply_markup)
 
     async def handle_performance_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -68,20 +65,9 @@ class BookingHandler:
         """
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_performance_menu')
         query = update.callback_query
-        reply_markup = TelegramUI.create_back_to_menu_keyboard()
+        view = self.ui_factory.performance_menu()
 
-        await query.edit_message_text(
-            "📊 Performance\n\n"
-            "This feature is under development.\n\n"
-            "Soon you'll be able to view:\n"
-            "• Your booking success rate\n"
-            "• Average response time\n"
-            "• Most played courts and times\n"
-            "• Weekly/monthly statistics\n"
-            "• Comparison with other users\n\n"
-            "Coming soon!",
-            reply_markup=reply_markup
-        )
+        await query.edit_message_text(view.text, reply_markup=view.reply_markup)
 
     async def handle_reservations_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -107,18 +93,12 @@ class BookingHandler:
 
             if is_admin:
                 # Show admin options menu
-                keyboard = [
-                    [InlineKeyboardButton("📋 My Reservations", callback_data='admin_view_my_reservations')],
-                    [InlineKeyboardButton("👥 View by User", callback_data='admin_view_users_list')],
-                    [InlineKeyboardButton("📊 All Reservations", callback_data='admin_view_all_reservations')],
-                    [InlineKeyboardButton("⬅️ Back", callback_data='back_to_menu')]
-                ]
+                admin_view = self.ui_factory.admin_reservations_menu()
 
                 await query.edit_message_text(
-                    "👮 **Admin Reservations Menu**\n\n"
-                    "Select which reservations to view:",
+                    admin_view.text,
                     parse_mode='Markdown',
-                    reply_markup=InlineKeyboardMarkup(keyboard)
+                    reply_markup=admin_view.reply_markup,
                 )
                 return
             # Get all reservations for the user
@@ -138,12 +118,11 @@ class BookingHandler:
                     all_reservations.append(res)
 
             if not all_reservations:
+                view = self.ui_factory.empty_reservations_view()
                 await query.edit_message_text(
-                    "📅 **My Reservations**\n\n"
-                    "You don't have any active reservations.\n\n"
-                    "Use '🎾 Reserve Court' to make a booking!",
+                    view.text,
                     parse_mode='Markdown',
-                    reply_markup=TelegramUI.create_back_to_menu_keyboard()
+                    reply_markup=view.reply_markup,
                 )
                 return
 

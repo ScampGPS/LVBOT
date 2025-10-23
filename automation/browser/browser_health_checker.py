@@ -11,9 +11,8 @@ ensure bookings have the best chance of success by detecting issues early.
 """
 from tracking import t
 
-import asyncio
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, Optional
 from datetime import datetime
 from playwright.async_api import Page
 
@@ -25,6 +24,7 @@ from automation.browser.health.evaluators import (
     evaluate_pool_health,
     summarise_courts,
 )
+from automation.browser.health.runner import HealthCheckRunner
 from automation.browser.health.types import CourtHealthStatus, HealthCheckResult, HealthStatus
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ class BrowserHealthChecker:
         self.browser_pool = browser_pool
         self.last_full_check: Optional[datetime] = None
         self.court_health_cache: Dict[int, CourtHealthStatus] = {}
+        self._runner = HealthCheckRunner(logger=logger)
     
     async def perform_pre_booking_health_check(self) -> HealthCheckResult:
         """
@@ -69,88 +70,13 @@ class BrowserHealthChecker:
         start_time = datetime.now()
         
         try:
-            # First check overall pool health
-            pool_health = await self.check_pool_health()
-            if pool_health.status == HealthStatus.FAILED:
-                return pool_health
-            
-            # Check individual court health in parallel
             available_courts = self.browser_pool.get_available_courts()
-            if not available_courts:
-                return HealthCheckResult(
-                    status=HealthStatus.FAILED,
-                    message="No courts available in browser pool",
-                    timestamp=datetime.now()
-                )
-            
-            # Parallel health checks for all courts
-            court_tasks = []
-            for court_num in available_courts:
-                court_tasks.append(self.check_court_health(court_num))
-            
-            court_results = await asyncio.gather(*court_tasks, return_exceptions=True)
+            court_checks = self._runner.build_court_checks(available_courts, self.check_court_health)
+            result = await self._runner.run(self.check_pool_health, court_checks)
+            if result.status != HealthStatus.FAILED:
+                self.last_full_check = datetime.now()
+            return result
 
-            healthy_courts = 0
-            degraded_courts = 0
-            failed_courts = 0
-            court_statuses: List[CourtHealthStatus] = []
-
-            for i, result in enumerate(court_results):
-                court_num = available_courts[i]
-                if isinstance(result, Exception):
-                    logger.error("Court %s health check failed: %s", court_num, result)
-                    failed_courts += 1
-                    court_statuses.append(
-                        CourtHealthStatus(
-                            court_number=court_num,
-                            status=HealthStatus.FAILED,
-                            last_check=datetime.now(),
-                            error_message=str(result),
-                        )
-                    )
-                    continue
-                court_statuses.append(result)
-                if result.status == HealthStatus.HEALTHY:
-                    healthy_courts += 1
-                elif result.status == HealthStatus.DEGRADED:
-                    degraded_courts += 1
-                else:
-                    failed_courts += 1
-
-            court_details = summarise_courts(court_statuses)
-            
-            # Determine overall status
-            elapsed_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-            
-            if healthy_courts == len(available_courts):
-                status = HealthStatus.HEALTHY
-                message = f"All {healthy_courts} courts are healthy"
-            elif healthy_courts > 0:
-                status = HealthStatus.DEGRADED
-                message = f"{healthy_courts} healthy, {degraded_courts} degraded, {failed_courts} failed"
-            elif degraded_courts > 0:
-                status = HealthStatus.CRITICAL
-                message = f"No healthy courts, {degraded_courts} degraded, {failed_courts} failed"
-            else:
-                status = HealthStatus.FAILED
-                message = f"All {failed_courts} courts have failed"
-            
-            self.last_full_check = datetime.now()
-            
-            return HealthCheckResult(
-                status=status,
-                message=message,
-                timestamp=datetime.now(),
-                details={
-                    "courts": court_details,
-                    "healthy_count": healthy_courts,
-                    "degraded_count": degraded_courts,
-                    "failed_count": failed_courts,
-                    "total_courts": len(available_courts),
-                    "check_duration_ms": elapsed_ms
-                }
-            )
-            
         except Exception as e:
             logger.error(f"Pre-booking health check failed: {e}")
             return HealthCheckResult(
@@ -200,8 +126,6 @@ class BrowserHealthChecker:
             CourtHealthStatus with detailed health information
         """
         t('automation.browser.browser_health_checker.BrowserHealthChecker.check_court_health')
-        start_time = datetime.now()
-
         try:
             async with self.browser_pool.lock:
                 page = self.browser_pool.pages.get(court_number)
@@ -242,46 +166,6 @@ class BrowserHealthChecker:
                 last_check=datetime.now(),
                 error_message=str(e),
             )
-    
-            
-            # 2. Test JavaScript execution
-            try:
-                js_result = await page.evaluate("() => 1 + 1")
-                if js_result == 2:
-                    results["javascript_works"] = True
-            except Exception as e:
-                logger.warning(f"Court {court_number}: JavaScript execution failed - {e}")
-            
-            # 3. Test network connectivity (check if on booking site)
-            try:
-                if current_url and ("clublavilla.as.me" in current_url or "acuityscheduling" in current_url):
-                    results["network_ok"] = True
-                else:
-                    # Try to check if we can reach the booking site
-                    can_reach = await page.evaluate("""
-                        () => {
-                            return window.location.hostname.includes('as.me') || 
-                                   window.location.hostname.includes('acuityscheduling');
-                        }
-                    """)
-                    results["network_ok"] = bool(can_reach)
-            except Exception as e:
-                logger.warning(f"Court {court_number}: Network check failed - {e}")
-            
-            # 4. Test DOM query capability
-            try:
-                # Try to find any button element
-                button_count = await page.evaluate("() => document.querySelectorAll('button').length")
-                results["dom_queryable"] = button_count > 0
-            except Exception as e:
-                logger.warning(f"Court {court_number}: DOM query failed - {e}")
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"Court {court_number}: Responsiveness test failed - {e}")
-            results["error"] = f"Responsiveness test failed: {str(e)}"
-            return results
     
     def get_court_health_summary(self) -> Dict[int, str]:
         """

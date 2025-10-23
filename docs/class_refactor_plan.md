@@ -86,6 +86,7 @@
 ### Status
 - ✅ `ReservationRequestBuilder` now owns all queue reservation conversions; callers instantiate and reuse it instead of module-level helpers.
 - ✅ `QueueRecordSerializer` centralises dataclass ↔ storage logic and is used by `ReservationQueue` for persistence and hydration.
+- ✅ Phase 5: `BookingUIFactory`, `HealthCheckRunner`, modular emergency fallback helpers, and componentised message utilities are in place.
 
 ## Phase 5 – Additional High-LOC Targets
 1. `botapp/handlers/booking/handler.py` (1,234 LOC)
@@ -141,6 +142,8 @@ Each of these modules has identifiable duplication (e.g., the same `await bot.se
 
 ### 6.10 `automation/executors/booking_orchestrator.py` (531 LOC – medium-high but already structured)
 - After core phases, revisit to split `prepare`, `execute`, `finalise` into dedicated components, removing inline state tracking.
+
+**Status:** Availability monitoring now uses `AvailabilityPoller`, and the realtime/court monitor scripts were trimmed to the shared helper. Emergency fallback and message utilities are modularised.
 
 
 ## Phase 7 – Small LOC/Class Offenders (100–250 LOC)
