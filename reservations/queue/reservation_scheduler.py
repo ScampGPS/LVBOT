@@ -32,10 +32,13 @@ from reservations.queue.scheduler import (
     BrowserLifecycle,
     DispatchJob,
     dispatch_to_executors,
-    hydrate_reservation_batch,
     pull_ready_reservations,
     SchedulerStats,
-    record_outcome,
+)
+from reservations.queue.scheduler.services import (
+    OutcomeRecorder,
+    ReservationHydrator,
+    SchedulerPipeline,
 )
 from reservations.queue.request_builder import build_request_from_reservation
 from reservations.queue.persistence import persist_queue_outcome
@@ -170,6 +173,28 @@ class ReservationScheduler:
 
         # Performance tracking
         self.stats = SchedulerStats()
+
+        executor_config_dict = asdict(self.executor_config) if self.executor_config else None
+        self.hydrator = ReservationHydrator(
+            logger=self.logger,
+            executor_config=executor_config_dict,
+            queue=self.queue,
+            persist_queue_outcome=persist_queue_outcome,
+            failure_builder=_failure_result_from_reservation,
+            on_failure=self._update_reservation_failed,
+        )
+        self.pipeline = SchedulerPipeline(
+            logger=self.logger,
+            hydrator=self.hydrator,
+            health_check=self._perform_pre_execution_health_check,
+            executor=self._execute_reservation_group,
+        )
+        self.outcome_recorder = OutcomeRecorder(
+            scheduler=self,
+            persist_queue_outcome=persist_queue_outcome,
+            failure_builder=_failure_result_from_reservation,
+            result_mapper=_booking_result_to_dict,
+        )
 
     @property
     def browser_pool(self):
@@ -323,8 +348,7 @@ class ReservationScheduler:
             try:
                 now = datetime.now(pytz.timezone(self.config.timezone))
                 evaluation = self._evaluate_queue(now)
-                await self._handle_health_check_batches(evaluation.requires_health_check)
-                await self._execute_ready_batches(evaluation.ready_for_execution)
+                await self.pipeline.process(evaluation)
                 await asyncio.sleep(poll_interval)
             except Exception as exc:  # pragma: no cover - defensive guard
                 self.logger.error("Scheduler error: %s", exc)
@@ -346,99 +370,6 @@ class ReservationScheduler:
             logger=self.logger,
         )
 
-    async def _handle_health_check_batches(self, batches: Iterable[Any]) -> None:
-        """Run pre-execution health checks for near-term reservations."""
-
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._handle_health_check_batches')
-        for batch in batches:
-            if not getattr(batch, 'reservations', None):
-                continue
-            self.logger.info(
-                "🏥 Performing health check for %s reservations (group: %s)",
-                len(batch.reservations),
-                batch.time_key,
-            )
-            await self._perform_pre_execution_health_check(batch.reservations)
-
-    async def _execute_ready_batches(self, batches: Iterable[Any]) -> None:
-        """Hydrate and execute each batch ready for booking."""
-
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._execute_ready_batches')
-        for batch in batches:
-            if not getattr(batch, 'reservations', None):
-                continue
-
-            reservations, prepared_requests = self._prepare_execution_inputs(batch)
-            if reservations:
-                await self._execute_reservation_group(
-                    reservations,
-                    prepared_requests=prepared_requests,
-                )
-
-    def _prepare_execution_inputs(
-        self,
-        batch: Any,
-    ) -> Tuple[List[Dict[str, Any]], Dict[str, BookingRequest]]:
-        """Hydrate a reservation batch and return executable reservations and requests."""
-
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._prepare_execution_inputs')
-
-        hydrated = hydrate_reservation_batch(
-            batch,
-            executor_config=asdict(self.executor_config)
-            if self.executor_config
-            else None,
-            logger=self.logger,
-        )
-
-        filtered_reservations: List[Dict[str, Any]]
-        if hydrated.failures:
-            failed_ids = {
-                str(failure.reservation.get('id'))
-                for failure in hydrated.failures
-                if failure.reservation.get('id') is not None
-            }
-            for failure in hydrated.failures:
-                raw_id = failure.reservation.get('id')
-                if raw_id is None:
-                    continue
-                reservation_id = str(raw_id)
-                error_message = f"Failed to prepare booking request: {failure.error}"
-                failure_result = _failure_result_from_reservation(
-                    failure.reservation,
-                    error_message,
-                    errors=[str(failure.error)],
-                )
-                persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                self._update_reservation_failed(reservation_id, error_message)
-            filtered_reservations = [
-                reservation
-                for reservation in batch.reservations
-                if str(reservation.get('id')) not in failed_ids
-            ]
-        else:
-            filtered_reservations = list(batch.reservations)
-
-        prepared_requests: Dict[str, BookingRequest] = {}
-        if hydrated.requests:
-            self.logger.debug(
-                "Prepared %s booking requests for batch %s",
-                len(hydrated.requests),
-                batch.time_key,
-            )
-            filtered_ids = {
-                str(reservation.get('id'))
-                for reservation in filtered_reservations
-                if reservation.get('id') is not None
-            }
-            prepared_requests = {
-                str(request.request_id): request
-                for request in hydrated.requests
-                if request.request_id is not None
-                and str(request.request_id) in filtered_ids
-            }
-
-        return filtered_reservations, prepared_requests
     async def _execute_reservation_group(
         self,
         reservations: List[Any],
@@ -653,7 +584,7 @@ class ReservationScheduler:
                 logger=self.logger,
             )
             results.update(dispatch_results)
-            await self._handle_dispatch_results(
+            await self.outcome_recorder.handle_dispatch_results(
                 reservation_lookup,
                 results,
                 timeouts,
@@ -665,7 +596,7 @@ class ReservationScheduler:
 
         self.logger.info("Booking execution complete: %s", self.orchestrator.get_booking_summary())
         self.logger.info("📊 Results dictionary before notification: %s", results)
-        await self._notify_booking_results(results)
+        await self.outcome_recorder.notify(results)
 
     def _build_dispatch_jobs(
         self,
@@ -715,41 +646,6 @@ class ReservationScheduler:
 
         return jobs, reservation_lookup, results
 
-    async def _handle_dispatch_results(
-        self,
-        reservation_lookup: Dict[str, Dict[str, Any]],
-        results: Dict[str, Dict[str, Any]],
-        timeouts: Dict[str, str],
-    ) -> None:
-        """Persist results, handle timeouts, and update orchestrator state."""
-
-        t('reservations.queue.reservation_scheduler.ReservationScheduler._handle_dispatch_results')
-
-        if timeouts:
-            if hasattr(self.browser_pool, 'set_critical_operation'):
-                try:
-                    await self.browser_pool.set_critical_operation(False)
-                    self.logger.info("✅ Critical operation flag forcibly cleared after task cancellation")
-                except Exception as cleanup_error:  # pragma: no cover - defensive guard
-                    self.logger.error(
-                        "❌ Failed to clear critical operation flag after cancellation: %s",
-                        cleanup_error,
-                    )
-
-            for reservation_id, timeout_message in timeouts.items():
-                reservation_data = reservation_lookup.get(reservation_id, {})
-                failure_result = _failure_result_from_reservation(
-                    reservation_data,
-                    timeout_message,
-                    errors=[timeout_message],
-                )
-                persist_queue_outcome(reservation_id, failure_result, queue=self.queue)
-                results[reservation_id] = _booking_result_to_dict(failure_result)
-
-        for reservation_id, result in results.items():
-            record_outcome(self, reservation_id, result)
-
-    
     async def _execute_single_booking(
         self,
         assignment: Dict,

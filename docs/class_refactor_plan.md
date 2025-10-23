@@ -49,9 +49,9 @@
 - Legacy compatibility branches: calls to `ImmediateBookingHandler.execute_queue_booking`, `_execute_booking`, and duplicated dispatch logging keep old interfaces alive.
 
 ### Actions
-1. Implement `SchedulerPipeline` with explicit stages (`pull_ready`, `hydrate_requests`, `dispatch`, `record_outcome`). Each stage maps to existing helper functions; migrating them into a class allows us to delete duplicated loops in `_execute_reservations` and `_process_ready_reservations`.
-2. Add `ReservationHydrator` to encapsulate `_get_reservation_field`, `_build_executor_user_info`, and `_prepare_requests`. This consolidates the hydration logic and removes repeated dict access across the file.
-3. Introduce `OutcomeRecorder` that handles persistence (`persist_queue_outcome`), notification formatting, and failure result creation. Once in place, drop `_booking_result_to_dict`, `_failure_result_from_reservation`, and the repeated metadata assembly inside `dispatch_to_executors` and `_record_failure`.
+- [x] Implement `SchedulerPipeline` with explicit stages (`pull_ready`, `hydrate_requests`, `dispatch`, `record_outcome`). Each stage maps to existing helper functions; migrating them into a class allows us to delete duplicated loops in `_execute_reservations` and `_process_ready_reservations`.
+- [x] Add `ReservationHydrator` to encapsulate `_get_reservation_field`, `_build_executor_user_info`, and `_prepare_requests`. This consolidates the hydration logic and removes repeated dict access across the file.
+- [x] Introduce `OutcomeRecorder` that handles persistence (`persist_queue_outcome`), notification formatting, and failure result creation. Once in place, drop `_booking_result_to_dict`, `_failure_result_from_reservation`, and the repeated metadata assembly inside `dispatch_to_executors` and `_record_failure`.
 4. Remove legacy pathways after the new classes are wired:
    - Delete `execute_queue_booking` calls and rely on `ImmediateBookingHandler._run_booking_attempts` directly.
    - Remove legacy threading controls (`self.scheduler_thread`, `_legacy_start`) if no longer used.
