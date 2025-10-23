@@ -30,15 +30,15 @@
 - Session interactions (`queue_session.set_*`, `clear_all`, etc.) scattered across handlers, leading to repetitive guard code.
 
 ### Actions
-1. Create `QueueBookingFlow` class that owns the booking-specific callback chain (`handle_queue_booking_*`). The class should capture dependencies (UI builders, session accessor) and expose concise methods (e.g., `select_date`, `select_time`, `select_courts`, `confirm`).
-2. Create `QueueReservationManager` (or `QueueReservationFlow`) for the reservation viewing/modification paths (`handle_my_reservations_menu`, `handle_queue_reservation_view`, `handle_queue_modify_*`). This separates management operations from booking initiation and lets us drop cross-branch conditionals.
-3. Introduce `QueueMessageFactory` to build shared Markdown payloads. Consolidate:
+- [x] Create `QueueBookingFlow` class that owns the booking-specific callback chain (`handle_queue_booking_*`). The class should capture dependencies (UI builders, session accessor) and expose concise methods (e.g., `select_date`, `select_time`, `select_courts`, `confirm`).
+- [x] Create `QueueReservationManager` (or `QueueReservationFlow`) for the reservation viewing/modification paths (`handle_my_reservations_menu`, `handle_queue_reservation_view`, `handle_queue_modify_*`). This separates management operations from booking initiation and lets us drop cross-branch conditionals.
+- [x] Introduce `QueueMessageFactory` to build shared Markdown payloads. Consolidate:
    - Success templates currently hard-coded at lines ~860, 918, 974.
    - Duplicate warnings around lines ~788, 929.
    - Error prompts for missing session data (lines ~835, 993, 1220).
    Removing these inline blocks should eliminate 150–200 LOC immediately.
-4. Consolidate session guard logic into helper methods (`ensure_summary`, `ensure_profile_fields`). Once the helpers exist, delete the redundant guard code from each handler.
-5. Drop redundant compatibility helpers `_clear_queue_booking_state` (just forwarders) and merge legacy key handling once the class wrappers own the flow.
+- [x] Consolidate session guard logic into helper methods (`ensure_summary`, `ensure_profile_fields`). Once the helpers exist, delete the redundant guard code from each handler.
+- [x] Drop redundant compatibility helpers `_clear_queue_booking_state` (just forwarders) and merge legacy key handling once the class wrappers own the flow.
 
 **Expected reduction:** 250–350 LOC once repeated message text and guard logic move into shared helpers and classes.
 
