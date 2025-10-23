@@ -7,6 +7,7 @@ from automation.forms.actions import (
     validate_required_fields,
     check_booking_success,
 )
+from automation.shared.booking_contracts import BookingUser
 
 
 @pytest.mark.parametrize(
@@ -24,6 +25,12 @@ from automation.forms.actions import (
             'client.lastName': '',
             'client.phone': '',
             'client.email': '',
+        }),
+        (BookingUser(user_id=5, first_name='Luis', last_name='Lopez', email='luis@example.com', phone='555-0000'), {
+            'client.firstName': 'Luis',
+            'client.lastName': 'Lopez',
+            'client.phone': '555-0000',
+            'client.email': 'luis@example.com',
         }),
     ],
 )

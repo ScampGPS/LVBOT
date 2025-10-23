@@ -18,6 +18,33 @@ class BookingSource(Enum):
     RETRY = "retry"
 
 
+def compose_booking_metadata(
+    source: BookingSource,
+    target_date: date | datetime | str,
+    target_time: str,
+    *,
+    extras: Optional[Dict[str, object]] = None,
+) -> Dict[str, object]:
+    """Build a consistent metadata dictionary for booking requests."""
+
+    if isinstance(target_date, datetime):
+        normalized_date = target_date.date().isoformat()
+    elif isinstance(target_date, date):
+        normalized_date = target_date.isoformat()
+    else:
+        normalized_date = str(target_date)
+
+    metadata: Dict[str, object] = {
+        'source': source.value,
+        'target_date': normalized_date,
+        'target_time': str(target_time),
+    }
+    if extras:
+        metadata.update(extras)
+    return metadata
+
+
+
 @dataclass(frozen=True)
 class CourtPreference:
     """Preferred courts in order of priority."""
@@ -46,6 +73,25 @@ class BookingUser:
     email: str
     phone: str
     tier: Optional[str] = None
+
+    def as_executor_payload(
+        self,
+        *,
+        user_id_as_str: bool = False,
+        include_tier_when_none: bool = False,
+    ) -> Dict[str, object]:
+        """Return the canonical payload consumed by executors and forms."""
+
+        payload: Dict[str, object] = {
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'email': self.email,
+            'phone': self.phone,
+            'user_id': str(self.user_id) if user_id_as_str else self.user_id,
+        }
+        if include_tier_when_none or self.tier is not None:
+            payload['tier'] = self.tier
+        return payload
 
 
 @dataclass(frozen=True)

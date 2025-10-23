@@ -9,6 +9,7 @@ from automation.shared.booking_contracts import (
     BookingRequest,
     BookingSource,
     BookingUser,
+    compose_booking_metadata,
 )
 
 REQUIRED_USER_FIELDS = {"user_id", "first_name", "last_name", "email", "phone"}
@@ -43,12 +44,12 @@ def build_immediate_booking_request(
     """Construct a `BookingRequest` for immediate Telegram-triggered bookings."""
 
     user = booking_user_from_profile(user_profile)
-    base_metadata: Dict[str, Any] = {
-        "source": BookingSource.IMMEDIATE.value,
-        "target_date": target_date.isoformat(),
-        "target_time": time_slot,
-        "court_number": court_number,
-    }
+    base_metadata: Dict[str, Any] = compose_booking_metadata(
+        BookingSource.IMMEDIATE,
+        target_date,
+        time_slot,
+        extras={"court_number": court_number},
+    )
     if metadata:
         base_metadata.update(metadata)
 

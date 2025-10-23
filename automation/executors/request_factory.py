@@ -12,6 +12,7 @@ from automation.shared.booking_contracts import (
     BookingSource,
     BookingStatus,
     BookingUser,
+    compose_booking_metadata,
 )
 
 REQUIRED_EXECUTOR_FIELDS = {"first_name", "last_name", "email", "phone"}
@@ -54,11 +55,11 @@ def build_executor_request(
 
     user = _normalise_user(user_info)
 
-    base_metadata = {
-        "source": source.value,
-        "target_date": target_date.isoformat(),
-        "target_time": time_slot,
-    }
+    base_metadata = compose_booking_metadata(
+        source,
+        target_date,
+        time_slot,
+    )
     if metadata:
         base_metadata.update(metadata)
 

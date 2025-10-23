@@ -9,7 +9,7 @@ from tracking import t
 import uuid
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from enum import Enum
 
 from reservations.models import ReservationRequest, UserProfile
@@ -19,6 +19,7 @@ from reservations.queue.reservation_transitions import (
     add_to_waitlist as mark_waitlisted,
     apply_status_update,
 )
+from reservations.queue.request_builder import reservation_request_to_payload
 from infrastructure.settings import get_test_mode
 
 
@@ -67,13 +68,13 @@ class ReservationQueue:
         Status breakdown: {self._get_status_counts()}
         """)
     
-    def add_reservation(self, reservation_data: Dict[str, Any]) -> str:
+    def add_reservation(self, reservation_data: Union[ReservationRequest, Dict[str, Any]]) -> str:
         """
         Add a new reservation to the queue.
-        
+
         Args:
-            reservation_data (Dict[str, Any]): Reservation data dictionary
-            
+            reservation_data: Reservation details (dataclass or legacy dict).
+
         Returns:
             str: Unique reservation ID assigned to the new reservation
         """
@@ -81,20 +82,25 @@ class ReservationQueue:
         from datetime import datetime, timedelta
         import pytz
 
+        if isinstance(reservation_data, ReservationRequest):
+            payload = reservation_request_to_payload(reservation_data)
+        else:
+            payload = dict(reservation_data)
+
         # Log detailed reservation request
         self.logger.info(f"""NEW RESERVATION REQUEST
-        User ID: {reservation_data.get('user_id')}
-        User Name: {reservation_data.get('first_name', 'Unknown')}
-        Date: {reservation_data.get('target_date')}
-        Time: {reservation_data.get('target_time')}
-        Court: {reservation_data.get('court_number', 'Any')}
-        Players: {reservation_data.get('players', [])}
+        User ID: {payload.get('user_id')}
+        User Name: {payload.get('first_name', 'Unknown')}
+        Date: {payload.get('target_date')}
+        Time: {payload.get('target_time')}
+        Court: {payload.get('court_number', 'Any')}
+        Players: {payload.get('players', [])}
         """)
-        
+
         # Check for duplicate reservations
-        user_id = reservation_data.get('user_id')
-        target_date_raw = reservation_data.get('target_date')
-        target_time_raw = reservation_data.get('target_time')
+        user_id = payload.get('user_id')
+        target_date_raw = payload.get('target_date')
+        target_time_raw = payload.get('target_time')
 
         ensure_unique_slot(
             self.queue,
@@ -103,17 +109,17 @@ class ReservationQueue:
             target_time=target_time_raw,
             logger=self.logger,
         )
-        
+
         reservation_id = uuid.uuid4().hex
         reservation = {
             'id': reservation_id,
             'status': 'pending',
-            **reservation_data
+            **payload,
         }
-        
+
         # Calculate scheduled execution time
         tz = pytz.timezone('America/Guatemala')
-        
+
         config = get_test_mode()
         if config.enabled:
             delay = max(config.trigger_delay_minutes, 0)
@@ -123,8 +129,8 @@ class ReservationQueue:
                 "TEST MODE: Scheduling execution in %s minutes", config.trigger_delay_minutes
             )
         else:
-            target_date = datetime.strptime(reservation_data['target_date'], '%Y-%m-%d').date()
-            target_time = datetime.strptime(reservation_data['target_time'], '%H:%M').time()
+            target_date = datetime.strptime(reservation['target_date'], '%Y-%m-%d').date()
+            target_time = datetime.strptime(reservation['target_time'], '%H:%M').time()
             target_datetime = datetime.combine(target_date, target_time)
             target_datetime = tz.localize(target_datetime)
 
@@ -135,16 +141,16 @@ class ReservationQueue:
                 reservation['status'] = 'scheduled'
             else:
                 reservation['status'] = 'scheduled'
-        
+
         reservation['scheduled_execution'] = scheduled_time.isoformat()
-        
+
         self.queue.append(reservation)
         self._save_queue()
-        
+
         # Log successful addition
         self.logger.info(f"""RESERVATION ADDED SUCCESSFULLY
         Reservation ID: {reservation_id}
-        User ID: {reservation_data.get('user_id')}
+        User ID: {reservation.get('user_id')}
         Status: {reservation['status']}
         Scheduled execution: {scheduled_time}
         Total queue size: {len(self.queue)}
@@ -155,22 +161,7 @@ class ReservationQueue:
         """Add a dataclass reservation request to the queue."""
         t('reservations.queue.reservation_queue.ReservationQueue.add_reservation_request')
 
-        payload = {
-            'user_id': request.user.user_id,
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-            'email': request.user.email,
-            'phone': request.user.phone,
-            'tier': request.user.tier,
-            'target_date': request.target_date.isoformat(),
-            'target_time': request.target_time,
-            'court_preferences': request.court_preferences,
-            'created_at': request.created_at.isoformat(),
-            'status': request.status,
-        }
-
-        reservation_id = self.add_reservation(payload)
-        return reservation_id
+        return self.add_reservation(request)
 
     def list_reservations(self) -> List[ReservationRequest]:
         """Return reservations as dataclasses."""

@@ -21,6 +21,10 @@
 - Availability helpers reorganised into modular components (`automation/availability/{dom_extraction,day_detection,time_grouping,time_utils,api}.py`) with `fetch_available_slots()` as the new entrypoint.
 - Guardrails: baseline lint configuration added via `.flake8` (max line length, ignore rules) ready for CI integration once the new structure settles.
 ## Key Targets
+- ~~**Uniform booking payloads** — shared helper in place across bot/executor/browser layers with all call-sites updated~~
+- ~~**Structured queue reservation summary** — queue confirmation now builds `ReservationRequest` before persistence~~
+- ~~**Booking metadata builder** — `compose_booking_metadata` feeds immediate/queue/executor builders~~
+- ~~**Scheduler failure user helper** — scheduler failure path reuses `booking_user_from_profile`~~
 - ~~`botapp/booking/immediate_handler.py` — replace the monolithic `_execute_booking` with helper methods ...~~ (completed).
 - ~~`automation/executors/booking.py` fast/natural flow split with shared helpers~~ (completed by flows package).
 - ~~`automation/executors/tennis.py` — builds `BookingRequest` via factory and delegates to `BookingFlowExecutor`~~ (completed).

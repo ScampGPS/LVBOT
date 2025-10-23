@@ -229,15 +229,7 @@ class ImmediateBookingHandler:
 
     def _build_executor_user_info(self, booking_request: BookingRequest) -> Dict[str, Any]:
         t('botapp.booking.immediate_handler.ImmediateBookingHandler._build_executor_user_info')
-        user = booking_request.user
-        return {
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'phone': user.phone,
-            'user_id': user.user_id,
-            'tier': user.tier,
-        }
+        return booking_request.user.as_executor_payload(include_tier_when_none=True)
 
     async def execute_queue_booking(self, booking_request: BookingRequest) -> BookingResult:
         """Compatibility wrapper used by the reservation scheduler."""

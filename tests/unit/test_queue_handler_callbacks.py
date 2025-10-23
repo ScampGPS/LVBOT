@@ -5,15 +5,16 @@ from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.queue.handler import QueueHandler
 from botapp.handlers.queue import session as queue_session
 from botapp.handlers.state import get_session_state
+from reservations.models import ReservationRequest
 
 
 class DummyReservationQueue:
     def __init__(self, duplicate=False):
         self.duplicate = duplicate
-        self.added = []
+        self.added_requests = []
 
-    def add_reservation(self, payload):
-        self.added.append(payload)
+    def add_reservation_request(self, request):
+        self.added_requests.append(request)
         if self.duplicate:
             raise ValueError("duplicate")
         return "new-res-id"
@@ -105,16 +106,26 @@ async def test_queue_confirm_success_clears_state(deps):
     context = DummyContext()
     # prepopulate state as booking flow would
     queue_session.set_summary(context, {
+        'user_id': 1,
+        'first_name': 'Test',
+        'last_name': 'User',
+        'email': 't@example.com',
+        'phone': '555-0100',
+        'tier': None,
         'court_preferences': [1, 2],
         'target_date': '2025-10-23',
         'target_time': '13:00',
+        'created_at': '2025-10-21T09:00:00',
     })
 
     update = DummyUpdate('queue_confirm')
 
     await handler.handle_queue_booking_confirm(update, context)
 
-    assert deps.reservation_queue.added, "Reservation should be enqueued"
+    assert deps.reservation_queue.added_requests, "Reservation should be enqueued"
+    stored_request = deps.reservation_queue.added_requests[0]
+    assert isinstance(stored_request, ReservationRequest)
+    assert stored_request.court_preferences == [1, 2]
     assert 'queue_booking_summary' not in context.user_data
     # ensure session state cleared
     session = get_session_state(context)
@@ -129,9 +140,16 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
     handler = QueueHandler(deps)
     context = DummyContext()
     queue_session.set_summary(context, {
+        'user_id': 1,
+        'first_name': 'Test',
+        'last_name': 'User',
+        'email': 't@example.com',
+        'phone': '555-0100',
+        'tier': None,
         'court_preferences': [1, 2, 3],
         'target_date': '2025-10-23',
         'target_time': '13:00',
+        'created_at': '2025-10-21T09:00:00',
     })
 
     update = DummyUpdate('queue_confirm')

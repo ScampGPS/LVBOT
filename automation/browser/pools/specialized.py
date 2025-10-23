@@ -23,6 +23,7 @@ from infrastructure.constants import (
     MAX_SINGLE_COURT_CHECK_TIME, MAX_NAVIGATION_WAIT_TIME, TARGET_AVAILABILITY_CHECK_TIME
 )
 from automation.forms.acuity_booking_form import AcuityBookingForm
+from automation.forms.actions import map_user_info
 
 logging.basicConfig(
     level=logging.INFO,
@@ -630,12 +631,7 @@ class SpecializedBrowserPool:
                 form_handler = AcuityBookingForm()
                 
                 # Prepare user data in the format expected by Acuity form
-                user_data = {
-                    'nombre': user_info.get('first_name', ''),
-                    'apellidos': user_info.get('last_name', ''),
-                    'telefono': user_info.get('phone', ''),
-                    'correo': user_info.get('email', '')
-                }
+                user_data = map_user_info(user_info)
                 
                 # Fill and submit the booking form
                 # Note: We pass the page object, not the frame, as the form might be in main page

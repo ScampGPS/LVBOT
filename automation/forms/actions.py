@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Mapping, Tuple
 
 from playwright.async_api import Page
 
 from tracking import t
 
 from automation.forms.fields import FORM_SELECTORS, REQUIRED_FIELDS, fill_fields_javascript, fill_fields_playwright
+from automation.shared.booking_contracts import BookingUser
 
 TRACE_PATH_TEMPLATE = "/mnt/c/Documents/code/python/LVBot/debugging/form_fill_trace_{timestamp}.zip"
 
@@ -223,16 +224,22 @@ async def fill_booking_form(
     return await fill_fields_playwright(page, user_data, logger=logger)
 
 
-def map_user_info(user_info: Dict[str, str]) -> Dict[str, str]:
+
+def map_user_info(user_info: Mapping[str, Any] | BookingUser) -> Dict[str, str]:
     """Map external user info to the form field structure."""
 
     t('automation.forms.actions.map_user_info')
 
+    if isinstance(user_info, BookingUser):
+        source = user_info.as_executor_payload(include_tier_when_none=True)
+    else:
+        source = dict(user_info)
+
     return {
-        'client.firstName': user_info.get('first_name', ''),
-        'client.lastName': user_info.get('last_name', ''),
-        'client.phone': user_info.get('phone', ''),
-        'client.email': user_info.get('email', ''),
+        'client.firstName': source.get('first_name', ''),
+        'client.lastName': source.get('last_name', ''),
+        'client.phone': source.get('phone', ''),
+        'client.email': source.get('email', ''),
     }
 
 

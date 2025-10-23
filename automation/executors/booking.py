@@ -68,17 +68,7 @@ class BookingFlowExecutor:
         target_slot = time_slot or booking_request.target_time
         target_datetime = datetime.combine(booking_request.target_date, datetime.min.time())
 
-        user = booking_request.user
-        user_info = {
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "phone": user.phone,
-        }
-
-        if getattr(user, "tier", None):
-            user_info["tier"] = user.tier  # Preserve tier for downstream logging
-        user_info["user_id"] = str(user.user_id)
+        user_info = booking_request.user.as_executor_payload(user_id_as_str=True)
 
         return await self.execute_booking(
             court_number=target_court,

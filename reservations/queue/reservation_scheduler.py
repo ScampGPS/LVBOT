@@ -26,7 +26,8 @@ from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from automation.executors import AsyncExecutorConfig
 from automation.browser.manager import BrowserManager
 from botapp.booking.immediate_handler import ImmediateBookingHandler
-from automation.shared.booking_contracts import BookingRequest, BookingResult, BookingUser
+from automation.shared.booking_contracts import BookingRequest, BookingResult
+from botapp.booking.request_builder import booking_user_from_profile
 from reservations.queue.scheduler import (
     BrowserLifecycle,
     DispatchJob,
@@ -65,23 +66,17 @@ def _booking_result_to_dict(result: BookingResult) -> Dict[str, Any]:
 def _failure_result_from_reservation(reservation: Dict[str, Any], message: str, *, errors: Optional[List[str]] = None) -> BookingResult:
     """Build a failure result when execution cannot proceed."""
 
+    fallback_user_id = reservation.get('user_id') or 0
     user_profile = {
-        'user_id': reservation.get('user_id') or 0,
+        'user_id': fallback_user_id,
         'first_name': reservation.get('first_name') or 'Unknown',
         'last_name': reservation.get('last_name') or '',
-        'email': reservation.get('email') or '',
-        'phone': reservation.get('phone') or '',
-        'tier': reservation.get('tier'),
+        'email': reservation.get('email') or f'unknown-{fallback_user_id}@example.com',
+        'phone': reservation.get('phone') or '000-000-0000',
+        'tier_name': reservation.get('tier'),
     }
 
-    booking_user = BookingUser(
-        user_id=int(user_profile['user_id']),
-        first_name=str(user_profile['first_name']),
-        last_name=str(user_profile['last_name']),
-        email=str(user_profile['email']),
-        phone=str(user_profile['phone']),
-        tier=user_profile.get('tier'),
-    )
+    booking_user = booking_user_from_profile(user_profile)
 
     metadata = {
         'source': 'queue_scheduler',
