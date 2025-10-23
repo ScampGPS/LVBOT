@@ -12,6 +12,7 @@
 - **Callback Handler modularization** – introduced `CallbackRouter`, split booking/queue/profile/admin handlers, added `CallbackDependencies`, and retired the monolithic dispatcher (validated by `py -m pytest`).
 - **Queue Handler restructure** – introduced typed session helpers, shared UI formatters, and trimmed queue flow handlers into single-purpose methods with updated harness coverage requirements.
 - **Removed TennisExecutor fallback** – unified immediate bookings on the natural Playwright flow and removed the legacy tennis executor path.
+- **Acuity form service rollout** – replaced the procedural helpers with `AcuityFormService`, updated `automation/forms/acuity_booking_form.py` and `automation/browser/pools/specialized.py` to depend on the service, and deleted the legacy functions.
 
 ## Next Major Refactor
 
@@ -29,10 +30,9 @@
 
 ## Future Refactor Candidates
 
-4. `automation/forms/actions.py` & `automation/forms/fields.py` – wrap the loose action helpers in a small service class so logging, JS/Playwright strategies, and field mappings live together.
-5. `automation/executors/request_factory.py` – replace the free functions with an `ExecutorRequestFactory` that owns user validation, metadata composition, and result translation.
-6. `reservations/queue/request_builder.py` – introduce a `ReservationRequestBuilder` to consolidate date parsing, court normalisation, and summary/dataclass adapters.
-7. `reservations/queue/reservation_queue.py` – add a `QueueRecordSerializer` (or `QueueRecord` dataclass) to centralise payload ↔ dataclass conversion and scheduling metadata.
+4. `automation/executors/request_factory.py` – replace the free functions with an `ExecutorRequestFactory` that owns user validation, metadata composition, and result translation.
+5. `reservations/queue/request_builder.py` – introduce a `ReservationRequestBuilder` to consolidate date parsing, court normalisation, and summary/dataclass adapters.
+6. `reservations/queue/reservation_queue.py` – add a `QueueRecordSerializer` (or `QueueRecord` dataclass) to centralise payload ↔ dataclass conversion and scheduling metadata.
 1. `botapp/handlers/booking/handler.py` (~1,200) – introduce small helpers for calendar management and message building.
 2. `automation/browser/pools/specialized.py` (~900) – break smart assignment/retry logic into strategies.
 3. `botapp/ui/booking.py` (~700) – keep UI components declarative and shared across flows.

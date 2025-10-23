@@ -22,8 +22,7 @@ from infrastructure.constants import (
     FAST_POLL_INTERVAL, DEFAULT_WAIT_INTERVAL, RESERVATION_RETRY_DELAY,
     MAX_SINGLE_COURT_CHECK_TIME, MAX_NAVIGATION_WAIT_TIME, TARGET_AVAILABILITY_CHECK_TIME
 )
-from automation.forms.acuity_booking_form import AcuityBookingForm
-from automation.forms.actions import map_user_info
+from automation.forms.actions import AcuityFormService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -76,6 +75,8 @@ class SpecializedBrowserPool:
         self.logger.debug(f"Initializing SpecializedBrowserPool with: courts_needed={courts_needed}, "
                          f"headless={headless}, low_resource_mode={low_resource_mode}, "
                          f"persistent={persistent}, max_browsers={max_browsers}")
+
+        self.form_service = AcuityFormService(logger=self.logger)
         
         self.courts_needed = courts_needed or DEFAULT_COURT_PREFERENCES[:2]  # Default to first two preferred courts
         self.headless = headless
@@ -625,42 +626,55 @@ class SpecializedBrowserPool:
             self.logger.info(f"Found and clicked {target_time} on court {browser.court_number}")
             await asyncio.sleep(RESERVATION_RETRY_DELAY)  # Wait for form
             
-            # Fill user information using AcuityBookingForm handler
+            # Fill user information using the shared form service
             try:
-                # Initialize form handler
-                form_handler = AcuityBookingForm()
-                
-                # Prepare user data in the format expected by Acuity form
-                user_data = map_user_info(user_info)
-                
-                # Fill and submit the booking form
-                # Note: We pass the page object, not the frame, as the form might be in main page
-                success, message = await form_handler.fill_booking_form(
-                    browser.page, 
-                    user_data,
-                    wait_for_navigation=True
+                success, message = await self.form_service.fill_and_submit(
+                    browser.page,
+                    user_info,
                 )
-                
-                if not success:
-                    return False, f"Form error: {message}"
-                
-                self.logger.info(f"Form submitted on court {browser.court_number}: {message}")
-                
-                # Check booking success
-                booking_success, confirmation_message = await form_handler.check_booking_success(browser.page)
-                
-                if booking_success:
-                    return True, f"Successfully booked {target_time} - {confirmation_message}"
-                else:
-                    return True, f"Booking submitted (pending confirmation) - {confirmation_message}"
-                
+                return self._finalise_form_result(browser.court_number, target_time, success, message)
+
             except Exception as e:
                 return False, f"Form submission error: {str(e)}"
-                
+
         except Exception as e:
             self.logger.error(f"Booking attempt failed on court {browser.court_number}: {e}")
             browser.is_healthy = False
             return False, str(e)
+
+    def _finalise_form_result(
+        self,
+        court_number: int,
+        target_time: str,
+        success: bool,
+        message: str,
+    ) -> Tuple[bool, str]:
+        """Format and log the outcome returned by the form service."""
+
+        result_lower = message.lower()
+
+        if success:
+            self.logger.info(
+                "Form submitted on court %s: %s",
+                court_number,
+                message,
+            )
+            return True, f"Successfully booked {target_time} - {message}"
+
+        if 'no confirmation detected' in result_lower or 'pending confirmation' in result_lower:
+            self.logger.info(
+                "Booking submitted on court %s (pending confirmation): %s",
+                court_number,
+                message,
+            )
+            return True, f"Booking submitted (pending confirmation) - {message}"
+
+        self.logger.warning(
+            "Form submission failed on court %s: %s",
+            court_number,
+            message,
+        )
+        return False, f"Form error: {message}"
     
     async def _get_available_times(self, frame: Frame) -> List[str]:
         """Extract available time slots from current page"""

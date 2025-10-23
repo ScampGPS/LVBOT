@@ -2,12 +2,16 @@ import asyncio
 
 import pytest
 
-from automation.forms.actions import (
-    map_user_info,
-    validate_required_fields,
-    check_booking_success,
-)
+from automation.forms.actions import AcuityFormService
 from automation.shared.booking_contracts import BookingUser
+
+
+@pytest.fixture(autouse=True)
+def fast_sleep(monkeypatch):
+    async def _no_sleep(_duration):
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", _no_sleep)
 
 
 @pytest.mark.parametrize(
@@ -35,11 +39,13 @@ from automation.shared.booking_contracts import BookingUser
     ],
 )
 def test_map_user_info(info, expected):
-    assert map_user_info(info) == expected
+    service = AcuityFormService(enable_tracing=False)
+    assert service.map_user_info(info) == expected
 
 
 def test_validate_required_fields_returns_missing():
-    missing = validate_required_fields({'client.firstName': 'Ana'})
+    service = AcuityFormService(enable_tracing=False)
+    missing = service.validate({'client.firstName': 'Ana'})
     assert 'client.lastName' in missing
     assert 'client.phone' in missing
     assert 'client.email' in missing
@@ -59,12 +65,37 @@ class DummyLogger:
         self.messages.append(("error", args))
 
 
+class DummyTracing:
+    async def start(self, *args, **kwargs):  # pragma: no cover - not invoked when tracing disabled
+        return None
+
+    async def stop(self, *args, **kwargs):  # pragma: no cover - not invoked when tracing disabled
+        return None
+
+
+class DummyContext:
+    def __init__(self):
+        self.tracing = DummyTracing()
+
+
 class DummyPage:
     def __init__(self, result):
-        self._result = result
+        if isinstance(result, list):
+            self._results = list(result)
+            self._single_result = None
+        else:
+            self._results = None
+            self._single_result = result
+        self.evaluate_calls = []
+        self.context = DummyContext()
 
-    async def evaluate(self, script):  # pragma: no cover - simple stub
-        return self._result
+    async def evaluate(self, script, *args):  # pragma: no cover - simple stub
+        self.evaluate_calls.append((script, args))
+        if self._results is not None:
+            if not self._results:
+                raise AssertionError("No queued evaluate results remaining")
+            return self._results.pop(0)
+        return self._single_result
 
 
 @pytest.mark.asyncio
@@ -74,7 +105,8 @@ async def test_check_booking_success_handles_success():
         'message': 'Reserva confirmada',
     })
     logger = DummyLogger()
-    success, message = await check_booking_success(page, logger=logger)
+    service = AcuityFormService(logger=logger, enable_tracing=False)
+    success, message = await service.check_success(page)
     assert success
     assert message == 'Reserva confirmada'
 
@@ -87,6 +119,154 @@ async def test_check_booking_success_handles_failure():
         'message': 'Errores de validación: email',
     })
     logger = DummyLogger()
-    success, message = await check_booking_success(page, logger=logger)
+    service = AcuityFormService(logger=logger, enable_tracing=False)
+    success, message = await service.check_success(page)
     assert not success
     assert 'Errores de validación' in message
+
+
+@pytest.mark.asyncio
+async def test_fill_and_submit_success_path():
+    page = DummyPage([
+        {'filled': 4, 'messages': ('ok',)},
+        {'hasErrors': False, 'errors': ()},
+        {'success': True, 'buttonText': 'Confirmar'},
+        {'success': True, 'message': 'Reserva confirmada'},
+    ])
+    logger = DummyLogger()
+    service = AcuityFormService(logger=logger, enable_tracing=False)
+
+    success, message = await service.fill_and_submit(
+        page,
+        {
+            'client.firstName': 'Ana',
+            'client.lastName': 'Perez',
+            'client.phone': '123',
+            'client.email': 'ana@example.com',
+        },
+    )
+
+    assert success
+    assert message == 'Reserva confirmada'
+    assert len(page.evaluate_calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_fill_and_submit_validation_failure():
+    page = DummyPage([
+        {'filled': 4, 'messages': ()},
+        {'hasErrors': True, 'errors': ('Email required',)},
+    ])
+    service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
+
+    success, message = await service.fill_and_submit(
+        page,
+        {
+            'client.firstName': 'Ana',
+            'client.lastName': 'Perez',
+            'client.phone': '123',
+            'client.email': 'ana@example.com',
+        },
+    )
+
+    assert not success
+    assert 'Form validation failed' in message
+    assert len(page.evaluate_calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_fill_and_submit_missing_required_fields_short_circuit():
+    page = DummyPage([])
+    service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
+
+    success, message = await service.fill_and_submit(
+        page,
+        {
+            'client.firstName': 'Ana',
+            'client.lastName': '',
+            'client.phone': '',
+            'client.email': '',
+        },
+    )
+
+    assert not success
+    assert message.startswith('Missing required fields')
+    assert page.evaluate_calls == []
+
+
+@pytest.mark.asyncio
+async def test_fill_and_submit_submit_failure():
+    page = DummyPage([
+        {'filled': 4, 'messages': ()},
+        {'hasErrors': False, 'errors': ()},
+        {'success': False, 'error': 'No submit button found'},
+    ])
+    service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
+
+    success, message = await service.fill_and_submit(
+        page,
+        {
+            'client.firstName': 'Ana',
+            'client.lastName': 'Perez',
+            'client.phone': '123',
+            'client.email': 'ana@example.com',
+        },
+    )
+
+    assert not success
+    assert message == '❌ Form submission failed'
+    assert len(page.evaluate_calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_fill_and_submit_accepts_booking_user():
+    booking_user = BookingUser(
+        user_id=1,
+        first_name='Ana',
+        last_name='Perez',
+        email='ana@example.com',
+        phone='123',
+    )
+    page = DummyPage([
+        {'filled': 4, 'messages': ()},
+        {'hasErrors': False, 'errors': ()},
+        {'success': True, 'buttonText': 'Confirmar'},
+        {'success': True, 'message': 'Reserva confirmada'},
+    ])
+    service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
+
+    success, message = await service.fill_and_submit(page, booking_user)
+
+    assert success
+    assert message == 'Reserva confirmada'
+    filled_payload = page.evaluate_calls[0][1][0]
+    assert filled_payload['client.firstName'] == 'Ana'
+
+
+@pytest.mark.asyncio
+async def test_check_validation_handles_exception():
+    class RaisingPage(DummyPage):
+        async def evaluate(self, script, *args):
+            raise RuntimeError('boom')
+
+    page = RaisingPage({})
+    service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
+
+    has_errors, errors = await service.check_validation(page)
+
+    assert has_errors
+    assert errors and 'boom' in errors[0]
+
+
+@pytest.mark.asyncio
+async def test_fill_form_uses_playwright_strategy(monkeypatch):
+    service = AcuityFormService(logger=DummyLogger(), use_javascript=False, enable_tracing=False)
+
+    async def fake_playwright(page, payload):
+        return 3
+
+    monkeypatch.setattr(service, '_fill_via_playwright', fake_playwright)
+
+    result = await service.fill_form(DummyPage({}), {'client.firstName': 'Ana'})
+
+    assert result == 3
