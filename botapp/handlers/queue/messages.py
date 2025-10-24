@@ -8,39 +8,40 @@ from typing import Iterable
 class QueueMessageFactory:
     """Produces Markdown strings shared across queue booking flows."""
 
-    SESSION_EXPIRED = "❌ Session expired. Please start the booking process again."
-    SESSION_EXPIRED_RETRY = "Session expired. Please try again."
-    INVALID_DATE = "❌ Invalid date selection received. Please try again."
-    RESERVATION_DETAILS_ERROR = "❌ Error loading reservation details."
-    RESERVATION_LIST_ERROR = "❌ Error loading reservations."
-    RESERVATION_CANCELLED = (
-        "✅ **Reservation Cancelled**\n\n"
-        "Your reservation has been cancelled successfully."
-    )
-    MODIFY_PROMPT = (
-        "✏️ **Modify Reservation**\n\n"
-        "What would you like to change?"
-    )
-    MODIFY_UNAVAILABLE = (
-        "✏️ **Modify Reservation**\n\n"
-        "Modification of confirmed bookings is coming soon!\n\n"
-        "For now, you can cancel this reservation and create a new one."
-    )
+    _STATIC_MESSAGES = {
+        "session_expired": "❌ Session expired. Please start the booking process again.",
+        "session_expired_retry": "Session expired. Please try again.",
+        "invalid_date": "❌ Invalid date selection received. Please try again.",
+        "reservation_details_error": "❌ Error loading reservation details.",
+        "reservation_list_error": "❌ Error loading reservations.",
+        "reservation_cancelled": (
+            "✅ **Reservation Cancelled**\n\n"
+            "Your reservation has been cancelled successfully."
+        ),
+        "modification_prompt": (
+            "✏️ **Modify Reservation**\n\n"
+            "What would you like to change?"
+        ),
+        "modification_unavailable": (
+            "✏️ **Modify Reservation**\n\n"
+            "Modification of confirmed bookings is coming soon!\n\n"
+            "For now, you can cancel this reservation and create a new one."
+        ),
+    }
 
-    def session_expired(self) -> str:
-        """Return the standard session expired copy."""
+    SESSION_EXPIRED = _STATIC_MESSAGES["session_expired"]
+    SESSION_EXPIRED_RETRY = _STATIC_MESSAGES["session_expired_retry"]
+    INVALID_DATE = _STATIC_MESSAGES["invalid_date"]
+    RESERVATION_DETAILS_ERROR = _STATIC_MESSAGES["reservation_details_error"]
+    RESERVATION_LIST_ERROR = _STATIC_MESSAGES["reservation_list_error"]
+    RESERVATION_CANCELLED = _STATIC_MESSAGES["reservation_cancelled"]
+    MODIFY_PROMPT = _STATIC_MESSAGES["modification_prompt"]
+    MODIFY_UNAVAILABLE = _STATIC_MESSAGES["modification_unavailable"]
 
-        return self.SESSION_EXPIRED
-
-    def session_expired_retry(self) -> str:
-        """Return the shorter retry variant used for inline answers."""
-
-        return self.SESSION_EXPIRED_RETRY
-
-    def invalid_date(self) -> str:
-        """Return invalid date selection copy."""
-
-        return self.INVALID_DATE
+    def __getattr__(self, name: str):
+        if name in self._STATIC_MESSAGES:
+            return lambda: self._STATIC_MESSAGES[name]
+        raise AttributeError(name)
 
     def profile_incomplete(self, missing_fields: Iterable[str]) -> str:
         """Return profile warning text including missing field names."""
@@ -51,31 +52,6 @@ class QueueMessageFactory:
             "Please update your profile before adding a reservation to the queue.\n"
             f"Missing fields: {missing}"
         )
-
-    def reservation_details_error(self) -> str:
-        """Return error text when specific reservation details cannot be loaded."""
-
-        return self.RESERVATION_DETAILS_ERROR
-
-    def reservation_list_error(self) -> str:
-        """Return error text when the reservation list cannot be loaded."""
-
-        return self.RESERVATION_LIST_ERROR
-
-    def reservation_cancelled(self) -> str:
-        """Return confirmation copy for cancelled reservations."""
-
-        return self.RESERVATION_CANCELLED
-
-    def modification_prompt(self) -> str:
-        """Return the modification menu prompt."""
-
-        return self.MODIFY_PROMPT
-
-    def modification_unavailable(self) -> str:
-        """Return copy for reservations that cannot be modified."""
-
-        return self.MODIFY_UNAVAILABLE
 
     def time_updated(self, new_time: str) -> str:
         """Return success text for reservation time updates."""

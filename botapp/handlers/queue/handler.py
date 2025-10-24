@@ -21,6 +21,25 @@ from botapp.ui.telegram_ui import TelegramUI  # noqa: F401 - test monkeypatch su
 from infrastructure.settings import get_test_mode
 
 
+def _delegate(
+    attr_name: str,
+    method_name: str,
+    tracking_id: str,
+    doc: str,
+):
+    """Create an async handler that logs and forwards to a dependency."""
+
+    async def handler(self, *args, **kwargs):
+        t(tracking_id)
+        target = getattr(self, attr_name)
+        method = getattr(target, method_name)
+        return await method(*args, **kwargs)
+
+    handler.__doc__ = doc
+    handler.__name__ = method_name
+    return handler
+
+
 class QueueHandler(CallbackResponseMixin):
     """Handles queue booking flows and reservation management."""
 
@@ -70,241 +89,140 @@ class QueueHandler(CallbackResponseMixin):
 
         await self.booking_flow._show_time_selection(update, context, selected_date)
 
-    async def handle_queue_booking_menu(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
-        """Handle Queue Booking menu option."""
+    handle_queue_booking_menu = _delegate(
+        "booking_flow",
+        "show_menu",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu",
+        "Handle Queue Booking menu option.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu"
-        )
-        await self.booking_flow.show_menu(update, context)
+    handle_my_reservations_menu = _delegate(
+        "reservation_manager",
+        "show_user_menu",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_my_reservations_menu",
+        "Handle My Reservations menu option.",
+    )
 
-    async def handle_my_reservations_menu(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle My Reservations menu option."""
+    handle_queue_booking_date_selection = _delegate(
+        "booking_flow",
+        "select_date",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_date_selection",
+        "Handle date selection for queue booking flow.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_my_reservations_menu"
-        )
-        await self.reservation_manager.show_user_menu(update, context)
+    handle_queue_booking_time_selection = _delegate(
+        "booking_flow",
+        "select_time",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_selection",
+        "Handle time selection for queue booking flow.",
+    )
 
-    async def handle_queue_booking_date_selection(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle date selection for queue booking flow."""
+    handle_queue_booking_court_selection = _delegate(
+        "booking_flow",
+        "select_courts",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_court_selection",
+        "Handle court selection for queue booking flow.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_date_selection"
-        )
-        await self.booking_flow.select_date(update, context)
-
-    async def handle_queue_booking_time_selection(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle time selection for queue booking flow."""
-
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_selection"
-        )
-        await self.booking_flow.select_time(update, context)
-
-    async def handle_queue_booking_court_selection(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle court selection for queue booking flow."""
-
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_court_selection"
-        )
-        await self.booking_flow.select_courts(update, context)
-
-    async def handle_queue_booking_confirm(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle confirmation of queue booking reservation."""
-
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_confirm"
-        )
-        await self.booking_flow.confirm(update, context)
+    handle_queue_booking_confirm = _delegate(
+        "booking_flow",
+        "confirm",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_confirm",
+        "Handle confirmation of queue booking reservation.",
+    )
 
     def clear_queue_booking_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
 
         self.booking_flow.clear_state(context)
 
-    async def handle_blocked_date_selection(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Allow selecting within-48h dates when test mode permits."""
+    handle_blocked_date_selection = _delegate(
+        "booking_flow",
+        "handle_blocked_date",
+        "botapp.handlers.queue.QueueHandler.handle_blocked_date_selection",
+        "Allow selecting within-48h dates when test mode permits.",
+    )
 
-        t("botapp.handlers.queue.QueueHandler.handle_blocked_date_selection")
-        await self.booking_flow.handle_blocked_date(update, context)
+    handle_queue_booking_cancel = _delegate(
+        "booking_flow",
+        "cancel",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_cancel",
+        "Handle cancellation of queue booking reservation.",
+    )
 
-    async def handle_queue_booking_cancel(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle cancellation of queue booking reservation."""
+    handle_back_to_queue_courts = _delegate(
+        "booking_flow",
+        "back_to_courts",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_courts",
+        "Handle returning to the court selection screen.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_cancel"
-        )
-        await self.booking_flow.cancel(update, context)
+    handle_manage_reservation = _delegate(
+        "reservation_manager",
+        "manage_reservation",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_reservation",
+        "Handle individual reservation management.",
+    )
 
-    async def handle_back_to_queue_courts(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle returning to the court selection screen."""
+    handle_manage_queue_reservation = _delegate(
+        "reservation_manager",
+        "manage_queue_reservation",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_queue_reservation",
+        "Handle management of a specific queued reservation.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_courts"
-        )
-        await self.booking_flow.back_to_courts(update, context)
+    handle_reservation_action = _delegate(
+        "reservation_manager",
+        "handle_action",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_reservation_action",
+        "Handle reservation actions (cancel, modify, share).",
+    )
 
-    async def handle_manage_reservation(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle individual reservation management."""
+    handle_cancel_reservation = _delegate(
+        "reservation_manager",
+        "cancel_reservation",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation",
+        "Cancel a reservation.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_reservation"
-        )
-        await self.reservation_manager.manage_reservation(update, context)
+    handle_modify_reservation = _delegate(
+        "reservation_manager",
+        "modify_reservation",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_modify_reservation",
+        "Modify a reservation.",
+    )
 
-    async def handle_manage_queue_reservation(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle management of a specific queued reservation."""
+    handle_share_reservation = _delegate(
+        "reservation_manager",
+        "share_reservation",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_share_reservation",
+        "Share reservation details.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_queue_reservation"
-        )
-        await self.reservation_manager.manage_queue_reservation(update, context)
+    handle_modify_option = _delegate(
+        "reservation_manager",
+        "modify_option",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_modify_option",
+        "Handle modification options for queued reservations.",
+    )
 
-    async def handle_reservation_action(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle reservation actions (cancel, modify, share)."""
+    handle_time_modification = _delegate(
+        "reservation_manager",
+        "time_modification",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_time_modification",
+        "Handle time modification from the modify menu.",
+    )
 
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_reservation_action"
-        )
-        await self.reservation_manager.handle_action(update, context)
+    _display_user_reservations = _delegate(
+        "reservation_manager",
+        "display_user_reservations",
+        "botapp.handlers.callback_handlers.CallbackHandler._display_user_reservations",
+        "Display reservations for a specific user (reusable method)",
+    )
 
-    async def handle_cancel_reservation(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-        reservation_id: str,
-    ) -> None:
-        """Cancel a reservation."""
-
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation"
-        )
-        await self.reservation_manager.cancel_reservation(
-            update, context, reservation_id
-        )
-
-    async def handle_modify_reservation(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-        reservation_id: str,
-    ) -> None:
-        """Modify a reservation."""
-
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._handle_modify_reservation"
-        )
-        await self.reservation_manager.modify_reservation(
-            update, context, reservation_id
-        )
-
-    async def handle_share_reservation(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-        reservation_id: str,
-    ) -> None:
-        """Share reservation details."""
-
-        t("botapp.handlers.callback_handlers.CallbackHandler._handle_share_reservation")
-        await self.reservation_manager.share_reservation(
-            update, context, reservation_id
-        )
-
-    async def handle_modify_option(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle modification options for queued reservations."""
-
-        t("botapp.handlers.callback_handlers.CallbackHandler._handle_modify_option")
-        await self.reservation_manager.modify_option(update, context)
-
-    async def handle_time_modification(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        """Handle time modification from the modify menu."""
-
-        t("botapp.handlers.callback_handlers.CallbackHandler._handle_time_modification")
-        await self.reservation_manager.time_modification(update, context)
-
-    async def _display_user_reservations(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE, target_user_id: int
-    ) -> None:
-        """
-        Display reservations for a specific user (reusable method)
-
-        Args:
-            update: The telegram update
-            context: The callback context
-            target_user_id: The user whose reservations to display
-        """
-        t(
-            "botapp.handlers.callback_handlers.CallbackHandler._display_user_reservations"
-        )
-        await self.reservation_manager.display_user_reservations(
-            update, context, target_user_id
-        )
-
-    async def _display_all_reservations(
-        self, query, all_reservations: List[Dict[str, Any]]
-    ) -> None:
-        """
-        Display all reservations from all users
-
-        Args:
-            query: The callback query
-            all_reservations: List of all reservations with user info
-        """
-        t("botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations")
-        await self.reservation_manager.display_all_reservations(query, all_reservations)
+    _display_all_reservations = _delegate(
+        "reservation_manager",
+        "display_all_reservations",
+        "botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations",
+        "Display all reservations from all users",
+    )

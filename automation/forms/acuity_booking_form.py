@@ -96,6 +96,24 @@ def _build_form(
     )
 
 
+async def _invoke_form_method(
+    method_name: str,
+    page: Page,
+    *,
+    logger: logging.Logger | None = None,
+    use_javascript: bool = True,
+    enable_tracing: bool = True,
+    **kwargs,
+):
+    form = _build_form(
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+    )
+    method = getattr(form, method_name)
+    return await method(page, **kwargs)
+
+
 async def check_form_validation_errors(
     page: Page,
     *,
@@ -106,8 +124,13 @@ async def check_form_validation_errors(
     """Proxy helper to access validation errors."""
 
     t('automation.forms.acuity_booking_form.check_form_validation_errors')
-    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
-    return await form.check_form_validation_errors(page)
+    return await _invoke_form_method(
+        "check_form_validation_errors",
+        page,
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+    )
 
 
 async def submit_form(
@@ -120,8 +143,13 @@ async def submit_form(
     """Submit the booking form using the shared service."""
 
     t('automation.forms.acuity_booking_form.submit_form')
-    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
-    return await form.submit(page)
+    return await _invoke_form_method(
+        "submit",
+        page,
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+    )
 
 
 async def check_booking_success(
@@ -134,8 +162,13 @@ async def check_booking_success(
     """Check whether the booking was successful after submission."""
 
     t('automation.forms.acuity_booking_form.check_booking_success')
-    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
-    return await form.check_booking_success(page)
+    return await _invoke_form_method(
+        "check_booking_success",
+        page,
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+    )
 
 
 async def fill_booking_form(
@@ -149,8 +182,14 @@ async def fill_booking_form(
     """Fill and submit the Acuity booking form with the provided user data."""
 
     t('automation.forms.acuity_booking_form.fill_booking_form')
-    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
-    return await form.fill_booking_form(page, user_data)
+    return await _invoke_form_method(
+        "fill_booking_form",
+        page,
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+        user_data=user_data,
+    )
 
 
 async def fill_form(
@@ -166,8 +205,14 @@ async def fill_form(
 
     _ = wait_for_navigation  # compatibility no-op
     t('automation.forms.acuity_booking_form.fill_form')
-    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
-    return await form.fill_form(page, user_info)
+    return await _invoke_form_method(
+        "fill_form",
+        page,
+        logger=logger,
+        use_javascript=use_javascript,
+        enable_tracing=enable_tracing,
+        user_info=user_info,
+    )
 
 
 __all__ = [

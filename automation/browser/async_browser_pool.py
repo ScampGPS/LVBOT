@@ -20,6 +20,19 @@ PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "false").lower() == "true"
 logger = logging.getLogger(__name__)
 
 
+def _manager_delegate(method_name: str, tracking_id: str, doc: str):
+    """Create an async wrapper that forwards to ``BrowserPoolManager``."""
+
+    async def handler(self, *args, **kwargs):
+        t(tracking_id)
+        method = getattr(self.manager, method_name)
+        return await method(*args, **kwargs)
+
+    handler.__doc__ = doc
+    handler.__name__ = method_name
+    return handler
+
+
 class AsyncBrowserPool:
     """Async browser pool backed by Playwright with modular helpers."""
 
@@ -48,75 +61,65 @@ class AsyncBrowserPool:
         self.production_mode = PRODUCTION_MODE
         self.manager = BrowserPoolManager(self, log=logger)
 
-    async def start(self) -> None:
-        """Initialize the browser pool."""
+    start = _manager_delegate(
+        "start_pool",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.start",
+        "Initialize the browser pool.",
+    )
 
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.start")
-        await self.manager.start_pool()
+    _create_and_navigate_court_page_with_stagger = _manager_delegate(
+        "create_and_navigate_court_page_with_stagger",
+        "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_stagger",
+        "Compatibility wrapper for legacy recovery routines.",
+    )
 
-    async def _create_and_navigate_court_page_with_stagger(
-        self, court: int, initial_delay: float
-    ):
-        """Compatibility wrapper for legacy recovery routines."""
+    _create_and_navigate_court_page_with_retry = _manager_delegate(
+        "create_and_navigate_court_page_with_retry",
+        "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_retry",
+        "Retry navigation helper retained for recovery flows.",
+    )
 
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_stagger"
-        )
-        return await self.manager.create_and_navigate_court_page_with_stagger(
-            court, initial_delay
-        )
+    _create_and_navigate_court_page_safe = _manager_delegate(
+        "create_and_navigate_court_page_safe",
+        "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_safe",
+        "Navigate to a court page with guarded error handling.",
+    )
 
-    async def _create_and_navigate_court_page_with_retry(self, court: int):
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_with_retry"
-        )
-        return await self.manager.create_and_navigate_court_page_with_retry(court)
+    _create_and_navigate_court_page = _manager_delegate(
+        "create_and_navigate_court_page_safe",
+        "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page",
+        "Legacy method retained for compatibility.",
+    )
 
-    async def _create_and_navigate_court_page_safe(self, court: int):
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page_safe"
-        )
-        return await self.manager.create_and_navigate_court_page_safe(court)
+    _cleanup_on_failure = _manager_delegate(
+        "cleanup_on_failure",
+        "automation.browser.async_browser_pool.AsyncBrowserPool._cleanup_on_failure",
+        "Cleanup hook invoked after pool failures.",
+    )
 
-    async def _create_and_navigate_court_page(self, court: int):
-        """Legacy method retained for compatibility."""
+    stop = _manager_delegate(
+        "stop_pool",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.stop",
+        "Clean up all browser resources with critical-operation awareness.",
+    )
 
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool._create_and_navigate_court_page"
-        )
-        return await self.manager.create_and_navigate_court_page_safe(court)
+    legacy_stop = _manager_delegate(
+        "legacy_stop",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.legacy_stop",
+        "Legacy stop path used by older callers.",
+    )
 
-    async def _cleanup_on_failure(self) -> None:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool._cleanup_on_failure")
-        await self.manager.cleanup_on_failure()
+    refresh_browser_pages = _manager_delegate(
+        "refresh_browser_pages",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.refresh_browser_pages",
+        "Refresh all initialized court pages.",
+    )
 
-    async def stop(self) -> None:
-        """Clean up all browser resources with critical-operation awareness."""
-
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.stop")
-        await self.manager.stop_pool()
-
-    async def legacy_stop(self) -> None:
-        """Legacy stop path used by older callers."""
-
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.legacy_stop")
-        await self.manager.legacy_stop()
-
-    async def refresh_browser_pages(self) -> Dict[int, bool]:
-        """Refresh all initialized court pages."""
-
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool.refresh_browser_pages"
-        )
-        return await self.manager.refresh_browser_pages()
-
-    async def set_critical_operation(self, in_progress: bool) -> None:
-        """Toggle the critical operation flag for booking windows."""
-
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool.set_critical_operation"
-        )
-        await self.manager.set_critical_operation(in_progress)
+    set_critical_operation = _manager_delegate(
+        "set_critical_operation",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.set_critical_operation",
+        "Toggle the critical operation flag for booking windows.",
+    )
 
     def is_critical_operation_in_progress(self) -> bool:
         t(

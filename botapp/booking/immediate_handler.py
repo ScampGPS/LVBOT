@@ -4,7 +4,7 @@ Manages the flow from availability display to booking execution
 """
 from tracking import t
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from datetime import datetime, date
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -296,6 +296,24 @@ class ImmediateBookingHandler:
             self.logger.error("❌ Natural flow execution error: %s", exc)
             return None
 
+    async def _handle_booking_outcome(
+        self,
+        query,
+        booking_request: BookingRequest,
+        booking_result: BookingResult,
+        *,
+        persist: Callable[[BookingRequest, BookingResult], str],
+        notifier: Callable[[int, BookingResult], Dict[str, Any]],
+        persist_error: str,
+    ) -> None:
+        try:
+            persist(booking_request, booking_result)
+        except Exception as exc:  # pragma: no cover - persistence guard
+            self.logger.error(persist_error, exc)
+
+        notification = notifier(booking_request.user.user_id, booking_result)
+        await self._send_notification(query, notification)
+
     async def _handle_successful_booking(
         self,
         query,
@@ -303,14 +321,14 @@ class ImmediateBookingHandler:
         booking_result: BookingResult,
     ) -> None:
         t('botapp.booking.immediate_handler.ImmediateBookingHandler._handle_successful_booking')
-
-        try:
-            self._persist_success(booking_request, booking_result)
-        except Exception as exc:  # pragma: no cover - persistence guard
-            self.logger.error("Failed to persist immediate success: %s", exc)
-
-        notification = send_success_notification(booking_request.user.user_id, booking_result)
-        await self._send_notification(query, notification)
+        await self._handle_booking_outcome(
+            query,
+            booking_request,
+            booking_result,
+            persist=self._persist_success,
+            notifier=send_success_notification,
+            persist_error="Failed to persist immediate success: %s",
+        )
 
     async def _handle_failed_booking(
         self,
@@ -319,14 +337,14 @@ class ImmediateBookingHandler:
         booking_result: BookingResult,
     ) -> None:
         t('botapp.booking.immediate_handler.ImmediateBookingHandler._handle_failed_booking')
-
-        try:
-            self._persist_failure(booking_request, booking_result)
-        except Exception as exc:  # pragma: no cover - persistence guard
-            self.logger.error("Failed to record immediate failure: %s", exc)
-
-        notification = send_failure_notification(booking_request.user.user_id, booking_result)
-        await self._send_notification(query, notification)
+        await self._handle_booking_outcome(
+            query,
+            booking_request,
+            booking_result,
+            persist=self._persist_failure,
+            notifier=send_failure_notification,
+            persist_error="Failed to record immediate failure: %s",
+        )
 
     def _persist_success(self, booking_request: BookingRequest, booking_result: BookingResult) -> str:
         t('botapp.booking.immediate_handler.ImmediateBookingHandler._persist_success')

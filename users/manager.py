@@ -90,14 +90,21 @@ class UserManager:
     def get_all_users(self) -> Dict[int, Dict[str, Any]]:
         """
         Retrieve all stored user profiles
-        
+
         Returns:
             Dictionary where keys are user_ids and values are user profile dictionaries
         """
         t('users.manager.UserManager.get_all_users')
         self.logger.debug(f"Retrieved all users: {len(self.users)} profiles")
         return self.users.copy()
-    
+
+    def _has_role(self, user_id: int, hardcoded: set[int], profile_flag: str) -> bool:
+        if user_id in hardcoded:
+            return True
+
+        user_profile = self.get_user(user_id)
+        return user_profile.get(profile_flag, False) if user_profile else False
+
     def is_admin(self, user_id: int) -> bool:
         """
         Check if a user has admin privileges
@@ -111,13 +118,7 @@ class UserManager:
             True if user is an admin, False otherwise
         """
         t('users.manager.UserManager.is_admin')
-        # Check hardcoded list first
-        if user_id in HARDCODED_ADMIN_USERS:
-            return True
-            
-        # Then check database flag
-        user_profile = self.get_user(user_id)
-        return user_profile.get('is_admin', False) if user_profile else False
+        return self._has_role(user_id, HARDCODED_ADMIN_USERS, 'is_admin')
     
     def is_vip(self, user_id: int) -> bool:
         """
@@ -135,13 +136,7 @@ class UserManager:
             True if user is a VIP, False otherwise
         """
         t('users.manager.UserManager.is_vip')
-        # Check hardcoded list first
-        if user_id in HARDCODED_VIP_USERS:
-            return True
-            
-        # Then check database flag
-        user_profile = self.get_user(user_id)
-        return user_profile.get('is_vip', False) if user_profile else False
+        return self._has_role(user_id, HARDCODED_VIP_USERS, 'is_vip')
     
     def get_user_tier(self, user_id: int) -> UserTier:
         """

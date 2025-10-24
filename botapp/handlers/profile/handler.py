@@ -3,7 +3,7 @@
 from __future__ import annotations
 from tracking import t
 
-from typing import Any
+from typing import Any, Callable
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
@@ -94,115 +94,70 @@ class ProfileHandler:
 
     async def handle_edit_first_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_first_name')
-        query = update.callback_query
-        user_id = query.from_user.id
-
         try:
-            session = get_session_state(context)
-            session.profile.name_input = ''
-            session.profile.editing_name_field = 'first_name'
-            context.user_data['name_input'] = ''
-            context.user_data['editing_name_field'] = 'first_name'
-
-            user_profile = self.deps.user_manager.get_user(user_id) or {}
-            current_name = user_profile.get('first_name', '')
-
-            message = (
-                "👤 **Edit First Name**\n\n"
-                f"Current: {current_name if current_name else 'Not set'}\n\n"
-                "First Name: \\_\n\n"
-                "Use the keyboard below:"
+            await self._start_name_edit(
+                update,
+                context,
+                field='first_name',
+                icon='👤',
+                label='First Name',
             )
-            reply_markup = TelegramUI.create_letter_keyboard()
-
-            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=reply_markup)
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to edit first name')
 
     async def handle_edit_last_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_last_name')
-        query = update.callback_query
-        user_id = query.from_user.id
-
         try:
-            session = get_session_state(context)
-            session.profile.name_input = ''
-            session.profile.editing_name_field = 'last_name'
-            context.user_data['name_input'] = ''
-            context.user_data['editing_name_field'] = 'last_name'
-
-            user_profile = self.deps.user_manager.get_user(user_id) or {}
-            current_name = user_profile.get('last_name', '')
-
-            message = (
-                "👥 **Edit Last Name**\n\n"
-                f"Current: {current_name if current_name else 'Not set'}\n\n"
-                "Last Name: \\_\n\n"
-                "Use the keyboard below:"
+            await self._start_name_edit(
+                update,
+                context,
+                field='last_name',
+                icon='👥',
+                label='Last Name',
             )
-            reply_markup = TelegramUI.create_letter_keyboard()
-
-            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=reply_markup)
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to edit last name')
 
     async def handle_edit_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_phone')
-        query = update.callback_query
-        user_id = query.from_user.id
-
         try:
-            session = get_session_state(context)
-            session.profile.editing_field = 'phone'
-            session.profile.phone_input = ''
-            context.user_data['editing_field'] = 'phone'
-            context.user_data['phone_input'] = ''
-
-            profile = self.deps.user_manager.get_user(user_id) or {}
-            current_phone = profile.get('phone', '')
-
-            message = (
-                "📱 **Edit Phone Number**\n\n"
-                f"Current: (+502) {current_phone if current_phone else 'Not set'}\n\n"
-                "(+502) ________\n\n"
-                "Use the keypad below to enter your phone number:"
-            )
-            reply_markup = TelegramUI.create_phone_keypad()
-
-            await query.edit_message_text(
-                message,
-                parse_mode='Markdown',
-                reply_markup=reply_markup,
+            await self._start_contact_edit(
+                update,
+                context,
+                field='phone',
+                session_attr='phone_input',
+                context_key='phone_input',
+                icon='📱',
+                label='Phone Number',
+                message_builder=lambda current: (
+                    "📱 **Edit Phone Number**\n\n"
+                    f"Current: (+502) {current if current else 'Not set'}\n\n"
+                    "(+502) ________\n\n"
+                    "Use the keypad below to enter your phone number:"
+                ),
+                keyboard_factory=TelegramUI.create_phone_keypad,
             )
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to show phone edit')
 
     async def handle_edit_email(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_email')
-        query = update.callback_query
-        user_id = query.from_user.id
-
         try:
-            session = get_session_state(context)
-            session.profile.editing_field = 'email'
-            session.profile.email_input = ''
-            context.user_data['email_input'] = ''
-
-            profile = self.deps.user_manager.get_user(user_id) or {}
-            current_email = profile.get('email', '')
-
-            message = (
-                "📧 **Edit Email**\n\n"
-                f"Current: {current_email if current_email else 'Not set'}\n\n"
-                "Email: \\_\n\n"
-                "Use the keyboard below:"
-            )
-            reply_markup = TelegramUI.create_email_char_keyboard()
-
-            await query.edit_message_text(
-                message,
-                parse_mode='Markdown',
-                reply_markup=reply_markup,
+            await self._start_contact_edit(
+                update,
+                context,
+                field='email',
+                session_attr='email_input',
+                context_key='email_input',
+                icon='📧',
+                label='Email',
+                message_builder=lambda current: (
+                    "📧 **Edit Email**\n\n"
+                    f"Current: {current if current else 'Not set'}\n\n"
+                    "Email: \\_\n\n"
+                    "Use the keyboard below:"
+                ),
+                keyboard_factory=TelegramUI.create_email_char_keyboard,
             )
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to show email edit')
@@ -222,6 +177,73 @@ class ProfileHandler:
             await self.handle_profile_menu(update, context)
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to cancel edit')
+
+    async def _start_name_edit(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        *,
+        field: str,
+        icon: str,
+        label: str,
+    ) -> None:
+        query = update.callback_query
+        user_id = query.from_user.id
+
+        session = get_session_state(context)
+        session.profile.name_input = ''
+        session.profile.editing_name_field = field
+        context.user_data['name_input'] = ''
+        context.user_data['editing_name_field'] = field
+
+        user_profile = self.deps.user_manager.get_user(user_id) or {}
+        current_value = user_profile.get(field, '')
+
+        message = (
+            f"{icon} **Edit {label}**\n\n"
+            f"Current: {current_value if current_value else 'Not set'}\n\n"
+            f"{label}: \\_\n\n"
+            "Use the keyboard below:"
+        )
+        reply_markup = TelegramUI.create_letter_keyboard()
+        await query.edit_message_text(
+            message,
+            parse_mode='Markdown',
+            reply_markup=reply_markup,
+        )
+
+    async def _start_contact_edit(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        *,
+        field: str,
+        session_attr: str,
+        context_key: str,
+        icon: str,
+        label: str,
+        message_builder: Callable[[str], str],
+        keyboard_factory: Callable[[], Any],
+    ) -> None:
+        query = update.callback_query
+        user_id = query.from_user.id
+
+        session = get_session_state(context)
+        session.profile.editing_field = field
+        setattr(session.profile, session_attr, '')
+        context.user_data['editing_field'] = field
+        context.user_data[context_key] = ''
+
+        profile = self.deps.user_manager.get_user(user_id) or {}
+        current_value = profile.get(field, '')
+
+        message = message_builder(current_value)
+        reply_markup = keyboard_factory()
+        await query.edit_message_text(
+            message,
+            parse_mode='Markdown',
+            reply_markup=reply_markup,
+        )
 
     async def handle_phone_keypad(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_phone_keypad')
