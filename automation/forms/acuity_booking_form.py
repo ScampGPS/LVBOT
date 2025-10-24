@@ -114,61 +114,53 @@ async def _invoke_form_method(
     return await method(page, **kwargs)
 
 
-async def check_form_validation_errors(
-    page: Page,
-    *,
-    logger: logging.Logger | None = None,
-    use_javascript: bool = True,
-    enable_tracing: bool = True,
-) -> Tuple[bool, List[str]]:
-    """Proxy helper to access validation errors."""
+def _make_simple_form_proxy(
+    proxy_name: str,
+    method_name: str,
+    tracking_id: str,
+    doc: str,
+):
+    async def _call(
+        page: Page,
+        *,
+        logger: logging.Logger | None = None,
+        use_javascript: bool = True,
+        enable_tracing: bool = True,
+    ):
+        t(tracking_id)
+        return await _invoke_form_method(
+            method_name,
+            page,
+            logger=logger,
+            use_javascript=use_javascript,
+            enable_tracing=enable_tracing,
+        )
 
-    t('automation.forms.acuity_booking_form.check_form_validation_errors')
-    return await _invoke_form_method(
-        "check_form_validation_errors",
-        page,
-        logger=logger,
-        use_javascript=use_javascript,
-        enable_tracing=enable_tracing,
-    )
-
-
-async def submit_form(
-    page: Page,
-    *,
-    logger: logging.Logger | None = None,
-    use_javascript: bool = True,
-    enable_tracing: bool = True,
-) -> bool:
-    """Submit the booking form using the shared service."""
-
-    t('automation.forms.acuity_booking_form.submit_form')
-    return await _invoke_form_method(
-        "submit",
-        page,
-        logger=logger,
-        use_javascript=use_javascript,
-        enable_tracing=enable_tracing,
-    )
+    _call.__name__ = proxy_name
+    _call.__doc__ = doc
+    return _call
 
 
-async def check_booking_success(
-    page: Page,
-    *,
-    logger: logging.Logger | None = None,
-    use_javascript: bool = True,
-    enable_tracing: bool = True,
-) -> Tuple[bool, str]:
-    """Check whether the booking was successful after submission."""
+check_form_validation_errors = _make_simple_form_proxy(
+    "check_form_validation_errors",
+    "check_form_validation_errors",
+    "automation.forms.acuity_booking_form.check_form_validation_errors",
+    "Proxy helper to access validation errors.",
+)
 
-    t('automation.forms.acuity_booking_form.check_booking_success')
-    return await _invoke_form_method(
-        "check_booking_success",
-        page,
-        logger=logger,
-        use_javascript=use_javascript,
-        enable_tracing=enable_tracing,
-    )
+submit_form = _make_simple_form_proxy(
+    "submit_form",
+    "submit",
+    "automation.forms.acuity_booking_form.submit_form",
+    "Submit the booking form using the shared service.",
+)
+
+check_booking_success = _make_simple_form_proxy(
+    "check_booking_success",
+    "check_booking_success",
+    "automation.forms.acuity_booking_form.check_booking_success",
+    "Check whether the booking was successful after submission.",
+)
 
 
 async def fill_booking_form(

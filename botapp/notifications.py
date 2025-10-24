@@ -112,38 +112,50 @@ class NotificationBuilder(MarkdownBuilderBase):
 _NOTIFICATIONS = NotificationBuilder()
 
 
-def format_success_message(result: BookingResult) -> str:
-    """Generate a Markdown-formatted success message."""
+def _format_notification(method_name: str, doc: str):
+    def _format(result: BookingResult) -> str:
+        builder_method = getattr(_NOTIFICATIONS, method_name)
+        return builder_method(result)
 
-    return _NOTIFICATIONS.success_message(result)
+    _format.__name__ = f"format_{method_name}"
+    _format.__doc__ = doc
+    return _format
 
 
-def format_failure_message(result: BookingResult) -> str:
-    """Generate a Markdown-formatted failure message with error context."""
+format_success_message = _format_notification(
+    "success_message",
+    "Generate a Markdown-formatted success message.",
+)
 
-    return _NOTIFICATIONS.failure_message(result)
+format_failure_message = _format_notification(
+    "failure_message",
+    "Generate a Markdown-formatted failure message with error context.",
+)
+
+
+def _send_notification(
+    formatter,
+    user_id: int,
+    result: BookingResult,
+) -> Dict[str, object]:
+    return {
+        "user_id": user_id,
+        "message": formatter(result),
+        "parse_mode": "Markdown",
+        "reply_markup": TelegramUI.create_back_to_menu_keyboard(),
+    }
 
 
 def send_success_notification(user_id: int, result: BookingResult) -> Dict[str, object]:
     """Prepare payload for delivering a success notification to Telegram."""
 
-    return {
-        "user_id": user_id,
-        "message": format_success_message(result),
-        "parse_mode": "Markdown",
-        "reply_markup": TelegramUI.create_back_to_menu_keyboard(),
-    }
+    return _send_notification(format_success_message, user_id, result)
 
 
 def send_failure_notification(user_id: int, result: BookingResult) -> Dict[str, object]:
     """Prepare payload for delivering a failure notification to Telegram."""
 
-    return {
-        "user_id": user_id,
-        "message": format_failure_message(result),
-        "parse_mode": "Markdown",
-        "reply_markup": TelegramUI.create_back_to_menu_keyboard(),
-    }
+    return _send_notification(format_failure_message, user_id, result)
 
 
 def format_queue_reservation_added(

@@ -181,94 +181,141 @@ class BookingHandler:
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
 
-    async def handle_help_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle Help menu option
+    def _help_sections(self) -> list[tuple[str, str]]:
+        return [
+            (
+                "🎾 **Welcome to LVBot!**",
+                "LVBot is your automated tennis court booking assistant for Club La Villa. "
+                "We help you secure court reservations with intelligent monitoring and "
+                "automated booking capabilities.",
+            ),
+            (
+                "**🚀 Key Features:**",
+                "\n".join(
+                    [
+                        "• Real-time court availability checking",
+                        "• Smart reservation queue management",
+                        "• 48-hour advance booking window",
+                        "• Automated booking execution",
+                        "• Personal reservation tracking",
+                    ]
+                ),
+            ),
+            (
+                "**📱 Available Commands:**",
+                "\n".join(
+                    [
+                        "• `/start` - Show the main menu",
+                        "• `/check_courts` - Quick availability check",
+                    ]
+                ),
+            ),
+            (
+                "**📋 How to Use:**",
+                "\n".join(
+                    [
+                        "1️⃣ **Reserve Court** - Check real-time availability",
+                        "2️⃣ **My Reservations** - View your bookings",
+                        "3️⃣ **Queue Booking** - Schedule future bookings (coming soon)",
+                        "4️⃣ **Settings** - Customize preferences (coming soon)",
+                    ]
+                ),
+            ),
+            (
+                "**⚠️ Important Notes:**",
+                "\n".join(
+                    [
+                        "• Courts open for booking exactly 48 hours in advance",
+                        "• Availability is checked in real-time",
+                        "• Queue system executes bookings automatically",
+                        "• Keep your profile updated for smooth bookings",
+                    ]
+                ),
+            ),
+            (
+                "**🆘 Need Support?**",
+                "Contact the admin team for assistance!",
+            ),
+        ]
 
-        Args:
-            update: The telegram update containing the callback query
-            context: The callback context
+    def _about_sections(self) -> list[tuple[str, str]]:
+        return [
+            (
+                "🎾 **LVBot - Tennis Court Booking Assistant**",
+                "LVBot streamlines tennis court reservations at Club La Villa using "
+                "browser automation and real-time monitoring.",
+            ),
+            (
+                "**🔧 Technical Features:**",
+                "\n".join(
+                    [
+                        "• Playwright-powered browser automation",
+                        "• Async/await architecture for performance",
+                        "• Multi-browser parallel processing",
+                        "• Smart refresh strategies",
+                        "• Persistent reservation queue",
+                    ]
+                ),
+            ),
+            (
+                "**📊 System Stats:**",
+                "\n".join(
+                    [
+                        "• 48-hour booking window monitoring",
+                        "• Automated booking execution coverage",
+                        "• Emergency fallback browser for resiliency",
+                    ]
+                ),
+            ),
+            (
+                "**🛠 Current Roadmap:**",
+                "\n".join(
+                    [
+                        "• Enhanced queue analytics",
+                        "• Expanded profile customization",
+                        "• Improved admin tooling",
+                    ]
+                ),
+            ),
+        ]
 
-        Returns:
-            None
-        """
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_help_menu')
-        query = update.callback_query
+    def _render_info_message(self, title: str, sections: list[tuple[str, str]]) -> str:
+        parts = [title, ""]
+        for heading, body in sections:
+            parts.append(heading)
+            if body:
+                parts.append(body)
+            parts.append("")
+        return "\n".join(parts).strip()
+
+    async def _display_static_page(
+        self,
+        query,
+        *,
+        title: str,
+        sections: list[tuple[str, str]],
+    ) -> None:
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
-
         await query.edit_message_text(
-            "💡 **Help - LVBot Tennis Court Assistant**\n\n"
-            "🎾 **Welcome to LVBot!**\n\n"
-            "LVBot is your automated tennis court booking assistant for Club La Villa. "
-            "We help you secure court reservations with intelligent monitoring and "
-            "automated booking capabilities.\n\n"
-            "**🚀 Key Features:**\n"
-            "• Real-time court availability checking\n"
-            "• Smart reservation queue management\n"
-            "• 48-hour advance booking window\n"
-            "• Automated booking execution\n"
-            "• Personal reservation tracking\n\n"
-            "**📱 Available Commands:**\n"
-            "• `/start` - Show the main menu\n"
-            "• `/check_courts` - Quick availability check\n\n"
-            "**📋 How to Use:**\n"
-            "1️⃣ **Reserve Court** - Check real-time availability\n"
-            "2️⃣ **My Reservations** - View your bookings\n"
-            "3️⃣ **Queue Booking** - Schedule future bookings (coming soon)\n"
-            "4️⃣ **Settings** - Customize preferences (coming soon)\n\n"
-            "**⚠️ Important Notes:**\n"
-            "• Courts open for booking exactly 48 hours in advance\n"
-            "• All availability is checked in real-time\n"
-            "• Queue system executes bookings automatically\n"
-            "• Keep your profile updated for smooth bookings\n\n"
-            "**🆘 Need Support?**\n"
-            "Contact the admin team for assistance!",
+            self._render_info_message(title, sections),
             parse_mode='Markdown',
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
+        )
+
+    async def handle_help_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_help_menu')
+        await self._display_static_page(
+            update.callback_query,
+            title="💡 **Help - LVBot Tennis Court Assistant**",
+            sections=self._help_sections(),
         )
 
     async def handle_about_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle About menu option
-
-        Shows information about LVBot, its features, and technical details
-
-        Args:
-            update: The telegram update containing the callback query
-            context: The callback context
-
-        Returns:
-            None
-        """
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_about_menu')
-        query = update.callback_query
-        reply_markup = TelegramUI.create_back_to_menu_keyboard()
-
-        await query.edit_message_text(
-            "ℹ️ **About LVBot**\n\n"
-            "🎾 **LVBot - Tennis Court Booking Assistant**\n\n"
-            "LVBot is an intelligent automation system designed to streamline "
-            "tennis court reservations at Club La Villa. Built with advanced "
-            "browser automation and real-time monitoring capabilities.\n\n"
-            "**🔧 Technical Features:**\n"
-            "• Playwright-powered browser automation\n"
-            "• Async/await architecture for performance\n"
-            "• Multi-browser parallel processing\n"
-            "• Smart refresh strategies\n"
-            "• Persistent reservation queue\n\n"
-            "**📊 System Stats:**\n"
-            "• 48-hour booking window monitoring\n"
-            "• Real-time availability detection\n"
-            "• Automated queue processing\n"
-            "• Error handling and recovery\n\n"
-            "**👥 Development:**\n"
-            "Built for tennis enthusiasts at Club La Villa\n"
-            "Continuously improving with user feedback\n\n"
-            "**📅 Version:** Phase 1 - Core Functionality\n"
-            "**🏗️ Architecture:** Modular Python/Telegram Bot\n\n"
-            "Questions or suggestions? Contact the development team!",
-            parse_mode='Markdown',
-            reply_markup=reply_markup
+        await self._display_static_page(
+            update.callback_query,
+            title="ℹ️ **About LVBot**",
+            sections=self._about_sections(),
         )
 
     async def handle_back_to_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

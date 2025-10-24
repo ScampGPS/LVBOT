@@ -5,6 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+class _Recorder:
+    def __init__(self, records: List[Dict[str, Any]]) -> None:
+        self._records = records
+
+    def _record(self, action: str, **payload: Any) -> None:
+        entry = {"action": action}
+        entry.update(payload)
+        self._records.append(entry)
+
 
 @dataclass
 class FakeUser:
@@ -16,25 +25,23 @@ class FakeUser:
     username: str = "test_user"
 
 
-class FakeMessage:
+class FakeMessage(_Recorder):
     """Collect replies emitted during a scenario."""
 
     def __init__(self, chat_id: int, records: List[Dict[str, Any]]) -> None:
+        super().__init__(records)
         self.chat_id = chat_id
-        self._records = records
 
     async def reply_text(self, text: str, **kwargs: Any) -> None:
-        self._records.append(
-            {
-                "action": "reply_text",
-                "chat_id": self.chat_id,
-                "text": text,
-                "kwargs": kwargs,
-            }
+        self._record(
+            "reply_text",
+            chat_id=self.chat_id,
+            text=text,
+            kwargs=kwargs,
         )
 
 
-class FakeCallbackQuery:
+class FakeCallbackQuery(_Recorder):
     """Simulate the subset of telegram.CallbackQuery used by the handlers."""
 
     def __init__(
@@ -44,37 +51,27 @@ class FakeCallbackQuery:
         user: FakeUser,
         records: List[Dict[str, Any]],
     ) -> None:
+        super().__init__(records)
         self.data = data
         self.from_user = user
-        self._records = records
         self.message = FakeMessage(chat_id=user.id, records=records)
 
     async def answer(self, **kwargs: Any) -> None:
-        self._records.append(
-            {
-                "action": "answer",
-                "data": self.data,
-                "kwargs": kwargs,
-            }
-        )
+        self._record("answer", data=self.data, kwargs=kwargs)
 
     async def edit_message_text(self, text: str, **kwargs: Any) -> None:
-        self._records.append(
-            {
-                "action": "edit_message_text",
-                "data": self.data,
-                "text": text,
-                "kwargs": kwargs,
-            }
+        self._record(
+            "edit_message_text",
+            data=self.data,
+            text=text,
+            kwargs=kwargs,
         )
 
     async def edit_message_reply_markup(self, reply_markup: Any = None) -> None:
-        self._records.append(
-            {
-                "action": "edit_message_reply_markup",
-                "data": self.data,
-                "reply_markup": reply_markup,
-            }
+        self._record(
+            "edit_message_reply_markup",
+            data=self.data,
+            reply_markup=reply_markup,
         )
 
 

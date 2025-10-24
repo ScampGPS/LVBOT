@@ -376,12 +376,27 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
                 except Exception:
                     pass
 
+    async def _delegate_call(
+        self,
+        target_attr: str,
+        method_name: str,
+        tracking_id: str,
+        *args,
+        **kwargs,
+    ):
+        t(tracking_id)
+        target = getattr(self, target_attr)
+        method = getattr(target, method_name)
+        return await method(*args, **kwargs)
+
     async def _check_form_visible(self, page: Page) -> bool:
         """Check if booking form is visible"""
-        t(
-            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_form_visible"
+        return await self._delegate_call(
+            "_form",
+            "check_form_visible",
+            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_form_visible",
+            page,
         )
-        return await self._form.check_form_visible(page)
 
     async def _try_click_continue(self, page: Page):
         """Try to click continue button if present"""
@@ -392,24 +407,31 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
 
     async def _fill_booking_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
         """Fill the booking form with user information"""
-        t(
-            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._fill_booking_form"
+        return await self._delegate_call(
+            "_form",
+            "fill_form",
+            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._fill_booking_form",
+            page,
+            user_info,
         )
-        return await self._form.fill_form(page, user_info)
 
     async def _submit_booking(self, page: Page) -> Dict[str, Any]:
         """Submit the booking and check for confirmation"""
-        t(
-            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._submit_booking"
+        return await self._delegate_call(
+            "_confirmation",
+            "submit",
+            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._submit_booking",
+            page,
         )
-        return await self._confirmation.submit(page)
 
     async def _check_for_errors(self, page: Page) -> Optional[str]:
         """Check page for error messages"""
-        t(
-            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_for_errors"
+        return await self._delegate_call(
+            "_confirmation",
+            "check_for_errors",
+            "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_for_errors",
+            page,
         )
-        return await self._confirmation.check_for_errors(page)
 
     async def cleanup(self):
         """Clean up browser resources"""

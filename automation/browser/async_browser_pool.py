@@ -33,6 +33,28 @@ def _manager_delegate(method_name: str, tracking_id: str, doc: str):
     return handler
 
 
+def _health_delegate(method_name: str, tracking_id: str, doc: str, *, is_async: bool):
+    health_method = getattr(pool_health, method_name)
+
+    if is_async:
+
+        async def async_handler(self, *args, **kwargs):
+            t(tracking_id)
+            return await health_method(self, *args, **kwargs)
+
+        async_handler.__doc__ = doc
+        async_handler.__name__ = method_name
+        return async_handler
+
+    def sync_handler(self, *args, **kwargs):
+        t(tracking_id)
+        return health_method(self, *args, **kwargs)
+
+    sync_handler.__doc__ = doc
+    sync_handler.__name__ = method_name
+    return sync_handler
+
+
 class AsyncBrowserPool:
     """Async browser pool backed by Playwright with modular helpers."""
 
@@ -121,43 +143,61 @@ class AsyncBrowserPool:
         "Toggle the critical operation flag for booking windows.",
     )
 
-    def is_critical_operation_in_progress(self) -> bool:
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool.is_critical_operation_in_progress"
-        )
-        return pool_health.is_critical_operation_in_progress(self)
+    is_critical_operation_in_progress = _health_delegate(
+        "is_critical_operation_in_progress",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.is_critical_operation_in_progress",
+        "Return True when a critical booking operation is flagged.",
+        is_async=False,
+    )
 
-    async def get_page(self, court_num: int) -> Optional[Page]:
-        """Fetch (and lazily recreate) the page for a specific court."""
+    get_page = _health_delegate(
+        "get_page",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.get_page",
+        "Fetch (and lazily recreate) the page for a specific court.",
+        is_async=True,
+    )
 
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.get_page")
-        return await pool_health.get_page(self, court_num)
+    is_ready = _health_delegate(
+        "is_ready",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.is_ready",
+        "Return True if at least one court page is available.",
+        is_async=False,
+    )
 
-    def is_ready(self) -> bool:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.is_ready")
-        return pool_health.is_ready(self)
+    wait_until_ready = _health_delegate(
+        "wait_until_ready",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.wait_until_ready",
+        "Wait until the browser pool is ready or timeout occurs.",
+        is_async=True,
+    )
 
-    async def wait_until_ready(self, timeout: float = 30) -> bool:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.wait_until_ready")
-        return await pool_health.wait_until_ready(self, timeout)
+    get_initialization_error = _health_delegate(
+        "get_initialization_error",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.get_initialization_error",
+        "Return initialization error details if the pool is not ready.",
+        is_async=False,
+    )
 
-    def get_initialization_error(self) -> Optional[str]:
-        t(
-            "automation.browser.async_browser_pool.AsyncBrowserPool.get_initialization_error"
-        )
-        return pool_health.get_initialization_error(self)
+    get_stats = _health_delegate(
+        "get_stats",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.get_stats",
+        "Gather basic statistics about the browser pool.",
+        is_async=False,
+    )
 
-    def get_stats(self) -> Dict[str, Any]:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.get_stats")
-        return pool_health.get_stats(self)
+    get_available_courts = _health_delegate(
+        "get_available_courts",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.get_available_courts",
+        "Return the list of courts that have been successfully initialized.",
+        is_async=False,
+    )
 
-    def get_available_courts(self) -> List[int]:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.get_available_courts")
-        return pool_health.get_available_courts(self)
-
-    def is_fully_ready(self) -> bool:
-        t("automation.browser.async_browser_pool.AsyncBrowserPool.is_fully_ready")
-        return pool_health.is_fully_ready(self)
+    is_fully_ready = _health_delegate(
+        "is_fully_ready",
+        "automation.browser.async_browser_pool.AsyncBrowserPool.is_fully_ready",
+        "Return True if all requested courts are initialized.",
+        is_async=False,
+    )
 
     async def execute_parallel_booking(
         self,

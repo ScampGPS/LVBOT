@@ -196,21 +196,35 @@ class ConversationStates:
     AWAITING_CONFIRMATION = "awaiting_confirmation"
     PROCESSING = "processing"
     ERROR = "error"
-    
+
+    @classmethod
+    def _state_matches(cls, state: str, prefix: str, tracking_id: str) -> bool:
+        t(tracking_id)
+        return bool(state) and state.startswith(prefix)
+
     @classmethod
     def is_reservation_flow(cls, state: str) -> bool:
         """Check if state is part of reservation flow"""
-        t('botapp.state.state_manager.ConversationStates.is_reservation_flow')
-        return state and state.startswith("reserve_")
-    
+        return cls._state_matches(
+            state,
+            "reserve_",
+            'botapp.state.state_manager.ConversationStates.is_reservation_flow',
+        )
+
     @classmethod
     def is_profile_flow(cls, state: str) -> bool:
         """Check if state is part of profile flow"""
-        t('botapp.state.state_manager.ConversationStates.is_profile_flow')
-        return state and state.startswith("profile_")
-    
+        return cls._state_matches(
+            state,
+            "profile_",
+            'botapp.state.state_manager.ConversationStates.is_profile_flow',
+        )
+
     @classmethod
     def is_admin_flow(cls, state: str) -> bool:
         """Check if state is part of admin flow"""
-        t('botapp.state.state_manager.ConversationStates.is_admin_flow')
-        return state and state.startswith("admin_")
+        return cls._state_matches(
+            state,
+            "admin_",
+            'botapp.state.state_manager.ConversationStates.is_admin_flow',
+        )

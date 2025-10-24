@@ -20,6 +20,21 @@ from .browser_pool_factory import build_browser_resources
 from .reservation_setup import build_reservation_components
 
 
+def _bundle_property(
+    index: int,
+    cache_key: str,
+    tracking_id: str,
+    doc: str,
+) -> property:
+    def getter(self):
+        t(tracking_id)
+        component = self._browser_bundle()[index]
+        return self._cache.setdefault(cache_key, component)
+
+    getter.__doc__ = doc
+    return property(getter)
+
+
 @dataclass(frozen=True)
 class BotDependencies:
     """Concrete dependency snapshot for the Telegram bot runtime."""
@@ -80,23 +95,26 @@ class DependencyContainer:
 
     # ------------------------------------------------------------------
     # Core dependencies
-    @property
-    def browser_pool(self) -> AsyncBrowserPool:
-        t('botapp.bootstrap.container.DependencyContainer.browser_pool')
-        pool, _, _ = self._browser_bundle()
-        return self._cache.setdefault('browser_pool', pool)
+    browser_pool = _bundle_property(
+        0,
+        'browser_pool',
+        'botapp.bootstrap.container.DependencyContainer.browser_pool',
+        "Cached async browser pool instance.",
+    )
 
-    @property
-    def browser_manager(self) -> BrowserManager:
-        t('botapp.bootstrap.container.DependencyContainer.browser_manager')
-        _, manager, _ = self._browser_bundle()
-        return self._cache.setdefault('browser_manager', manager)
+    browser_manager = _bundle_property(
+        1,
+        'browser_manager',
+        'botapp.bootstrap.container.DependencyContainer.browser_manager',
+        "Cached browser manager coordinating the pool lifecycle.",
+    )
 
-    @property
-    def availability_checker(self) -> AvailabilityChecker:
-        t('botapp.bootstrap.container.DependencyContainer.availability_checker')
-        _, _, checker = self._browser_bundle()
-        return self._cache.setdefault('availability_checker', checker)
+    availability_checker = _bundle_property(
+        2,
+        'availability_checker',
+        'botapp.bootstrap.container.DependencyContainer.availability_checker',
+        "Cached availability checker sharing the pool resources.",
+    )
 
     @property
     def user_manager(self) -> UserManager:

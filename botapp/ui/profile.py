@@ -11,36 +11,47 @@ from .constants import TIER_BADGES
 from .text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 
 
+def _keyboard(rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(text, callback_data=callback) for text, callback in row]
+            for row in rows
+        ]
+    )
+
+
 def create_profile_keyboard() -> InlineKeyboardMarkup:
     """Create profile view keyboard with Edit and Back buttons."""
 
     t("botapp.ui.profile.create_profile_keyboard")
-    keyboard = [
-        [InlineKeyboardButton("✏️ Edit Profile", callback_data="edit_profile")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
+    return _keyboard(
+        [
+            [("✏️ Edit Profile", "edit_profile")],
+            [("🔙 Back to Menu", "back_to_menu")],
+        ]
+    )
 
 
 def create_edit_profile_keyboard() -> InlineKeyboardMarkup:
     """Create edit profile menu keyboard."""
 
     t("botapp.ui.profile.create_edit_profile_keyboard")
-    keyboard = [
-        [InlineKeyboardButton("👤 Edit Name", callback_data="edit_name")],
-        [InlineKeyboardButton("📱 Edit Phone", callback_data="edit_phone")],
-        [InlineKeyboardButton("📧 Edit Email", callback_data="edit_email")],
-        [InlineKeyboardButton("🔙 Back to Profile", callback_data="menu_profile")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
+    return _keyboard(
+        [
+            [("👤 Edit Name", "edit_name")],
+            [("📱 Edit Phone", "edit_phone")],
+            [("📧 Edit Email", "edit_email")],
+            [("🔙 Back to Profile", "menu_profile")],
+        ]
+    )
 
 
 def create_cancel_edit_keyboard() -> InlineKeyboardMarkup:
     """Create a cancel button for edit operations."""
 
     t("botapp.ui.profile.create_cancel_edit_keyboard")
-    return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("❌ Cancel", callback_data="cancel_edit")]]
+    return _keyboard(
+        [[("❌ Cancel", "cancel_edit")]]
     )
 
 
@@ -48,47 +59,28 @@ def create_phone_keypad() -> InlineKeyboardMarkup:
     """Create numeric keypad for phone number input."""
 
     t("botapp.ui.profile.create_phone_keypad")
-    keyboard = [
-        [
-            InlineKeyboardButton("1", callback_data="phone_digit_1"),
-            InlineKeyboardButton("2", callback_data="phone_digit_2"),
-            InlineKeyboardButton("3", callback_data="phone_digit_3"),
-        ],
-        [
-            InlineKeyboardButton("4", callback_data="phone_digit_4"),
-            InlineKeyboardButton("5", callback_data="phone_digit_5"),
-            InlineKeyboardButton("6", callback_data="phone_digit_6"),
-        ],
-        [
-            InlineKeyboardButton("7", callback_data="phone_digit_7"),
-            InlineKeyboardButton("8", callback_data="phone_digit_8"),
-            InlineKeyboardButton("9", callback_data="phone_digit_9"),
-        ],
-        [
-            InlineKeyboardButton("⬅️ Delete", callback_data="phone_delete"),
-            InlineKeyboardButton("0", callback_data="phone_digit_0"),
-            InlineKeyboardButton("✅ Done", callback_data="phone_done"),
-        ],
-        [InlineKeyboardButton("❌ Cancel", callback_data="cancel_edit")],
+    rows = [
+        [("1", "phone_digit_1"), ("2", "phone_digit_2"), ("3", "phone_digit_3")],
+        [("4", "phone_digit_4"), ("5", "phone_digit_5"), ("6", "phone_digit_6")],
+        [("7", "phone_digit_7"), ("8", "phone_digit_8"), ("9", "phone_digit_9")],
+        [("⬅️ Delete", "phone_delete"), ("0", "phone_digit_0"), ("✅ Done", "phone_done")],
+        [("❌ Cancel", "cancel_edit")],
     ]
-    return InlineKeyboardMarkup(keyboard)
+    return _keyboard(rows)
 
 
 def create_name_type_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard to choose which name to edit."""
 
     t("botapp.ui.profile.create_name_type_keyboard")
-    keyboard = [
-        [InlineKeyboardButton("👤 Edit First Name", callback_data="edit_first_name")],
-        [InlineKeyboardButton("👥 Edit Last Name", callback_data="edit_last_name")],
+    return _keyboard(
         [
-            InlineKeyboardButton(
-                "📋 Use Telegram Name", callback_data="name_use_telegram"
-            )
-        ],
-        [InlineKeyboardButton("🔙 Back", callback_data="edit_profile")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
+            [("👤 Edit First Name", "edit_first_name")],
+            [("👥 Edit Last Name", "edit_last_name")],
+            [("📋 Use Telegram Name", "name_use_telegram")],
+            [("🔙 Back", "edit_profile")],
+        ]
+    )
 
 
 def create_letter_keyboard() -> InlineKeyboardMarkup:
@@ -103,38 +95,29 @@ def create_letter_keyboard() -> InlineKeyboardMarkup:
         ["Y", "Z", "-", "'"],
     ]
 
-    keyboard = []
-    for row in letters:
-        kb_row = []
-        for letter in row:
-            callback = "letter_apostrophe" if letter == "'" else f"letter_{letter}"
-            kb_row.append(InlineKeyboardButton(letter, callback_data=callback))
-        keyboard.append(kb_row)
-
-    keyboard.append(
+    rows = [
         [
-            InlineKeyboardButton("⬅️ Delete", callback_data="letter_delete"),
-            InlineKeyboardButton("✅ Done", callback_data="letter_done"),
+            (letter, "letter_apostrophe" if letter == "'" else f"letter_{letter}")
+            for letter in row
         ]
-    )
-    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_edit")])
-    return InlineKeyboardMarkup(keyboard)
+        for row in letters
+    ]
+    rows.append([("⬅️ Delete", "letter_delete"), ("✅ Done", "letter_done")])
+    rows.append([("❌ Cancel", "cancel_edit")])
+    return _keyboard(rows)
 
 
 def create_email_confirm_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard to confirm email."""
 
     t("botapp.ui.profile.create_email_confirm_keyboard")
-    keyboard = [
+    return _keyboard(
         [
-            InlineKeyboardButton(
-                "✅ Yes, Save This Email", callback_data="email_confirm"
-            )
-        ],
-        [InlineKeyboardButton("🔄 Try Again", callback_data="edit_email")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="cancel_edit")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
+            [("✅ Yes, Save This Email", "email_confirm")],
+            [("🔄 Try Again", "edit_email")],
+            [("❌ Cancel", "cancel_edit")],
+        ]
+    )
 
 
 def create_email_char_keyboard() -> InlineKeyboardMarkup:
@@ -151,23 +134,13 @@ def create_email_char_keyboard() -> InlineKeyboardMarkup:
         [".", "_", "-", "@"],
     ]
 
-    keyboard = []
-    for row in chars:
-        keyboard.append(
-            [
-                InlineKeyboardButton(char, callback_data=f"email_char_{char}")
-                for char in row
-            ]
-        )
-
-    keyboard.append(
-        [
-            InlineKeyboardButton("⬅️ Delete", callback_data="email_delete"),
-            InlineKeyboardButton("✅ Done", callback_data="email_done"),
-        ]
-    )
-    keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_edit")])
-    return InlineKeyboardMarkup(keyboard)
+    rows = [
+        [(char, f"email_char_{char}") for char in row]
+        for row in chars
+    ]
+    rows.append([("⬅️ Delete", "email_delete"), ("✅ Done", "email_done")])
+    rows.append([("❌ Cancel", "cancel_edit")])
+    return _keyboard(rows)
 
 
 def format_user_profile_message(
