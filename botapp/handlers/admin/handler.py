@@ -10,24 +10,16 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from botapp.handlers.dependencies import CallbackDependencies
+from botapp.handlers.mixins import CallbackResponseMixin
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.error_handler import ErrorHandler
 from infrastructure.settings import get_test_mode, update_test_mode
 
 
-class AdminHandler:
+class AdminHandler(CallbackResponseMixin):
     def __init__(self, deps: CallbackDependencies) -> None:
         self.deps = deps
         self.logger = deps.logger
-
-    async def _safe_answer_callback(self, query, text: str | None = None) -> None:
-        try:
-            if text:
-                await query.answer(text)
-            else:
-                await query.answer()
-        except Exception as exc:
-            self.logger.warning('Failed to answer callback query: %s', exc)
 
     async def handle_admin_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """

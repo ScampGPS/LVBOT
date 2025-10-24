@@ -6,27 +6,26 @@ from tracking import t
 from datetime import date
 from typing import Any, Dict, List
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update
 from telegram.ext import ContextTypes
 
 from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.queue.flows import QueueBookingFlow, QueueReservationManager
 from botapp.handlers.queue.messages import QueueMessageFactory
-from botapp.messages.message_handlers import MessageHandlers
+from botapp.handlers.mixins import CallbackResponseMixin
 from botapp.notifications import (
-    format_duplicate_reservation_message,  # Backwards compatibility for tests
+    format_duplicate_reservation_message,
     format_queue_reservation_added,
 )
-from botapp.ui.telegram_ui import TelegramUI  # Backwards compatibility for tests
+from botapp.ui.telegram_ui import TelegramUI  # noqa: F401 - test monkeypatch support
 from infrastructure.settings import get_test_mode
 
 
-class QueueHandler:
-
+class QueueHandler(CallbackResponseMixin):
     """Handles queue booking flows and reservation management."""
 
     def __init__(self, deps: CallbackDependencies) -> None:
-        t('botapp.handlers.queue.QueueHandler.__init__')
+        t("botapp.handlers.queue.QueueHandler.__init__")
         self.deps = deps
         self.logger = deps.logger
         self.messages = QueueMessageFactory()
@@ -42,36 +41,23 @@ class QueueHandler:
             self.messages,
             safe_answer,
             edit_message,
-            lambda: globals()['get_test_mode'](),
-            lambda *args, **kwargs: globals()['format_queue_reservation_added'](*args, **kwargs),
-            lambda *args, **kwargs: globals()['format_duplicate_reservation_message'](*args, **kwargs),
-            lambda update, context, selected_date: self._show_queue_time_selection(update, context, selected_date),
+            lambda: globals()["get_test_mode"](),
+            lambda *args, **kwargs: globals()["format_queue_reservation_added"](
+                *args, **kwargs
+            ),
+            lambda *args, **kwargs: globals()["format_duplicate_reservation_message"](
+                *args, **kwargs
+            ),
+            lambda update, context, selected_date: self._show_queue_time_selection(
+                update, context, selected_date
+            ),
         )
         self.reservation_manager = QueueReservationManager(
             deps,
             self.messages,
             safe_answer,
             edit_message,
-            lambda: globals()['get_test_mode'](),
-        )
-
-    async def _safe_answer_callback(self, query, text: str | None = None) -> None:
-        t('botapp.handlers.queue.QueueHandler._safe_answer_callback')
-        try:
-            if text:
-                await query.answer(text)
-            else:
-                await query.answer()
-        except Exception as exc:
-            self.logger.warning('Failed to answer callback query: %s', exc)
-
-    async def _edit_callback_message(self, query, text: str, **kwargs) -> None:
-        t('botapp.handlers.queue.QueueHandler._edit_callback_message')
-        await MessageHandlers.edit_callback_message(
-            query,
-            text,
-            logger=self.logger,
-            **kwargs,
+            lambda: globals()["get_test_mode"](),
         )
 
     async def _show_queue_time_selection(
@@ -84,10 +70,14 @@ class QueueHandler:
 
         await self.booking_flow._show_time_selection(update, context, selected_date)
 
-    async def handle_queue_booking_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def handle_queue_booking_menu(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         """Handle Queue Booking menu option."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_menu"
+        )
         await self.booking_flow.show_menu(update, context)
 
     async def handle_my_reservations_menu(
@@ -97,7 +87,9 @@ class QueueHandler:
     ) -> None:
         """Handle My Reservations menu option."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_my_reservations_menu')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_my_reservations_menu"
+        )
         await self.reservation_manager.show_user_menu(update, context)
 
     async def handle_queue_booking_date_selection(
@@ -107,7 +99,9 @@ class QueueHandler:
     ) -> None:
         """Handle date selection for queue booking flow."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_date_selection')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_date_selection"
+        )
         await self.booking_flow.select_date(update, context)
 
     async def handle_queue_booking_time_selection(
@@ -117,7 +111,9 @@ class QueueHandler:
     ) -> None:
         """Handle time selection for queue booking flow."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_selection')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_time_selection"
+        )
         await self.booking_flow.select_time(update, context)
 
     async def handle_queue_booking_court_selection(
@@ -127,7 +123,9 @@ class QueueHandler:
     ) -> None:
         """Handle court selection for queue booking flow."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_court_selection')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_court_selection"
+        )
         await self.booking_flow.select_courts(update, context)
 
     async def handle_queue_booking_confirm(
@@ -137,7 +135,9 @@ class QueueHandler:
     ) -> None:
         """Handle confirmation of queue booking reservation."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_confirm')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_confirm"
+        )
         await self.booking_flow.confirm(update, context)
 
     def clear_queue_booking_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -152,7 +152,7 @@ class QueueHandler:
     ) -> None:
         """Allow selecting within-48h dates when test mode permits."""
 
-        t('botapp.handlers.queue.QueueHandler.handle_blocked_date_selection')
+        t("botapp.handlers.queue.QueueHandler.handle_blocked_date_selection")
         await self.booking_flow.handle_blocked_date(update, context)
 
     async def handle_queue_booking_cancel(
@@ -162,7 +162,9 @@ class QueueHandler:
     ) -> None:
         """Handle cancellation of queue booking reservation."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_cancel')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_queue_booking_cancel"
+        )
         await self.booking_flow.cancel(update, context)
 
     async def handle_back_to_queue_courts(
@@ -172,7 +174,9 @@ class QueueHandler:
     ) -> None:
         """Handle returning to the court selection screen."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_courts')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_courts"
+        )
         await self.booking_flow.back_to_courts(update, context)
 
     async def handle_manage_reservation(
@@ -182,7 +186,9 @@ class QueueHandler:
     ) -> None:
         """Handle individual reservation management."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_manage_reservation')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_reservation"
+        )
         await self.reservation_manager.manage_reservation(update, context)
 
     async def handle_manage_queue_reservation(
@@ -192,7 +198,9 @@ class QueueHandler:
     ) -> None:
         """Handle management of a specific queued reservation."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_manage_queue_reservation')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_manage_queue_reservation"
+        )
         await self.reservation_manager.manage_queue_reservation(update, context)
 
     async def handle_reservation_action(
@@ -202,7 +210,9 @@ class QueueHandler:
     ) -> None:
         """Handle reservation actions (cancel, modify, share)."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_reservation_action')
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_reservation_action"
+        )
         await self.reservation_manager.handle_action(update, context)
 
     async def handle_cancel_reservation(
@@ -213,8 +223,12 @@ class QueueHandler:
     ) -> None:
         """Cancel a reservation."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation')
-        await self.reservation_manager.cancel_reservation(update, context, reservation_id)
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation"
+        )
+        await self.reservation_manager.cancel_reservation(
+            update, context, reservation_id
+        )
 
     async def handle_modify_reservation(
         self,
@@ -224,8 +238,12 @@ class QueueHandler:
     ) -> None:
         """Modify a reservation."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_modify_reservation')
-        await self.reservation_manager.modify_reservation(update, context, reservation_id)
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._handle_modify_reservation"
+        )
+        await self.reservation_manager.modify_reservation(
+            update, context, reservation_id
+        )
 
     async def handle_share_reservation(
         self,
@@ -235,8 +253,10 @@ class QueueHandler:
     ) -> None:
         """Share reservation details."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_share_reservation')
-        await self.reservation_manager.share_reservation(update, context, reservation_id)
+        t("botapp.handlers.callback_handlers.CallbackHandler._handle_share_reservation")
+        await self.reservation_manager.share_reservation(
+            update, context, reservation_id
+        )
 
     async def handle_modify_option(
         self,
@@ -245,7 +265,7 @@ class QueueHandler:
     ) -> None:
         """Handle modification options for queued reservations."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_modify_option')
+        t("botapp.handlers.callback_handlers.CallbackHandler._handle_modify_option")
         await self.reservation_manager.modify_option(update, context)
 
     async def handle_time_modification(
@@ -255,11 +275,12 @@ class QueueHandler:
     ) -> None:
         """Handle time modification from the modify menu."""
 
-        t('botapp.handlers.callback_handlers.CallbackHandler._handle_time_modification')
+        t("botapp.handlers.callback_handlers.CallbackHandler._handle_time_modification")
         await self.reservation_manager.time_modification(update, context)
 
-    async def _display_user_reservations(self, update: Update, context: ContextTypes.DEFAULT_TYPE, 
-                                       target_user_id: int) -> None:
+    async def _display_user_reservations(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, target_user_id: int
+    ) -> None:
         """
         Display reservations for a specific user (reusable method)
 
@@ -268,10 +289,16 @@ class QueueHandler:
             context: The callback context
             target_user_id: The user whose reservations to display
         """
-        t('botapp.handlers.callback_handlers.CallbackHandler._display_user_reservations')
-        await self.reservation_manager.display_user_reservations(update, context, target_user_id)
+        t(
+            "botapp.handlers.callback_handlers.CallbackHandler._display_user_reservations"
+        )
+        await self.reservation_manager.display_user_reservations(
+            update, context, target_user_id
+        )
 
-    async def _display_all_reservations(self, query, all_reservations: List[Dict[str, Any]]) -> None:
+    async def _display_all_reservations(
+        self, query, all_reservations: List[Dict[str, Any]]
+    ) -> None:
         """
         Display all reservations from all users
 
@@ -279,5 +306,5 @@ class QueueHandler:
             query: The callback query
             all_reservations: List of all reservations with user info
         """
-        t('botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations')
+        t("botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations")
         await self.reservation_manager.display_all_reservations(query, all_reservations)
