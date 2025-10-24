@@ -211,7 +211,7 @@ class ProfileViewBuilder(MarkdownBuilderBase):
     def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False) -> str:
         t("botapp.ui.profile.ProfileViewBuilder.build")
 
-        builder = self._new_builder()
+        builder = self.create_builder()
         status_emoji = "✅" if user_data.get("is_active", True) else "🔴"
 
         phone = user_data.get("phone", "Not set")

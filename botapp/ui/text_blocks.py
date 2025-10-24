@@ -58,5 +58,10 @@ class MarkdownBuilderBase:
     def _new_builder(self) -> MarkdownBlockBuilder:
         return self._builder_factory()
 
+    def create_builder(self) -> MarkdownBlockBuilder:
+        """Return a new builder instance for composing Markdown output."""
+
+        return self._new_builder()
+
 
 __all__ = ["MarkdownBlockBuilder", "MarkdownBuilderBase"]

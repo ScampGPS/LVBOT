@@ -39,7 +39,11 @@ from reservations.queue.scheduler.services import (
 )
 from reservations.queue.request_builder import ReservationRequestBuilder
 from reservations.queue.persistence import persist_queue_outcome
-from botapp.notifications import format_failure_message, format_success_message
+from botapp.notifications import (
+    NotificationBuilder,
+    format_failure_message,
+    format_success_message,
+)
 from infrastructure.settings import get_test_mode
 
 # Read production mode setting (opt-in; default is false for richer diagnostics)
@@ -145,6 +149,7 @@ class ReservationScheduler:
             self.notification_callback = notification_callback
 
         self.logger = logging.getLogger("ReservationScheduler")
+        self._notifications = NotificationBuilder()
 
         # Thread control
         self.running = False
@@ -1485,12 +1490,15 @@ class ReservationScheduler:
             "reservations.queue.reservation_scheduler.ReservationScheduler._send_health_warning"
         )
         try:
-            message = (
-                "⚠️ **System Notice**\n\n"
-                "The booking system is experiencing minor issues:\n"
-                f"{health_result.message}\n\n"
+            builder = self._notifications.create_builder()
+            builder.heading("⚠️ **System Notice**").blank()
+            builder.line("The booking system is experiencing minor issues:")
+            if health_result.message:
+                builder.line(str(health_result.message))
+            builder.blank().line(
                 "We'll still attempt your booking but success rates may be reduced."
             )
+            message = builder.build()
             await self.bot.send_notification(user_id, message)
         except Exception as e:
             self.logger.error(f"Failed to send health warning to user {user_id}: {e}")
@@ -1503,26 +1511,28 @@ class ReservationScheduler:
             "reservations.queue.reservation_scheduler.ReservationScheduler._send_recovery_notification"
         )
         try:
+            builder = self._notifications.create_builder()
             if recovery_result.strategy_used.value == "emergency_fallback":
-                message = (
-                    "🚑 **Using Backup System**\n\n"
-                    "The main booking system had issues but we've activated a backup system. "
-                    "Your booking will proceed with limited functionality."
+                builder.heading("🚑 **Using Backup System**").blank()
+                builder.line(
+                    "The main booking system had issues but we've activated a backup system."
                 )
+                builder.line("Your booking will proceed with limited functionality.")
             elif recovery_result.courts_failed:
-                message = (
-                    "🔧 **System Partially Recovered**\n\n"
-                    f"We've recovered {len(recovery_result.courts_recovered)} out of "
-                    f"{len(recovery_result.courts_recovered) + len(recovery_result.courts_failed)} courts. "
-                    f"Your booking will proceed with available courts."
+                builder.heading("🔧 **System Partially Recovered**").blank()
+                total_courts = len(recovery_result.courts_recovered) + len(
+                    recovery_result.courts_failed
                 )
+                builder.line(
+                    f"We've recovered {len(recovery_result.courts_recovered)} out of {total_courts} courts."
+                )
+                builder.line("Your booking will proceed with available courts.")
             else:
-                message = (
-                    "✅ **System Recovered**\n\n"
-                    "The booking system has been successfully recovered. "
-                    "Your booking will proceed normally."
-                )
+                builder.heading("✅ **System Recovered**").blank()
+                builder.line("The booking system has been successfully recovered.")
+                builder.line("Your booking will proceed normally.")
 
+            message = builder.build()
             await self.bot.send_notification(user_id, message)
         except Exception as e:
             self.logger.error(

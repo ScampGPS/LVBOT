@@ -24,7 +24,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         super().__init__(builder_factory=builder_factory)
 
     def success_message(self, result: BookingResult) -> str:
-        builder = self._new_builder().heading(SUCCESS_HEADER)
+        builder = self.create_builder().heading(SUCCESS_HEADER)
 
         if result.court_reserved:
             builder.bullet(f"Court: {result.court_reserved}")
@@ -40,7 +40,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         return builder.build()
 
     def failure_message(self, result: BookingResult) -> str:
-        builder = self._new_builder().heading(FAILURE_HEADER)
+        builder = self.create_builder().heading(FAILURE_HEADER)
 
         if result.message:
             builder.line(result.message)
@@ -50,7 +50,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         return builder.build()
 
     def duplicate_warning(self, error_message: str) -> str:
-        builder = self._new_builder().heading("⚠️ **Duplicate Reservation**")
+        builder = self.create_builder().heading("⚠️ **Duplicate Reservation**")
         builder.blank().line(error_message).blank()
         builder.line(
             "You can only have one reservation per time slot. "
@@ -65,7 +65,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         *,
         test_mode_config: TestModeConfig,
     ) -> str:
-        builder = self._new_builder().heading("✅ **Reservation Added to Queue!**")
+        builder = self.create_builder().heading("✅ **Reservation Added to Queue!**")
         builder.blank()
 
         display_date = datetime.strptime(
