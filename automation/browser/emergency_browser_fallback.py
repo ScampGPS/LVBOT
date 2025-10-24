@@ -15,11 +15,18 @@ from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 from playwright.async_api import TimeoutError as PlaywrightTimeout
 
 
-class EmergencyBrowserFactory:
-    """Creates and manages the single emergency Playwright browser/context."""
+class EmergencyLoggerMixin:
+    """Provides a shared logger for emergency browser components."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
         self.logger = logger or logging.getLogger("EmergencyBrowserFallback")
+
+
+class EmergencyBrowserFactory(EmergencyLoggerMixin):
+    """Creates and manages the single emergency Playwright browser/context."""
+
+    def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        super().__init__(logger=logger)
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self.playwright = None
@@ -70,11 +77,11 @@ class EmergencyBrowserFactory:
             self.playwright = None
 
 
-class EmergencyFormInteractor:
+class EmergencyFormInteractor(EmergencyLoggerMixin):
     """Handles form navigation, visibility checks, and filling."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
-        self.logger = logger or logging.getLogger("EmergencyBrowserFallback")
+        super().__init__(logger=logger)
 
     async def ensure_form_visible(self, page: Page) -> bool:
         if await self._check_form_visible(page):
@@ -129,11 +136,11 @@ class EmergencyFormInteractor:
             pass
 
 
-class EmergencyConfirmationChecker:
+class EmergencyConfirmationChecker(EmergencyLoggerMixin):
     """Submits booking and extracts confirmation/error state."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
-        self.logger = logger or logging.getLogger("EmergencyBrowserFallback")
+        super().__init__(logger=logger)
 
     async def submit(self, page: Page) -> Dict[str, Any]:
         try:
@@ -230,19 +237,19 @@ class EmergencyBookingResult:
     user_name: Optional[str] = None
 
 
-class EmergencyBrowserFallback:
+class EmergencyBrowserFallback(EmergencyLoggerMixin):
     """
     Emergency fallback system for booking reservations
     Operates independently of browser pool infrastructure
     Simple, reliable, single-browser implementation
     """
 
-    def __init__(self):
+    def __init__(self, *, logger: Optional[logging.Logger] = None):
         """Initialize emergency fallback - no pool dependencies"""
         t(
             "automation.browser.emergency_browser_fallback.EmergencyBrowserFallback.__init__"
         )
-        self.logger = logging.getLogger("EmergencyBrowserFallback")
+        super().__init__(logger=logger)
         self._initialized = False
 
         # Timeout configuration
