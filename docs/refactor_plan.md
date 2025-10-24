@@ -16,7 +16,10 @@
 - **Queue reservation builder overhaul** – introduced `ReservationRequestBuilder`, rewired scheduler/queue flows to depend on it, and added a `QueueRecordSerializer` for consistent persistence wiring.
 - **Booking UI & health runners** – extracted `BookingUIFactory`, introduced `HealthCheckRunner` for pool/court checks, modularised emergency fallback helpers, and split message-handling utilities into reusable components.
 - **Availability poller & monitoring cleanup** – added `AvailabilityPoller`, refactored realtime/court monitors to reuse it, and removed redundant, script-style polling scaffolding.
-- **Queue reservation builder overhaul** – introduced `ReservationRequestBuilder`, rewired scheduler/queue flows to depend on it, and added a `QueueRecordSerializer` for consistent persistence wiring.
+- **Queue session/store refresh** – replaced the procedural `queue_session` helpers with `QueueSessionStore` + guard utilities, trimming repeated state management branches.
+- **Browser pool consolidation** – introduced `BrowserPoolManager` to replace the legacy `pool.init`/`pool.maintenance` helpers and routed `AsyncBrowserPool` and health utilities through the manager.
+- **Shared Markdown formatting** – added `MarkdownBlockBuilder`, `NotificationBuilder`, and `ProfileViewBuilder` to standardise message/profile formatting across the bot.
+- **Executor request helpers** – wrapped booking request construction/result translation in `ExecutorRequestFactory` for reuse across immediate and queued flows.
 
 ## Next Major Refactor
 

@@ -134,16 +134,6 @@ automation.browser.pool.health.is_critical_operation_in_progress
 automation.browser.pool.health.is_fully_ready
 automation.browser.pool.health.is_ready
 automation.browser.pool.health.wait_until_ready
-automation.browser.pool.init._cleanup_failed_page
-automation.browser.pool.init.cleanup_on_failure
-automation.browser.pool.init.create_and_navigate_court_page_safe
-automation.browser.pool.init.create_and_navigate_court_page_with_retry
-automation.browser.pool.init.create_and_navigate_court_page_with_stagger
-automation.browser.pool.init.start_pool
-automation.browser.pool.maintenance.legacy_stop
-automation.browser.pool.maintenance.refresh_browser_pages
-automation.browser.pool.maintenance.set_critical_operation
-automation.browser.pool.maintenance.stop_pool
 automation.browser.pool.manager.BrowserPoolManager.__init__
 automation.browser.pool.manager.BrowserPoolManager._cleanup_failed_page
 automation.browser.pool.manager.BrowserPoolManager.cleanup_on_failure
@@ -882,6 +872,10 @@ reservations.services.reservation_service.ReservationService.is_scheduler_runnin
 reservations.services.reservation_service.ReservationService.list_requests
 reservations.services.reservation_service.ReservationService.start_scheduler
 reservations.services.reservation_service.ReservationService.stop_scheduler
+scripts.run_checks._run
+scripts.run_checks.main
+scripts.run_checks.refresh_tracking
+scripts.run_checks.run_tests
 scripts.tools._build_service
 scripts.tools.list_queue
 scripts.tools.main
