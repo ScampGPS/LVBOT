@@ -18,7 +18,9 @@ _tracked_functions: Set[str] = set()
 PRODUCTION_MODE = os.getenv('PRODUCTION_MODE', 'false').lower() == 'true'
 
 # Define the log directory to be a fixed 'latest_log'
-LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'latest_log')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+LOG_DIR = os.path.join(PROJECT_ROOT, 'logs', 'latest_log')
 
 def setup_logging() -> None:
     """

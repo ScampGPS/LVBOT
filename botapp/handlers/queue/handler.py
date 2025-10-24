@@ -33,6 +33,27 @@ def _delegate(
         t(tracking_id)
         target = getattr(self, attr_name)
         method = getattr(target, method_name)
+
+        update = args[0] if args else None
+        callback_data = None
+        user_id = None
+        if update is not None:
+            user = getattr(update, "effective_user", None)
+            if user is not None:
+                user_id = getattr(user, "id", None)
+            query = getattr(update, "callback_query", None)
+            if query is not None:
+                callback_data = getattr(query, "data", None)
+
+        logger = getattr(self, "logger", None)
+        if logger is not None:
+            logger.info(
+                "QueueHandler delegating to %s.%s user=%s callback_data=%s",
+                attr_name,
+                method_name,
+                user_id,
+                callback_data,
+            )
         return await method(*args, **kwargs)
 
     handler.__doc__ = doc
@@ -86,7 +107,16 @@ class QueueHandler(CallbackResponseMixin):
         selected_date: date,
     ) -> None:
         """Compatibility hook that delegates to the booking flow time selector."""
-
+        user_id = (
+            update.callback_query.from_user.id
+            if update.callback_query and getattr(update.callback_query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info(
+            "QueueHandler._show_queue_time_selection user=%s selected_date=%s",
+            user_id,
+            selected_date,
+        )
         await self.booking_flow._show_time_selection(update, context, selected_date)
 
     handle_queue_booking_menu = _delegate(

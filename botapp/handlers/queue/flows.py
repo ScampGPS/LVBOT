@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Mapping, Sequence
+from html import escape
+from telegram.constants import ParseMode
 
 import pytz
 
@@ -124,6 +126,17 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info(
+            "QueueBookingFlow.show_menu user=%s current_flow=%s",
+            user_id,
+            context.user_data.get('current_flow'),
+        )
+
         store = self._session_store(context)
         reset_flow(context, 'queue_booking')
         context.user_data['current_flow'] = 'queue_booking'
@@ -141,7 +154,17 @@ class QueueBookingFlow(QueueFlowBase):
             if self._date_has_available_slots(candidate, config, tz, now)
         ]
 
+        self.logger.info(
+            "QueueBookingFlow.show_menu computed %s available dates for user=%s",
+            len(dates),
+            user_id,
+        )
+
         if not dates:
+            self.logger.info(
+                "QueueBookingFlow.show_menu no selectable dates user=%s",
+                user_id,
+            )
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
             await self.edit_callback(
                 query,
@@ -168,6 +191,18 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        callback_data = query.data if query else None
+        self.logger.info(
+            "QueueBookingFlow.select_date user=%s callback_data=%s",
+            user_id,
+            callback_data,
+        )
+
         callback_data = query.data
         date_str = callback_data.replace('queue_date_', '')
 
@@ -187,6 +222,12 @@ class QueueBookingFlow(QueueFlowBase):
         store.selected_time = None
         store.selected_courts = []
 
+        self.logger.info(
+            "QueueBookingFlow.select_date stored user=%s selected_date=%s",
+            user_id,
+            selected_date,
+        )
+
         await self._show_time_selection(update, context, selected_date)
 
     async def select_time(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -194,6 +235,18 @@ class QueueBookingFlow(QueueFlowBase):
 
         query = update.callback_query
         await self.answer_callback(query)
+
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        callback_data = query.data if query else None
+        self.logger.info(
+            "QueueBookingFlow.select_time user=%s callback_data=%s",
+            user_id,
+            callback_data,
+        )
 
         callback_data = query.data
         try:
@@ -207,6 +260,13 @@ class QueueBookingFlow(QueueFlowBase):
                 f"❌ Invalid time selection format received: {callback_data}. Please try again.",
             )
             return
+
+        self.logger.info(
+            "QueueBookingFlow.select_time parsed user=%s time=%s date=%s",
+            user_id,
+            selected_time,
+            callback_date,
+        )
 
         store = self._session_store(context)
         modifying_id, modifying_option = store.modification
@@ -270,6 +330,18 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        callback_data = query.data if query else None
+        self.logger.info(
+            "QueueBookingFlow.select_courts user=%s callback_data=%s",
+            user_id,
+            callback_data,
+        )
+
         callback_data = query.data
         selected_courts = [
             int(part)
@@ -288,6 +360,12 @@ class QueueBookingFlow(QueueFlowBase):
             ]
 
         cleaned_courts = sorted(set(selected_courts))
+
+        self.logger.info(
+            "QueueBookingFlow.select_courts parsed user=%s courts=%s",
+            user_id,
+            cleaned_courts,
+        )
 
         store = self._session_store(context)
         modifying_id, modifying_option = store.modification
@@ -315,6 +393,13 @@ class QueueBookingFlow(QueueFlowBase):
 
         selected_date = store.selected_date
         selected_time = store.selected_time
+
+        self.logger.info(
+            "QueueBookingFlow.select_courts context user=%s date=%s time=%s",
+            user_id,
+            selected_date,
+            selected_time,
+        )
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details in user context")
@@ -356,6 +441,14 @@ class QueueBookingFlow(QueueFlowBase):
             'created_at': datetime.now().isoformat(),
         }
 
+        self.logger.info(
+            "QueueBookingFlow.select_courts summary ready user=%s date=%s time=%s courts=%s",
+            user_id,
+            store.summary['target_date'],
+            store.summary['target_time'],
+            cleaned_courts,
+        )
+
         reply_markup = TelegramUI.create_queue_confirmation_keyboard()
         courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
         await self.edit_callback(
@@ -375,6 +468,13 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info("QueueBookingFlow.confirm user=%s", user_id)
+
         store = self._session_store(context)
 
         try:
@@ -384,6 +484,13 @@ class QueueBookingFlow(QueueFlowBase):
             await self.edit_callback(query, self.messages.session_expired())
             return
 
+        self.logger.info(
+            "QueueBookingFlow.confirm summary user=%s target=%s %s",
+            user_id,
+            booking_summary.get('target_date'),
+            booking_summary.get('target_time'),
+        )
+
         config = self._get_test_mode()
 
         try:
@@ -392,6 +499,12 @@ class QueueBookingFlow(QueueFlowBase):
 
             store.clear()
             context.user_data.pop('current_flow', None)
+
+            self.logger.info(
+                "QueueBookingFlow.confirm queued reservation user=%s reservation_id=%s",
+                user_id,
+                reservation_id,
+            )
 
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
             success_message = self._format_queue_reservation_added(
@@ -437,6 +550,13 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info("QueueBookingFlow.cancel user=%s", user_id)
+
         store.clear()
         context.user_data.pop('current_flow', None)
 
@@ -454,7 +574,26 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         config = self._get_test_mode()
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        callback_data = query.data if query else None
+        self.logger.info(
+            "QueueBookingFlow.handle_blocked_date user=%s callback_data=%s test_mode_enabled=%s allow_within_48h=%s",
+            user_id,
+            callback_data,
+            config.enabled,
+            config.allow_within_48h,
+        )
+
         if not (config.enabled and config.allow_within_48h):
+            self.logger.info(
+                "QueueBookingFlow.handle_blocked_date denied user=%s date_data=%s",
+                user_id,
+                callback_data,
+            )
             await self.edit_callback(
                 query,
                 "⚠️ This date is within the 48-hour booking window. Enable test mode to queue it.",
@@ -481,6 +620,12 @@ class QueueBookingFlow(QueueFlowBase):
         store.selected_courts = []
         context.user_data['current_flow'] = 'queue_booking'
 
+        self.logger.info(
+            "QueueBookingFlow.handle_blocked_date granted user=%s selected_date=%s",
+            user_id,
+            selected_date,
+        )
+
         await self._show_time_selection_callback(update, context, selected_date)
 
     async def back_to_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -488,6 +633,13 @@ class QueueBookingFlow(QueueFlowBase):
 
         query = update.callback_query
         await self.answer_callback(query)
+
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info("QueueBookingFlow.back_to_courts user=%s", user_id)
 
         store = self._session_store(context)
         selected_date = store.selected_date
@@ -516,6 +668,7 @@ class QueueBookingFlow(QueueFlowBase):
     def clear_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
 
+        self.logger.info("QueueBookingFlow.clear_state")
         self._session_store(context).clear()
         context.user_data.pop('current_flow', None)
 
@@ -529,9 +682,28 @@ class QueueBookingFlow(QueueFlowBase):
 
         query = update.callback_query
 
+        user_id = update.effective_user.id if update.effective_user else None
+        self.logger.info(
+            "QueueBookingFlow._show_time_selection user=%s selected_date=%s",
+            user_id,
+            selected_date,
+        )
+
         time_slots = await self._available_time_slots(context, selected_date)
 
+        self.logger.info(
+            "QueueBookingFlow._show_time_selection resolved %s slots for user=%s date=%s",
+            len(time_slots) if time_slots else 0,
+            user_id,
+            selected_date,
+        )
+
         if not time_slots:
+            self.logger.info(
+                "QueueBookingFlow._show_time_selection no slots available user=%s date=%s",
+                user_id,
+                selected_date,
+            )
             await self.edit_callback(
                 query,
                 "⏰ Queue Booking\n\n"
@@ -542,12 +714,16 @@ class QueueBookingFlow(QueueFlowBase):
             return
 
         keyboard = TelegramUI.create_queue_time_selection_keyboard(selected_date, time_slots)
+        message = (
+            "<b>⏰ Queue Booking</b><br><br>"
+            f"📅 Selected date: {escape(selected_date.strftime('%A, %B %d, %Y'))}<br><br>"
+            "⏱️ Select a time for your reservation:"
+        )
         await self.edit_callback(
             query,
-            "⏰ Queue Booking\n\n"
-            f"📅 Selected date: {selected_date.strftime('%A, %B %d, %Y')}\n\n"
-            "⏱️ Select a time for your reservation:",
+            message,
             reply_markup=keyboard,
+            parse_mode=ParseMode.HTML,
         )
 
     async def _available_time_slots(
@@ -562,14 +738,40 @@ class QueueBookingFlow(QueueFlowBase):
         now = datetime.now(tz)
         all_slots = get_court_hours(selected_date)
 
+        self.logger.info(
+            "Queue availability requested for %s (test_mode=%s, allow_within_48h=%s)",
+            selected_date,
+            config.enabled,
+            config.allow_within_48h,
+        )
+
         if config.enabled and config.allow_within_48h:
             start_of_day = tz.localize(datetime.combine(selected_date, datetime.min.time()))
             if start_of_day < now + timedelta(hours=48):
+                self.logger.info(
+                    "Queue attempting live availability lookup for %s (within 48h window)",
+                    selected_date,
+                )
                 live_slots = await self._get_live_time_slots(context, selected_date, tz, now)
                 if live_slots is not None:
+                    self.logger.info(
+                        "Queue live availability returned %s slots for %s",
+                        len(live_slots),
+                        selected_date,
+                    )
                     return live_slots
+                self.logger.warning(
+                    "Queue live availability unavailable for %s; falling back to static timetable",
+                    selected_date,
+                )
 
-        return self._filter_slots_beyond_48_hours(all_slots, selected_date, tz, now)
+        filtered_slots = self._filter_slots_beyond_48_hours(all_slots, selected_date, tz, now)
+        self.logger.info(
+            "QueueBookingFlow._available_time_slots fallback returned %s slots for %s",
+            len(filtered_slots),
+            selected_date,
+        )
+        return filtered_slots
 
     async def _get_live_time_slots(
         self,
@@ -592,29 +794,38 @@ class QueueBookingFlow(QueueFlowBase):
             cache_value = {}
             context.user_data['queue_live_time_cache'] = cache_value
         cache: dict[str, list[str]] = cache_value
+        self.logger.info(
+            "QueueBookingFlow._get_live_time_slots cache_keys=%s selected_date=%s",
+            list(cache.keys()),
+            selected_date,
+        )
         date_key = selected_date.isoformat()
         if date_key in cache:
+            self.logger.debug(
+                "Queue live availability cache hit for %s: %s slots",
+                date_key,
+                len(cache[date_key]),
+            )
             return cache[date_key]
 
-        try:
-            availability_results = await checker.check_availability()
-        except Exception as exc:  # pragma: no cover - defensive guard
-            self.logger.error(
-                "Failed to fetch live availability for %s: %s", date_key, exc
+        matrix = await self._fetch_live_matrix(selected_date, checker, tz, now)
+        if matrix is None:
+            self.logger.info(
+                "QueueBookingFlow._get_live_time_slots live matrix unavailable for %s",
+                selected_date,
             )
             return None
 
+        daily_availability = matrix.get(date_key, {})
+        if not daily_availability:
+            self.logger.info(
+                "Queue live availability found no slots for %s (matrix keys: %s)",
+                date_key,
+                list(matrix.keys()),
+            )
         unique_times: set[str] = set()
-        for court_data in availability_results.values():
-            if isinstance(court_data, dict) and "error" in court_data:
-                continue
-            times = court_data.get(date_key)
-            if times:
-                unique_times.update(times)
-
-        if not unique_times:
-            cache[date_key] = []
-            return []
+        for times in daily_availability.values():
+            unique_times.update(times)
 
         filtered_times: list[str] = []
         for time_str in sorted(unique_times):
@@ -623,13 +834,76 @@ class QueueBookingFlow(QueueFlowBase):
             except ValueError:
                 continue
 
-            slot_dt = datetime.combine(selected_date, datetime.min.time().replace(hour=hour, minute=minute))
+            slot_dt = datetime.combine(
+                selected_date,
+                datetime.min.time().replace(hour=hour, minute=minute),
+            )
             slot_dt = tz.localize(slot_dt)
             if slot_dt >= now:
                 filtered_times.append(time_str)
 
         cache[date_key] = filtered_times
+        self.logger.debug(
+            "Queue live availability resolved %s unique slots for %s",
+            len(filtered_times),
+            date_key,
+        )
+        self.logger.info(
+            "QueueBookingFlow._get_live_time_slots returning %s slots for %s",
+            len(filtered_times),
+            selected_date,
+        )
         return filtered_times
+
+    async def _fetch_live_matrix(
+        self,
+        selected_date: date,
+        checker,
+        tz,
+        now: datetime,
+    ) -> dict[str, dict[int, list[str]]] | None:
+        """Fetch availability matrix using the availability checker for the selected date."""
+
+        self.logger.info(
+            "QueueBookingFlow._fetch_live_matrix selected_date=%s now=%s",
+            selected_date,
+            now,
+        )
+
+        try:
+            availability_results = await checker.check_availability(
+                current_time=now,
+            )
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.error(
+                "Failed to fetch live availability for %s: %s",
+                selected_date,
+                exc,
+            )
+            return None
+
+        matrix: dict[str, dict[int, list[str]]] = {}
+        for court_num, court_data in availability_results.items():
+            if isinstance(court_data, dict) and "error" in court_data:
+                self.logger.warning(
+                    "Queue live availability ignored Court %s due to error: %s",
+                    court_num,
+                    court_data["error"],
+                )
+                continue
+
+            for date_key, times in court_data.items():
+                if not times:
+                    continue
+                matrix.setdefault(date_key, {})[court_num] = sorted(times)
+
+        self.logger.info(
+            "Queue live availability matrix fetched for %s: %s dates, courts=%s",
+            selected_date,
+            len(matrix),
+            {k: list(v.keys()) for k, v in matrix.items()},
+        )
+        return matrix
 
     def _filter_slots_beyond_48_hours(
         self,
@@ -711,6 +985,8 @@ class QueueReservationManager(QueueFlowBase):
         await self.answer_callback(query)
         user_id = query.from_user.id
 
+        self.logger.info("QueueReservationManager.show_user_menu user=%s", user_id)
+
         try:
             reservations = self.deps.reservation_queue.get_user_reservations(user_id)
         except Exception as exc:
@@ -722,6 +998,12 @@ class QueueReservationManager(QueueFlowBase):
                 'Failed to retrieve reservations',
             )
             return
+
+        self.logger.info(
+            "QueueReservationManager.show_user_menu loaded %s reservations for user=%s",
+            len(reservations),
+            user_id,
+        )
 
         if not reservations:
             await self.edit_callback(
@@ -797,6 +1079,12 @@ class QueueReservationManager(QueueFlowBase):
         await self.answer_callback(query)
         reservation_id = query.data.replace('manage_res_', '')
         user_id = query.from_user.id
+
+        self.logger.info(
+            "QueueReservationManager.manage_reservation user=%s reservation_id=%s",
+            user_id,
+            reservation_id,
+        )
 
         try:
             reservation = self._get_queue_reservation(reservation_id, user_id)
