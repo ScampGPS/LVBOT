@@ -17,6 +17,8 @@ from automation.availability import DateTimeHelpers
 from infrastructure.settings import get_test_mode
 from infrastructure.constants import get_court_hours
 from botapp.handlers.booking.ui_factory import BookingUIFactory
+from botapp.handlers.queue.live_availability import fetch_live_time_slots
+import pytz
 
 
 class BookingHandler:
@@ -775,26 +777,34 @@ class BookingHandler:
             # Use centralized court hours from constants
             all_time_slots = get_court_hours(selected_date)
 
+            tz = pytz.timezone('America/Mexico_City')
+            now = datetime.now(tz)
+
             if config.enabled and config.allow_within_48h:
-                available_time_slots = list(all_time_slots)
-            else:
-                import pytz
+                live_slots = await fetch_live_time_slots(
+                    self.deps,
+                    context,
+                    selected_date,
+                    tz,
+                    now,
+                    self.logger,
+                    log_prefix="Booking",
+                )
 
-                tz = pytz.timezone('America/Mexico_City')
-                now = datetime.now(tz)
-                available_time_slots = []
-
-                for time_str in all_time_slots:
-                    hour, minute = map(int, time_str.split(':'))
-                    slot_datetime = datetime.combine(
+                if live_slots is None:
+                    self.logger.warning(
+                        "Test mode live availability unavailable for %s; falling back to static timetable",
                         selected_date,
-                        datetime.min.time().replace(hour=hour, minute=minute),
                     )
-                    slot_datetime = tz.localize(slot_datetime)
-
-                    hours_until = (slot_datetime - now).total_seconds() / 3600
-                    if hours_until >= 48:
-                        available_time_slots.append(time_str)
+                    available_time_slots = list(all_time_slots)
+                else:
+                    available_time_slots = live_slots
+            else:
+                available_time_slots = [
+                    time_str
+                    for time_str in all_time_slots
+                    if self._slot_is_beyond_window(selected_date, time_str, tz, now)
+                ]
 
             # If no times available on this date, show error
             if not available_time_slots:
@@ -827,6 +837,22 @@ class BookingHandler:
                 "❌ Invalid date selection. Please try again.",
                 reply_markup=keyboard
             )
+
+    @staticmethod
+    def _slot_is_beyond_window(selected_date: date, time_str: str, tz, now: datetime) -> bool:
+        """Return True when the slot is at least 48 hours ahead."""
+
+        try:
+            hour, minute = map(int, time_str.split(':'))
+        except ValueError:
+            return False
+
+        slot_dt = datetime.combine(
+            selected_date,
+            datetime.min.time().replace(hour=hour, minute=minute),
+        )
+        slot_dt = tz.localize(slot_dt)
+        return (slot_dt - now).total_seconds() >= 48 * 3600
 
     async def handle_blocked_date_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """

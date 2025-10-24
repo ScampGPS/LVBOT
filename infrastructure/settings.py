@@ -9,9 +9,11 @@ they can migrate to :func:`get_settings` gradually without behaviour changes.
 from __future__ import annotations
 from tracking import t
 
+import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Mapping, Optional
 
 try:  # Optional dependency to support .env files during development.
@@ -20,6 +22,8 @@ except ImportError:  # pragma: no cover - library is optional.
     load_dotenv = None  # type: ignore
 
 from . import constants as utils_constants
+
+TEST_MODE_FILE = Path(__file__).resolve().parents[1] / 'data' / 'test_mode.json'
 
 
 def _to_bool(value: str, default: bool = False) -> bool:
@@ -48,6 +52,7 @@ class AppSettings:
     queue_file: str
     users_file: str
     data_directory: str
+    save_availability_screenshots: bool
 
 
 @dataclass(frozen=True)
@@ -90,6 +95,9 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     queue_file = env.get("QUEUE_FILE", "data/queue.json")
     users_file = env.get("USERS_FILE", "data/users.json")
     data_directory = env.get("DATA_DIRECTORY", "data")
+    save_availability_screenshots = _to_bool(
+        env.get("SAVE_AVAILABILITY_SCREENSHOTS", "false")
+    )
 
     return AppSettings(
         bot_token=bot_token,
@@ -105,6 +113,7 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
         queue_file=queue_file,
         users_file=users_file,
         data_directory=data_directory,
+        save_availability_screenshots=save_availability_screenshots,
     )
 
 
@@ -139,11 +148,31 @@ def load_test_mode(env: Optional[Mapping[str, str]] = None) -> TestModeConfig:
         default=enabled,
     )
 
+    config_data = {
+        'enabled': enabled,
+        'allow_within_48h': allow_within_48h,
+        'trigger_delay_minutes': trigger_delay_minutes,
+        'retain_failed_reservations': retain_failed,
+    }
+
+    if TEST_MODE_FILE.exists():
+        try:
+            file_values = json.loads(TEST_MODE_FILE.read_text(encoding='utf-8'))
+            if isinstance(file_values, dict):
+                config_data.update({
+                    'enabled': bool(file_values.get('enabled', config_data['enabled'])),
+                    'allow_within_48h': bool(file_values.get('allow_within_48h', config_data['allow_within_48h'])),
+                    'trigger_delay_minutes': float(file_values.get('trigger_delay_minutes', config_data['trigger_delay_minutes'])),
+                    'retain_failed_reservations': bool(file_values.get('retain_failed_reservations', config_data['retain_failed_reservations'])),
+                })
+        except (ValueError, OSError):
+            pass
+
     return TestModeConfig(
-        enabled=enabled,
-        allow_within_48h=allow_within_48h,
-        trigger_delay_minutes=trigger_delay_minutes,
-        retain_failed_reservations=retain_failed,
+        enabled=config_data['enabled'],
+        allow_within_48h=config_data['allow_within_48h'],
+        trigger_delay_minutes=config_data['trigger_delay_minutes'],
+        retain_failed_reservations=config_data['retain_failed_reservations'],
     )
 
 
@@ -168,6 +197,7 @@ def set_test_mode(config: TestModeConfig) -> TestModeConfig:
 
     global _TEST_MODE_CONFIG
     _TEST_MODE_CONFIG = config
+    _write_test_mode_file(config)
     return _TEST_MODE_CONFIG
 
 
@@ -184,3 +214,22 @@ def update_test_mode(**kwargs: object) -> TestModeConfig:
         retain_failed_reservations=kwargs.get('retain_failed_reservations', current.retain_failed_reservations),
     )
     return set_test_mode(new_config)
+
+
+def _write_test_mode_file(config: TestModeConfig) -> None:
+    try:
+        TEST_MODE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        TEST_MODE_FILE.write_text(
+            json.dumps(
+                {
+                    'enabled': config.enabled,
+                    'allow_within_48h': config.allow_within_48h,
+                    'trigger_delay_minutes': config.trigger_delay_minutes,
+                    'retain_failed_reservations': config.retain_failed_reservations,
+                },
+                indent=2,
+            ),
+            encoding='utf-8',
+        )
+    except OSError:
+        pass

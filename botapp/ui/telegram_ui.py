@@ -48,6 +48,7 @@ from .queue import (
     format_no_time_slots_message as _format_no_time_slots_message,
     format_confirmation_message as _format_queue_confirmation_message,
     format_cancellation_message as _format_queue_cancellation_message,
+    format_court_selection_prompt as _format_queue_court_selection_prompt,
 )
 
 
@@ -97,6 +98,7 @@ class TelegramUI:
     format_queue_no_times = staticmethod(_format_no_time_slots_message)
     format_queue_confirmation_message = staticmethod(_format_queue_confirmation_message)
     format_queue_cancellation_message = staticmethod(_format_queue_cancellation_message)
+    format_queue_court_selection_prompt = staticmethod(_format_queue_court_selection_prompt)
 
 
 __all__ = ['TelegramUI']

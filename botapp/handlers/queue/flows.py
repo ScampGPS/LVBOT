@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Mapping, Sequence
-from html import escape
 from telegram.constants import ParseMode
 
 import pytz
@@ -23,6 +22,7 @@ from botapp.handlers.queue.guards import (
     ensure_summary,
 )
 from botapp.handlers.queue.messages import QueueMessageFactory
+from botapp.handlers.queue.live_availability import fetch_live_time_slots
 from botapp.handlers.state import reset_flow
 from infrastructure.constants import get_court_hours
 from reservations.queue.request_builder import DEFAULT_BUILDER, ReservationRequestBuilder
@@ -250,8 +250,11 @@ class QueueBookingFlow(QueueFlowBase):
 
         callback_data = query.data
         try:
-            selected_time = callback_data.replace('queue_time_', '')
-            callback_date_str = callback_data.split('_')[2]
+            parts = callback_data.split('_') if callback_data else []
+            if len(parts) != 4:
+                raise ValueError('Unexpected queue time callback format')
+
+            _, _, callback_date_str, selected_time = parts
             callback_date = datetime.strptime(callback_date_str, '%Y-%m-%d').date()
         except (ValueError, IndexError):
             self.logger.error("Invalid queue time callback format: %s", callback_data)
@@ -314,13 +317,8 @@ class QueueBookingFlow(QueueFlowBase):
         reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
         await self.edit_callback(
             query,
-            (
-                "⏰ **Queue Booking**\n\n"
-                f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
-                f"⏱️ Time: {selected_time}\n\n"
-                "🎾 Select your preferred court(s) for the reservation:"
-            ),
-            parse_mode='Markdown',
+            TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),
+            parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
         )
 
@@ -458,7 +456,7 @@ class QueueBookingFlow(QueueFlowBase):
                 selected_time,
                 courts_text,
             ),
-            parse_mode='Markdown',
+            parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
         )
 
@@ -516,7 +514,7 @@ class QueueBookingFlow(QueueFlowBase):
             await self.edit_callback(
                 query,
                 success_message,
-                parse_mode='Markdown',
+                parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=reply_markup,
             )
 
@@ -529,7 +527,7 @@ class QueueBookingFlow(QueueFlowBase):
             await self.edit_callback(
                 query,
                 duplicate_message,
-                parse_mode='Markdown',
+                parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=reply_markup,
             )
 
@@ -714,16 +712,12 @@ class QueueBookingFlow(QueueFlowBase):
             return
 
         keyboard = TelegramUI.create_queue_time_selection_keyboard(selected_date, time_slots)
-        message = (
-            "<b>⏰ Queue Booking</b><br><br>"
-            f"📅 Selected date: {escape(selected_date.strftime('%A, %B %d, %Y'))}<br><br>"
-            "⏱️ Select a time for your reservation:"
-        )
+        message = TelegramUI.format_queue_time_prompt(selected_date)
         await self.edit_callback(
             query,
             message,
             reply_markup=keyboard,
-            parse_mode=ParseMode.HTML,
+            parse_mode=ParseMode.MARKDOWN_V2,
         )
 
     async def _available_time_slots(
@@ -752,7 +746,15 @@ class QueueBookingFlow(QueueFlowBase):
                     "Queue attempting live availability lookup for %s (within 48h window)",
                     selected_date,
                 )
-                live_slots = await self._get_live_time_slots(context, selected_date, tz, now)
+                live_slots = await fetch_live_time_slots(
+                    self.deps,
+                    context,
+                    selected_date,
+                    tz,
+                    now,
+                    self.logger,
+                    log_prefix="Queue",
+                )
                 if live_slots is not None:
                     self.logger.info(
                         "Queue live availability returned %s slots for %s",
@@ -772,138 +774,6 @@ class QueueBookingFlow(QueueFlowBase):
             selected_date,
         )
         return filtered_slots
-
-    async def _get_live_time_slots(
-        self,
-        context: ContextTypes.DEFAULT_TYPE,
-        selected_date: date,
-        tz,
-        now: datetime,
-    ) -> list[str] | None:
-        """Fetch live availability for dates within 48h when test mode allows it."""
-
-        checker = getattr(self.deps, 'availability_checker', None)
-        if checker is None:
-            self.logger.warning(
-                "Test mode within-48h requested live availability but checker is unavailable; falling back to static slots."
-            )
-            return None
-
-        cache_value = context.user_data.setdefault('queue_live_time_cache', {})
-        if not isinstance(cache_value, dict):
-            cache_value = {}
-            context.user_data['queue_live_time_cache'] = cache_value
-        cache: dict[str, list[str]] = cache_value
-        self.logger.info(
-            "QueueBookingFlow._get_live_time_slots cache_keys=%s selected_date=%s",
-            list(cache.keys()),
-            selected_date,
-        )
-        date_key = selected_date.isoformat()
-        if date_key in cache:
-            self.logger.debug(
-                "Queue live availability cache hit for %s: %s slots",
-                date_key,
-                len(cache[date_key]),
-            )
-            return cache[date_key]
-
-        matrix = await self._fetch_live_matrix(selected_date, checker, tz, now)
-        if matrix is None:
-            self.logger.info(
-                "QueueBookingFlow._get_live_time_slots live matrix unavailable for %s",
-                selected_date,
-            )
-            return None
-
-        daily_availability = matrix.get(date_key, {})
-        if not daily_availability:
-            self.logger.info(
-                "Queue live availability found no slots for %s (matrix keys: %s)",
-                date_key,
-                list(matrix.keys()),
-            )
-        unique_times: set[str] = set()
-        for times in daily_availability.values():
-            unique_times.update(times)
-
-        filtered_times: list[str] = []
-        for time_str in sorted(unique_times):
-            try:
-                hour, minute = map(int, time_str.split(':'))
-            except ValueError:
-                continue
-
-            slot_dt = datetime.combine(
-                selected_date,
-                datetime.min.time().replace(hour=hour, minute=minute),
-            )
-            slot_dt = tz.localize(slot_dt)
-            if slot_dt >= now:
-                filtered_times.append(time_str)
-
-        cache[date_key] = filtered_times
-        self.logger.debug(
-            "Queue live availability resolved %s unique slots for %s",
-            len(filtered_times),
-            date_key,
-        )
-        self.logger.info(
-            "QueueBookingFlow._get_live_time_slots returning %s slots for %s",
-            len(filtered_times),
-            selected_date,
-        )
-        return filtered_times
-
-    async def _fetch_live_matrix(
-        self,
-        selected_date: date,
-        checker,
-        tz,
-        now: datetime,
-    ) -> dict[str, dict[int, list[str]]] | None:
-        """Fetch availability matrix using the availability checker for the selected date."""
-
-        self.logger.info(
-            "QueueBookingFlow._fetch_live_matrix selected_date=%s now=%s",
-            selected_date,
-            now,
-        )
-
-        try:
-            availability_results = await checker.check_availability(
-                current_time=now,
-            )
-        except Exception as exc:  # pragma: no cover - defensive guard
-            self.logger.error(
-                "Failed to fetch live availability for %s: %s",
-                selected_date,
-                exc,
-            )
-            return None
-
-        matrix: dict[str, dict[int, list[str]]] = {}
-        for court_num, court_data in availability_results.items():
-            if isinstance(court_data, dict) and "error" in court_data:
-                self.logger.warning(
-                    "Queue live availability ignored Court %s due to error: %s",
-                    court_num,
-                    court_data["error"],
-                )
-                continue
-
-            for date_key, times in court_data.items():
-                if not times:
-                    continue
-                matrix.setdefault(date_key, {})[court_num] = sorted(times)
-
-        self.logger.info(
-            "Queue live availability matrix fetched for %s: %s dates, courts=%s",
-            selected_date,
-            len(matrix),
-            {k: list(v.keys()) for k, v in matrix.items()},
-        )
-        return matrix
 
     def _filter_slots_beyond_48_hours(
         self,

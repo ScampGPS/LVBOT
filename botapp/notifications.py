@@ -12,9 +12,22 @@ from automation.shared.booking_contracts import BookingResult
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.ui.text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 from infrastructure.settings import TestModeConfig
+from telegram.helpers import escape_markdown
 
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
+
+
+def _md(text: object) -> str:
+    """Escape text for Telegram Markdown V2."""
+
+    return escape_markdown(str(text), version=2)
+
+
+def _bold(text: object) -> str:
+    """Return bold Markdown V2 text."""
+
+    return f"*{_md(text)}*"
 
 
 class NotificationBuilder(MarkdownBuilderBase):
@@ -50,13 +63,16 @@ class NotificationBuilder(MarkdownBuilderBase):
         return builder.build()
 
     def duplicate_warning(self, error_message: str) -> str:
-        builder = self.create_builder().heading("⚠️ **Duplicate Reservation**")
-        builder.blank().line(error_message).blank()
-        builder.line(
-            "You can only have one reservation per time slot. "
-            "Please check your existing reservations or choose a different time."
-        )
-        return builder.build()
+        lines = [
+            f"⚠️ {_bold('Duplicate Reservation')}",
+            "",
+            _md(error_message),
+            "",
+            _md(
+                "You can only have one reservation per time slot. Please check your existing reservations or choose a different time."
+            ),
+        ]
+        return "\n".join(lines)
 
     def queue_reservation_added(
         self,
@@ -65,9 +81,6 @@ class NotificationBuilder(MarkdownBuilderBase):
         *,
         test_mode_config: TestModeConfig,
     ) -> str:
-        builder = self.create_builder().heading("✅ **Reservation Added to Queue!**")
-        builder.blank()
-
         display_date = datetime.strptime(
             booking_summary["target_date"], "%Y-%m-%d"
         ).strftime("%A, %B %d, %Y")
@@ -82,31 +95,38 @@ class NotificationBuilder(MarkdownBuilderBase):
                 or "All Courts"
             )
 
-        builder.line(f"📅 Date: {display_date}")
-        builder.line(f"⏱️ Time: {booking_summary['target_time']}")
-        builder.line(f"🎾 Courts: {courts_label}")
-        builder.blank()
-        builder.line(f"🤖 **Queue ID:** {reservation_id[:8]}...")
-        builder.blank()
+        lines = [
+            f"✅ {_bold('Reservation Added to Queue!')}",
+            "",
+            f"📅 Date: {_md(display_date)}",
+            f"⏱️ Time: {_md(booking_summary['target_time'])}",
+            f"🎾 Courts: {_md(courts_label)}",
+            "",
+            f"🤖 {_bold('Queue ID:')} {_md(reservation_id[:8] + '...')}",
+            "",
+        ]
 
         if test_mode_config.enabled:
-            builder.line("🧪 **TEST MODE ACTIVE**")
-            builder.line(
-                f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!"
+            lines.append(_bold("TEST MODE ACTIVE"))
+            lines.append(
+                _md(
+                    f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!"
+                )
             )
-            builder.blank()
+            lines.append("")
         else:
-            builder.line(
-                "Your reservation has been successfully added to the queue. "
-                "The bot will automatically attempt to book this court when the booking window opens."
+            lines.append(
+                _md(
+                    "Your reservation has been successfully added to the queue. The bot will automatically attempt to book this court when the booking window opens."
+                )
             )
-            builder.blank()
+            lines.append("")
 
-        builder.line(
-            "You can view your queued reservations anytime using the **'My Reservations'** option."
+        lines.append(
+            _md("You can view your queued reservations anytime using the My Reservations option.")
         )
 
-        return builder.build()
+        return "\n".join(lines)
 
 
 _NOTIFICATIONS = NotificationBuilder()

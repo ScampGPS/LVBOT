@@ -12,6 +12,8 @@ from playwright.async_api import Page
 
 from infrastructure.constants import COURT_CONFIG, NO_AVAILABILITY_PATTERNS
 from .api import fetch_available_slots
+from infrastructure.settings import get_settings
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,9 @@ class AvailabilityChecker:
         self.browser_pool = browser_pool
         self._reference_date: Optional[date] = None
         self._current_time: Optional[datetime] = None
+        settings = get_settings()
+        self._save_screenshots = settings.save_availability_screenshots
+        self._screenshot_dir = Path(settings.data_directory) / "screenshots" / "availability"
 
     async def check_all_courts_parallel(self) -> Dict[int, List[str]]:
         t('automation.availability.checker.AvailabilityChecker.check_all_courts_parallel')
@@ -108,6 +113,9 @@ class AvailabilityChecker:
             await page.reload(wait_until="domcontentloaded")
             await asyncio.sleep(1)
 
+            if self._save_screenshots:
+                await self._capture_screenshot(page, court_num)
+
             if await self._has_no_availability_message(page):
                 return {}
 
@@ -130,6 +138,24 @@ class AvailabilityChecker:
         except Exception as exc:  # pragma: no cover - defensive guard
             logger.error("Court %s availability check failed: %s", court_num, exc, exc_info=True)
             raise
+
+    async def _capture_screenshot(self, page: Page, court_num: int) -> None:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        try:
+            self._screenshot_dir.mkdir(parents=True, exist_ok=True)
+            path = self._screenshot_dir / f"court-{court_num}-{timestamp}.png"
+            await page.screenshot(path=str(path))
+            logger.debug(
+                "Saved availability screenshot for court %s at %s",
+                court_num,
+                path,
+            )
+        except Exception as exc:  # pragma: no cover - debug helper
+            logger.debug(
+                "Failed to capture availability screenshot for court %s: %s",
+                court_num,
+                exc,
+            )
 
     async def _has_no_availability_message(self, page: Page) -> bool:
         t('automation.availability.checker.AvailabilityChecker._has_no_availability_message')

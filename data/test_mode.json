@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "allow_within_48h": true,
+  "trigger_delay_minutes": 1.0,
+  "retain_failed_reservations": false
+}
