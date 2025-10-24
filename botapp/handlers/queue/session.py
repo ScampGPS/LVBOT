@@ -5,7 +5,7 @@ from tracking import t
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from telegram.ext import ContextTypes
 
@@ -30,6 +30,125 @@ LEGACY_COURTS_KEY = 'queue_booking_courts'
 LEGACY_SUMMARY_KEY = 'queue_booking_summary'
 LEGACY_MODIFY_ID_KEY = 'modifying_reservation_id'
 LEGACY_MODIFY_OPTION_KEY = 'modifying_option'
+
+
+_MISSING = object()
+
+
+class QueueSessionStore:
+    """Stateful helper encapsulating queue booking session persistence."""
+
+    def __init__(self, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.__init__')
+        self._context = context
+
+    @classmethod
+    def from_context(cls, context: ContextTypes.DEFAULT_TYPE) -> 'QueueSessionStore':
+        """Alternate constructor for compatibility with legacy helpers."""
+
+        t('botapp.handlers.queue.session.QueueSessionStore.from_context')
+        return cls(context)
+
+    def _load(self) -> QueueSessionData:
+        return _ensure_state(self._context)
+
+    def _persist(self, data: QueueSessionData) -> None:
+        _persist_state(self._context, data)
+
+    def update(
+        self,
+        *,
+        date: Optional[date] = _MISSING,
+        time: Optional[str] = _MISSING,
+        courts: Optional[Iterable[int]] = _MISSING,
+        summary: Optional[Dict[str, Any]] = _MISSING,
+        modifying_reservation_id: Optional[str] = _MISSING,
+        modifying_option: Optional[str] = _MISSING,
+    ) -> QueueSessionData:
+        """Mutate stored values and persist in a single operation."""
+
+        t('botapp.handlers.queue.session.QueueSessionStore.update')
+        data = self._load()
+
+        if date is not _MISSING:
+            data.selected_date = date
+
+        if time is not _MISSING:
+            data.selected_time = time
+
+        if courts is not _MISSING:
+            cleaned: List[int] = []
+            if courts:
+                cleaned = sorted({int(court) for court in courts})
+            data.selected_courts = cleaned
+
+        if summary is not _MISSING:
+            data.summary = dict(summary or {})
+
+        if modifying_reservation_id is not _MISSING:
+            data.modifying_reservation_id = modifying_reservation_id
+
+        if modifying_option is not _MISSING:
+            data.modifying_option = modifying_option
+
+        self._persist(data)
+        return data
+
+    def clear(self) -> None:
+        """Reset all stored values."""
+
+        t('botapp.handlers.queue.session.QueueSessionStore.clear')
+        self._persist(QueueSessionData())
+
+    @property
+    def selected_date(self) -> Optional[date]:
+        return self._load().selected_date
+
+    @selected_date.setter
+    def selected_date(self, value: Optional[date]) -> None:
+        self.update(date=value)
+
+    @property
+    def selected_time(self) -> Optional[str]:
+        return self._load().selected_time
+
+    @selected_time.setter
+    def selected_time(self, value: Optional[str]) -> None:
+        self.update(time=value)
+
+    @property
+    def selected_courts(self) -> List[int]:
+        return list(self._load().selected_courts)
+
+    @selected_courts.setter
+    def selected_courts(self, values: Iterable[int]) -> None:
+        self.update(courts=values)
+
+    @property
+    def summary(self) -> Dict[str, Any]:
+        return dict(self._load().summary)
+
+    @summary.setter
+    def summary(self, value: Dict[str, Any]) -> None:
+        self.update(summary=value)
+
+    @property
+    def modification(self) -> tuple[Optional[str], Optional[str]]:
+        data = self._load()
+        return data.modifying_reservation_id, data.modifying_option
+
+    def set_modification(
+        self,
+        reservation_id: Optional[str],
+        option: Optional[str],
+    ) -> None:
+        self.update(
+            modifying_reservation_id=reservation_id,
+            modifying_option=option,
+        )
+
+    def clear_summary(self) -> None:
+        self.update(summary={})
 
 
 def _ensure_state(context: ContextTypes.DEFAULT_TYPE) -> QueueSessionData:
@@ -119,118 +238,4 @@ def _coerce_date(value: Optional[Any]) -> Optional[date]:
         except ValueError:
             return None
     return None
-
-
-def set_selected_date(context: ContextTypes.DEFAULT_TYPE, selected_date: Optional[date]) -> None:
-    """Persist the selected queue booking date."""
-
-    t('botapp.handlers.queue.session.set_selected_date')
-    data = _ensure_state(context)
-    data.selected_date = selected_date
-    _persist_state(context, data)
-
-
-def get_selected_date(context: ContextTypes.DEFAULT_TYPE) -> Optional[date]:
-    """Return the selected queue booking date if any."""
-
-    t('botapp.handlers.queue.session.get_selected_date')
-    return _ensure_state(context).selected_date
-
-
-def set_selected_time(context: ContextTypes.DEFAULT_TYPE, selected_time: Optional[str]) -> None:
-    """Persist the selected queue booking time."""
-
-    t('botapp.handlers.queue.session.set_selected_time')
-    data = _ensure_state(context)
-    data.selected_time = selected_time
-    _persist_state(context, data)
-
-
-def get_selected_time(context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
-    """Return the selected queue booking time if any."""
-
-    t('botapp.handlers.queue.session.get_selected_time')
-    return _ensure_state(context).selected_time
-
-
-def set_selected_courts(context: ContextTypes.DEFAULT_TYPE, courts: List[int]) -> None:
-    """Persist the selected courts for the booking."""
-
-    t('botapp.handlers.queue.session.set_selected_courts')
-    data = _ensure_state(context)
-    data.selected_courts = sorted(set(courts))
-    _persist_state(context, data)
-
-
-def get_selected_courts(context: ContextTypes.DEFAULT_TYPE) -> List[int]:
-    """Return the selected courts, defaulting to an empty list."""
-
-    t('botapp.handlers.queue.session.get_selected_courts')
-    return list(_ensure_state(context).selected_courts)
-
-
-def set_summary(context: ContextTypes.DEFAULT_TYPE, summary: Dict[str, Any]) -> None:
-    """Persist the prepared booking summary."""
-
-    t('botapp.handlers.queue.session.set_summary')
-    data = _ensure_state(context)
-    data.summary = dict(summary)
-    _persist_state(context, data)
-
-
-def get_summary(context: ContextTypes.DEFAULT_TYPE) -> Dict[str, Any]:
-    """Return the queued booking summary, empty if unset."""
-
-    t('botapp.handlers.queue.session.get_summary')
-    return dict(_ensure_state(context).summary)
-
-
-def clear_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Remove the stored booking summary."""
-
-    t('botapp.handlers.queue.session.clear_summary')
-    data = _ensure_state(context)
-    data.summary = {}
-    _persist_state(context, data)
-
-
-def set_modification(context: ContextTypes.DEFAULT_TYPE, reservation_id: Optional[str], option: Optional[str]) -> None:
-    """Store modification context identifiers."""
-
-    t('botapp.handlers.queue.session.set_modification')
-    data = _ensure_state(context)
-    data.modifying_reservation_id = reservation_id
-    data.modifying_option = option
-    _persist_state(context, data)
-
-
-def get_modification(context: ContextTypes.DEFAULT_TYPE) -> tuple[Optional[str], Optional[str]]:
-    """Return the modification reservation id and option."""
-
-    t('botapp.handlers.queue.session.get_modification')
-    data = _ensure_state(context)
-    return data.modifying_reservation_id, data.modifying_option
-
-
-def clear_all(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Clear all queue booking session data."""
-
-    t('botapp.handlers.queue.session.clear_all')
-    data = QueueSessionData()
-    _persist_state(context, data)
-
-
-__all__ = [
-    'get_selected_date',
-    'set_selected_date',
-    'get_selected_time',
-    'set_selected_time',
-    'get_selected_courts',
-    'set_selected_courts',
-    'get_summary',
-    'set_summary',
-    'clear_summary',
-    'set_modification',
-    'get_modification',
-    'clear_all',
-]
+__all__ = ['QueueSessionStore']

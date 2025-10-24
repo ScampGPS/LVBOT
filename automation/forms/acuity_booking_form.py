@@ -1,7 +1,6 @@
-"""High-level helpers for interacting with the Acuity booking form."""
+"""Thin facade around `AcuityFormService` for legacy callers."""
 
 from __future__ import annotations
-
 from tracking import t
 
 import asyncio
@@ -13,86 +12,11 @@ from playwright.async_api import Page
 from automation.forms.actions import AcuityFormService
 
 DEFAULT_LOGGER = logging.getLogger(__name__)
-
-
-def _build_service(
-    *,
-    logger: logging.Logger | None = None,
-    use_javascript: bool = True,
-    enable_tracing: bool = True,
-) -> AcuityFormService:
-    return AcuityFormService(
-        logger=logger or DEFAULT_LOGGER,
-        use_javascript=use_javascript,
-        enable_tracing=enable_tracing,
-    )
-
-
-async def check_form_validation_errors(page: Page, *, logger: logging.Logger | None = None) -> Tuple[bool, List[str]]:
-    """Proxy helper to access validation errors."""
-
-    t('automation.forms.acuity_booking_form.check_form_validation_errors')
-    has_errors, errors = await _build_service(logger=logger).check_validation(page)
-    return has_errors, list(errors)
-
-
-async def submit_form(page: Page, *, logger: logging.Logger | None = None) -> bool:
-    """Submit the booking form using the shared service."""
-
-    t('automation.forms.acuity_booking_form.submit_form')
-    return await _build_service(logger=logger).submit(page)
-
-
-async def check_booking_success(page: Page, *, logger: logging.Logger | None = None) -> Tuple[bool, str]:
-    """Check whether the booking was successful after submission."""
-
-    t('automation.forms.acuity_booking_form.check_booking_success')
-    return await _build_service(logger=logger).check_success(page)
-
-
-async def fill_booking_form(
-    page: Page,
-    user_data: Dict[str, str],
-    *,
-    use_javascript: bool = True,
-    wait_for_navigation: bool = True,  # retained for compatibility
-    logger: logging.Logger | None = None,
-) -> Tuple[bool, str]:
-    """Fill and submit the Acuity booking form with the provided user data."""
-
-    t('automation.forms.acuity_booking_form.fill_booking_form')
-    service = _build_service(logger=logger, use_javascript=use_javascript)
-    return await service.fill_and_submit(page, user_data)
-
-
-async def fill_form(
-    page: Page,
-    user_info: Dict[str, str],
-    *,
-    use_javascript: bool = True,
-    logger: logging.Logger | None = None,
-) -> bool:
-    """Fill the form without submission for external callers."""
-
-    t('automation.forms.acuity_booking_form.fill_form')
-
-    service = _build_service(logger=logger, use_javascript=use_javascript)
-    user_data = service.map_user_info(user_info)
-
-    filled_count = await service.fill_form(page, user_data)
-
-    await asyncio.sleep(2)
-    has_errors, _ = await service.check_validation(page)
-    if has_errors:
-        service.logger.error("❌ Form validation failed after filling")
-        return False
-
-    service.logger.info("✅ Successfully filled %s/%s fields", filled_count, len(user_data))
-    return filled_count > 0
+_VALIDATION_DELAY_SECONDS = 2.0
 
 
 class AcuityBookingForm:
-    """Compatibility wrapper around the service-centric booking-form helpers."""
+    """Facade that delegates to :class:`AcuityFormService`."""
 
     def __init__(
         self,
@@ -103,40 +27,154 @@ class AcuityBookingForm:
         service: AcuityFormService | None = None,
     ) -> None:
         t('automation.forms.acuity_booking_form.AcuityBookingForm.__init__')
-        self.logger = logger or DEFAULT_LOGGER
+        base_logger = logger or DEFAULT_LOGGER
         self.service = service or AcuityFormService(
-            logger=self.logger,
+            logger=base_logger,
             use_javascript=use_javascript,
             enable_tracing=enable_tracing,
         )
+        self.logger = self.service.logger
 
-    async def check_form_validation_errors(self, page: Page) -> Tuple[bool, List[str]]:
-        has_errors, errors = await self.service.check_validation(page)
-        return has_errors, list(errors)
-
-    async def fill_booking_form(
-        self,
-        page: Page,
-        user_data: Dict[str, str],
-        wait_for_navigation: bool = True,
-    ) -> Tuple[bool, str]:
+    async def fill_booking_form(self, page: Page, user_data: Dict[str, str]) -> Tuple[bool, str]:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.fill_booking_form')
         return await self.service.fill_and_submit(page, user_data)
 
-    async def fill_form(self, page: Page, user_info: Dict[str, str]) -> bool:
+    async def fill_form(
+        self,
+        page: Page,
+        user_info: Dict[str, str],
+        *,
+        validate: bool = True,
+    ) -> bool:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.fill_form')
+
         mapped = self.service.map_user_info(user_info)
         filled_count = await self.service.fill_form(page, mapped)
 
-        await asyncio.sleep(2)
-        has_errors, _ = await self.service.check_validation(page)
+        if not validate:
+            return filled_count > 0
+
+        await asyncio.sleep(_VALIDATION_DELAY_SECONDS)
+        has_errors, errors = await self.service.check_validation(page)
         if has_errors:
             self.logger.error("❌ Form validation failed after filling")
+            for error in errors:
+                self.logger.error("Form error: %s", error)
             return False
 
         self.logger.info("✅ Successfully filled %s/%s fields", filled_count, len(mapped))
         return filled_count > 0
 
-    async def _submit_form_simple(self, page: Page) -> bool:
+    async def check_form_validation_errors(self, page: Page) -> Tuple[bool, List[str]]:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.check_form_validation_errors')
+        has_errors, errors = await self.service.check_validation(page)
+        return has_errors, list(errors)
+
+    async def submit(self, page: Page) -> bool:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.submit')
         return await self.service.submit(page)
 
+    async def _submit_form_simple(self, page: Page) -> bool:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm._submit_form_simple')
+        return await self.submit(page)
+
     async def check_booking_success(self, page: Page) -> Tuple[bool, str]:
+        t('automation.forms.acuity_booking_form.AcuityBookingForm.check_booking_success')
         return await self.service.check_success(page)
+
+
+def _build_form(
+    *,
+    logger: logging.Logger | None = None,
+    use_javascript: bool = True,
+    enable_tracing: bool = True,
+) -> AcuityBookingForm:
+    return AcuityBookingForm(
+        use_javascript=use_javascript,
+        logger=logger,
+        enable_tracing=enable_tracing,
+    )
+
+
+async def check_form_validation_errors(
+    page: Page,
+    *,
+    logger: logging.Logger | None = None,
+    use_javascript: bool = True,
+    enable_tracing: bool = True,
+) -> Tuple[bool, List[str]]:
+    """Proxy helper to access validation errors."""
+
+    t('automation.forms.acuity_booking_form.check_form_validation_errors')
+    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
+    return await form.check_form_validation_errors(page)
+
+
+async def submit_form(
+    page: Page,
+    *,
+    logger: logging.Logger | None = None,
+    use_javascript: bool = True,
+    enable_tracing: bool = True,
+) -> bool:
+    """Submit the booking form using the shared service."""
+
+    t('automation.forms.acuity_booking_form.submit_form')
+    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
+    return await form.submit(page)
+
+
+async def check_booking_success(
+    page: Page,
+    *,
+    logger: logging.Logger | None = None,
+    use_javascript: bool = True,
+    enable_tracing: bool = True,
+) -> Tuple[bool, str]:
+    """Check whether the booking was successful after submission."""
+
+    t('automation.forms.acuity_booking_form.check_booking_success')
+    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
+    return await form.check_booking_success(page)
+
+
+async def fill_booking_form(
+    page: Page,
+    user_data: Dict[str, str],
+    *,
+    use_javascript: bool = True,
+    logger: logging.Logger | None = None,
+    enable_tracing: bool = True,
+) -> Tuple[bool, str]:
+    """Fill and submit the Acuity booking form with the provided user data."""
+
+    t('automation.forms.acuity_booking_form.fill_booking_form')
+    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
+    return await form.fill_booking_form(page, user_data)
+
+
+async def fill_form(
+    page: Page,
+    user_info: Dict[str, str],
+    *,
+    use_javascript: bool = True,
+    wait_for_navigation: bool = True,  # retained for compatibility
+    logger: logging.Logger | None = None,
+    enable_tracing: bool = True,
+) -> bool:
+    """Fill the form without submission for external callers."""
+
+    _ = wait_for_navigation  # compatibility no-op
+    t('automation.forms.acuity_booking_form.fill_form')
+    form = _build_form(logger=logger, use_javascript=use_javascript, enable_tracing=enable_tracing)
+    return await form.fill_form(page, user_info)
+
+
+__all__ = [
+    'AcuityBookingForm',
+    'check_form_validation_errors',
+    'submit_form',
+    'check_booking_success',
+    'fill_booking_form',
+    'fill_form',
+]

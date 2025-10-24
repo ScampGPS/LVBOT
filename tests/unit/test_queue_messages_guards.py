@@ -9,7 +9,7 @@ from botapp.handlers.queue.guards import (
     ensure_profile_fields,
     ensure_summary,
 )
-from botapp.handlers.queue import session as queue_session
+from botapp.handlers.queue.session import QueueSessionStore
 
 
 class DummyContext:
@@ -43,7 +43,7 @@ def test_queue_message_factory_all_methods():
 
 def test_ensure_summary_success_and_failure():
     context = DummyContext()
-    queue_session.set_summary(context, {"value": 1})
+    QueueSessionStore(context).summary = {"value": 1}
     assert ensure_summary(context)["value"] == 1
 
     context_missing = DummyContext()
@@ -53,7 +53,7 @@ def test_ensure_summary_success_and_failure():
 
 def test_ensure_modification_success_and_failure():
     context = DummyContext()
-    queue_session.set_modification(context, "res-1", "time")
+    QueueSessionStore(context).set_modification("res-1", "time")
     modifying_id, option = ensure_modification(context)
     assert modifying_id == "res-1"
     assert option == "time"

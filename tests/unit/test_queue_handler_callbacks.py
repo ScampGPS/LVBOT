@@ -3,7 +3,7 @@ import pytest
 
 from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.queue.handler import QueueHandler
-from botapp.handlers.queue import session as queue_session
+from botapp.handlers.queue.session import QueueSessionStore
 from botapp.handlers.state import get_session_state
 from reservations.models import ReservationRequest
 
@@ -105,7 +105,8 @@ async def test_queue_confirm_success_clears_state(deps):
     handler = QueueHandler(deps)
     context = DummyContext()
     # prepopulate state as booking flow would
-    queue_session.set_summary(context, {
+    store = QueueSessionStore(context)
+    store.summary = {
         'user_id': 1,
         'first_name': 'Test',
         'last_name': 'User',
@@ -116,7 +117,7 @@ async def test_queue_confirm_success_clears_state(deps):
         'target_date': '2025-10-23',
         'target_time': '13:00',
         'created_at': '2025-10-21T09:00:00',
-    })
+    }
 
     update = DummyUpdate('queue_confirm')
 
@@ -139,7 +140,8 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
     deps.reservation_queue = DummyReservationQueue(duplicate=True)
     handler = QueueHandler(deps)
     context = DummyContext()
-    queue_session.set_summary(context, {
+    store = QueueSessionStore(context)
+    store.summary = {
         'user_id': 1,
         'first_name': 'Test',
         'last_name': 'User',
@@ -150,7 +152,7 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
         'target_date': '2025-10-23',
         'target_time': '13:00',
         'created_at': '2025-10-21T09:00:00',
-    })
+    }
 
     update = DummyUpdate('queue_confirm')
 
@@ -183,7 +185,7 @@ async def test_blocked_date_allows_selection_in_test_mode(monkeypatch, deps):
     await handler.handle_blocked_date_selection(update, context)
 
     assert captured and captured[0].isoformat() == '2025-10-22'
-    assert queue_session.get_selected_date(context).isoformat() == '2025-10-22'
+    assert QueueSessionStore(context).selected_date.isoformat() == '2025-10-22'
     assert context.user_data.get('current_flow') == 'queue_booking'
 
 

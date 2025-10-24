@@ -8,7 +8,7 @@ import logging
 import time
 from typing import Dict, Optional
 
-from automation.browser.pool.init import create_and_navigate_court_page_safe
+from automation.browser.pool.manager import BrowserPoolManager
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,8 @@ async def get_page(pool, court_num: int):
             logger.warning("Court %s page connection is dead: %s. Recreating...", court_num, exc)
             await _close_page_and_context(pool, court_num)
             try:
-                await create_and_navigate_court_page_safe(pool, court_num)
+                manager = BrowserPoolManager(pool, log=logger)
+                await manager.create_and_navigate_court_page_safe(court_num)
                 return pool.pages.get(court_num)
             except Exception as recreate_error:
                 logger.error("Failed to recreate Court %s page: %s", court_num, recreate_error)

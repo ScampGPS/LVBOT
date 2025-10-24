@@ -6,7 +6,7 @@ from typing import Iterable, Mapping, Sequence
 
 from telegram.ext import ContextTypes
 
-from botapp.handlers.queue import session as queue_session
+from botapp.handlers.queue.session import QueueSessionStore
 
 
 class QueueSessionError(RuntimeError):
@@ -33,7 +33,7 @@ class MissingModificationContextError(QueueSessionError):
 def ensure_summary(context: ContextTypes.DEFAULT_TYPE) -> Mapping[str, object]:
     """Return the queue booking summary or raise if missing."""
 
-    summary = queue_session.get_summary(context)
+    summary = QueueSessionStore(context).summary
     if not summary:
         raise MissingQueueSummaryError()
     return summary
@@ -42,7 +42,7 @@ def ensure_summary(context: ContextTypes.DEFAULT_TYPE) -> Mapping[str, object]:
 def ensure_modification(context: ContextTypes.DEFAULT_TYPE) -> tuple[str | None, str | None]:
     """Return the reservation modification tuple or raise if missing."""
 
-    modifying_id, option = queue_session.get_modification(context)
+    modifying_id, option = QueueSessionStore(context).modification
     if not modifying_id:
         raise MissingModificationContextError()
     return modifying_id, option

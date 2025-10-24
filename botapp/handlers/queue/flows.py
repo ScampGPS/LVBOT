@@ -11,7 +11,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import ContextTypes
 
 from botapp.error_handler import ErrorHandler
-from botapp.handlers.queue import session as queue_session
+from botapp.handlers.queue.session import QueueSessionStore
 from botapp.handlers.queue.guards import (
     IncompleteProfileError,
     MissingModificationContextError,
@@ -114,15 +114,20 @@ class QueueBookingFlow(QueueFlowBase):
         self._format_duplicate_reservation_message = format_duplicate_reservation_message
         self._show_time_selection_callback = show_time_selection
 
+    @staticmethod
+    def _session_store(context: ContextTypes.DEFAULT_TYPE) -> QueueSessionStore:
+        return QueueSessionStore(context)
+
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Display the queue booking menu with date options."""
 
         query = update.callback_query
         await self.answer_callback(query)
 
+        store = self._session_store(context)
         reset_flow(context, 'queue_booking')
         context.user_data['current_flow'] = 'queue_booking'
-        queue_session.clear_all(context)
+        store.clear()
         context.user_data.pop('queue_live_time_cache', None)
 
         today = date.today()
@@ -177,9 +182,10 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        queue_session.set_selected_date(context, selected_date)
-        queue_session.set_selected_time(context, None)
-        queue_session.set_selected_courts(context, [])
+        store = self._session_store(context)
+        store.selected_date = selected_date
+        store.selected_time = None
+        store.selected_courts = []
 
         await self._show_time_selection(update, context, selected_date)
 
@@ -202,14 +208,15 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        modifying_id, modifying_option = queue_session.get_modification(context)
+        store = self._session_store(context)
+        modifying_id, modifying_option = store.modification
         if modifying_id and modifying_option == 'time':
             reservation = self.deps.reservation_queue.get_reservation(modifying_id)
             if reservation:
                 reservation['target_time'] = selected_time
                 self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
-                queue_session.set_modification(context, None, None)
+                store.set_modification(None, None)
 
                 await self.edit_callback(
                     query,
@@ -222,8 +229,8 @@ class QueueBookingFlow(QueueFlowBase):
                 )
                 return
 
-        queue_session.set_selected_time(context, selected_time)
-        selected_date = queue_session.get_selected_date(context)
+        store.selected_time = selected_time
+        selected_date = store.selected_date
 
         if selected_date is None:
             self.logger.error("Missing queue_booking_date in user context")
@@ -282,14 +289,15 @@ class QueueBookingFlow(QueueFlowBase):
 
         cleaned_courts = sorted(set(selected_courts))
 
-        modifying_id, modifying_option = queue_session.get_modification(context)
+        store = self._session_store(context)
+        modifying_id, modifying_option = store.modification
         if modifying_id and modifying_option == 'courts':
             reservation = self.deps.reservation_queue.get_reservation(modifying_id)
             if reservation:
                 reservation['court_preferences'] = cleaned_courts
                 self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
-                queue_session.set_modification(context, None, None)
+                store.set_modification(None, None)
 
                 courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
                 await self.edit_callback(
@@ -303,10 +311,10 @@ class QueueBookingFlow(QueueFlowBase):
                 )
                 return
 
-        queue_session.set_selected_courts(context, cleaned_courts)
+        store.selected_courts = cleaned_courts
 
-        selected_date = queue_session.get_selected_date(context)
-        selected_time = queue_session.get_selected_time(context)
+        selected_date = store.selected_date
+        selected_time = store.selected_time
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details in user context")
@@ -335,21 +343,18 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        queue_session.set_summary(
-            context,
-            {
-                'user_id': user_id,
-                'first_name': user_profile.get('first_name'),
-                'last_name': user_profile.get('last_name'),
-                'email': user_profile.get('email'),
-                'phone': user_profile.get('phone'),
-                'tier': user_profile.get('tier_name') or user_profile.get('tier'),
-                'target_date': selected_date.strftime('%Y-%m-%d'),
-                'target_time': selected_time,
-                'court_preferences': cleaned_courts,
-                'created_at': datetime.now().isoformat(),
-            },
-        )
+        store.summary = {
+            'user_id': user_id,
+            'first_name': user_profile.get('first_name'),
+            'last_name': user_profile.get('last_name'),
+            'email': user_profile.get('email'),
+            'phone': user_profile.get('phone'),
+            'tier': user_profile.get('tier_name') or user_profile.get('tier'),
+            'target_date': selected_date.strftime('%Y-%m-%d'),
+            'target_time': selected_time,
+            'court_preferences': cleaned_courts,
+            'created_at': datetime.now().isoformat(),
+        }
 
         reply_markup = TelegramUI.create_queue_confirmation_keyboard()
         courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
@@ -370,6 +375,8 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
+        store = self._session_store(context)
+
         try:
             booking_summary = ensure_summary(context)
         except MissingQueueSummaryError:
@@ -383,7 +390,7 @@ class QueueBookingFlow(QueueFlowBase):
             reservation_request = self._request_builder.from_summary(booking_summary)
             reservation_id = self.deps.reservation_queue.add_reservation_request(reservation_request)
 
-            queue_session.clear_all(context)
+            store.clear()
             context.user_data.pop('current_flow', None)
 
             reply_markup = TelegramUI.create_back_to_menu_keyboard()
@@ -413,7 +420,7 @@ class QueueBookingFlow(QueueFlowBase):
                 reply_markup=reply_markup,
             )
 
-            queue_session.clear_all(context)
+            store.clear()
             context.user_data.pop('current_flow', None)
 
         except Exception:
@@ -430,7 +437,7 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
-        queue_session.clear_all(context)
+        store.clear()
         context.user_data.pop('current_flow', None)
 
         reply_markup = TelegramUI.create_back_to_menu_keyboard()
@@ -467,10 +474,11 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
+        store = self._session_store(context)
         reset_flow(context, 'queue_booking')
-        queue_session.set_selected_date(context, selected_date)
-        queue_session.set_selected_time(context, None)
-        queue_session.set_selected_courts(context, [])
+        store.selected_date = selected_date
+        store.selected_time = None
+        store.selected_courts = []
         context.user_data['current_flow'] = 'queue_booking'
 
         await self._show_time_selection_callback(update, context, selected_date)
@@ -481,8 +489,9 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
 
-        selected_date = queue_session.get_selected_date(context)
-        selected_time = queue_session.get_selected_time(context)
+        store = self._session_store(context)
+        selected_date = store.selected_date
+        selected_time = store.selected_time
 
         if not selected_date or not selected_time:
             self.logger.error("Missing booking details when going back to court selection")
@@ -507,7 +516,7 @@ class QueueBookingFlow(QueueFlowBase):
     def clear_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
 
-        queue_session.clear_all(context)
+        self._session_store(context).clear()
         context.user_data.pop('current_flow', None)
 
     async def _show_time_selection(
@@ -925,6 +934,7 @@ class QueueReservationManager(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
         user_id = query.from_user.id
+        store = self._session_store(context)
 
         reservation = self.deps.reservation_queue.get_reservation(reservation_id)
         is_queued = bool(reservation and reservation.get('user_id') == user_id)
@@ -939,7 +949,7 @@ class QueueReservationManager(QueueFlowBase):
             return
 
         if is_queued:
-            queue_session.set_modification(context, reservation_id, None)
+            store.set_modification(reservation_id, None)
             keyboard = [
                 [InlineKeyboardButton("📅 Change Date", callback_data=f"modify_date_{reservation_id}")],
                 [InlineKeyboardButton("⏰ Change Time", callback_data=f"modify_time_{reservation_id}")],
@@ -1018,6 +1028,7 @@ class QueueReservationManager(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
         data = query.data
+        store = self._session_store(context)
 
         if data.startswith('modify_date_'):
             option = 'date'
@@ -1031,7 +1042,7 @@ class QueueReservationManager(QueueFlowBase):
         else:
             return
 
-        queue_session.set_modification(context, reservation_id, option)
+        store.set_modification(reservation_id, option)
         reservation = self.deps.reservation_queue.get_reservation(reservation_id)
         if not reservation:
             await query.answer("Reservation not found")
@@ -1068,6 +1079,7 @@ class QueueReservationManager(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
         time_str = query.data.replace('queue_time_modify_', '')
+        store = self._session_store(context)
 
         try:
             modifying_id, _ = ensure_modification(context)
@@ -1080,7 +1092,7 @@ class QueueReservationManager(QueueFlowBase):
             reservation['target_time'] = time_str
             self.deps.reservation_queue.update_reservation(modifying_id, reservation)
 
-        queue_session.set_modification(context, None, None)
+        store.set_modification(None, None)
 
         await self.edit_callback(
             query,

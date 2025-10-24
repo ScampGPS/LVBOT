@@ -148,34 +148,33 @@ Each of these modules has identifiable duplication (e.g., the same `await bot.se
 
 ## Phase 7 – Small LOC/Class Offenders (100–250 LOC)
 ### 7.1 `botapp/handlers/queue/session.py` (236 LOC)
-- Current state: dataclass + numerous `set_*/get_*` helpers duplicating guard/persist logic.
-- Plan: introduce `QueueSessionStore` class with methods `update(date=None, time=None, courts=None, summary=None)` and `clear()`. Collapse the `set_*`/`get_*` helpers into properties and remove duplicated legacy key handling. Target reduction: ~60 LOC.
+- ✅ Introduced `QueueSessionStore` with property-style accessors and a single `update()` surface, replacing the old `set_*`/`get_*` helpers while keeping legacy key coercion. Queue flows/guards now depend on the store API, trimming repetitive guard code.
 
 ### 7.2 `automation/forms/acuity_booking_form.py` (186 LOC)
 - After Phase 3’s `AcuityFormService`, convert this module into a thin façade class or drop it entirely if callers can use the service directly. Expected reduction: 70–90 LOC by removing duplicated validation/submission wrappers.
 
 ### 7.3 `botapp/notifications.py` (180 LOC)
-- Factor repeated Markdown-building into a `NotificationBuilder` class (success, failure, duplicate). Use templates for bullet lists/buttons instead of inline string assembly. Estimated savings: 40–50 LOC.
+- ✅ Added `NotificationBuilder` powered by the shared `MarkdownBlockBuilder`, consolidating success/failure/duplicate templates and wiring callers to the builder.
 
 ### 7.4 `botapp/runtime/lifecycle.py` (187 LOC) & `botapp/runtime/bot_application.py` (175 LOC)
 - Introduce `LifecycleManager` (state, start, shutdown) and `BotApplication` composition helpers—merge repeated startup/shutdown logging and environment checks. Reduces duplication between runtime modules (~50 LOC total).
 
 ### 7.5 `automation/browser/pool/{init,maintenance}.py` (230 & 191 LOC)
-- Combine into `BrowserPoolManager` class with methods `initialize_pool`, `schedule_maintenance`, `check_health`. Shared logging and retry loops shrink both modules (target: 70 LOC combined).
+- ✅ Replaced the split modules with a single `BrowserPoolManager` class (start/refresh/stop/legacy operations). `AsyncBrowserPool` and `pool.health` now delegate to the manager, and the obsolete modules were removed.
 
 ### 7.6 `automation/availability/checker.py` (219 LOC)
 - Create `AvailabilityChecker` class with pluggable sources (API, DOM). Remove repeated loop scaffolding around `datetime_helpers` and consolidate alert generation (saves ~40 LOC).
 
 ### 7.7 `automation/executors/flows/natural_flow.py` (157 LOC)
-- Extract `NaturalFlowSteps` class encapsulating navigation/filling/confirmation to reuse with fast flow; restructure to share DOM selectors and reduce inline logging duplication (~30 LOC).
+- ✅ Extracted `NaturalFlowSteps` encapsulating navigation, typing, and submission behaviour, with `execute_natural_flow` delegating to the class.
 
 ### 7.8 `botapp/notifications.py` & `botapp/ui/profile.py` (211 LOC)
-- For profile UI, introduce `ProfileViewBuilder` and reuse with notifications to share bullet formatting, trimming repeated emoji/text generation (~30 LOC).
+- ✅ Introduced `ProfileViewBuilder` alongside the Markdown builder so profile rendering and notifications share formatting utilities.
 
 ### 7.9 `botapp/callbacks/parser.py` (174 LOC)
 - Implement `CallbackParser` class with registry for known patterns; remove repeated `split('_')` logic across handlers. Expect 25–30 LOC reduction.
 
 ### 7.10 `automation/executors/request_factory.py` (162 LOC)
-- After Phase 2 rewrite, downsize by merging the retry builder into the new class and deleting `_normalise_user` duplication. Additional savings: ~20 LOC.
+- ✅ Consolidated request/result helpers inside `ExecutorRequestFactory`, exposing thin module-level shims and removing duplicated normalisation code.
 
 These smaller refactors leverage the larger architectural changes to finish trimming residual duplication and ensure future features tap the shared helper classes.
