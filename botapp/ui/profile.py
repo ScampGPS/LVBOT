@@ -8,7 +8,7 @@ from typing import Any, Dict
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from .constants import TIER_BADGES
-from .text_blocks import MarkdownBlockBuilder
+from .text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 
 
 def create_profile_keyboard() -> InlineKeyboardMarkup:
@@ -201,17 +201,17 @@ __all__ = [
 ]
 
 
-class ProfileViewBuilder:
+class ProfileViewBuilder(MarkdownBuilderBase):
     """Compose the user profile view using shared Markdown helpers."""
 
     def __init__(self, builder_factory=MarkdownBlockBuilder) -> None:
         t("botapp.ui.profile.ProfileViewBuilder.__init__")
-        self._builder_factory = builder_factory
+        super().__init__(builder_factory=builder_factory)
 
     def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False) -> str:
         t("botapp.ui.profile.ProfileViewBuilder.build")
 
-        builder = self._builder_factory()
+        builder = self._new_builder()
         status_emoji = "✅" if user_data.get("is_active", True) else "🔴"
 
         phone = user_data.get("phone", "Not set")

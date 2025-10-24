@@ -10,21 +10,21 @@ from tracking import t
 
 from automation.shared.booking_contracts import BookingResult
 from botapp.ui.telegram_ui import TelegramUI
-from botapp.ui.text_blocks import MarkdownBlockBuilder
+from botapp.ui.text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 from infrastructure.settings import TestModeConfig
 
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
 
 
-class NotificationBuilder:
+class NotificationBuilder(MarkdownBuilderBase):
     """Build common booking notifications with shared Markdown formatting."""
 
     def __init__(self, builder_factory=MarkdownBlockBuilder) -> None:
-        self._builder_factory = builder_factory
+        super().__init__(builder_factory=builder_factory)
 
     def success_message(self, result: BookingResult) -> str:
-        builder = self._builder_factory().heading(SUCCESS_HEADER)
+        builder = self._new_builder().heading(SUCCESS_HEADER)
 
         if result.court_reserved:
             builder.bullet(f"Court: {result.court_reserved}")
@@ -40,7 +40,7 @@ class NotificationBuilder:
         return builder.build()
 
     def failure_message(self, result: BookingResult) -> str:
-        builder = self._builder_factory().heading(FAILURE_HEADER)
+        builder = self._new_builder().heading(FAILURE_HEADER)
 
         if result.message:
             builder.line(result.message)
@@ -50,7 +50,7 @@ class NotificationBuilder:
         return builder.build()
 
     def duplicate_warning(self, error_message: str) -> str:
-        builder = self._builder_factory().heading("⚠️ **Duplicate Reservation**")
+        builder = self._new_builder().heading("⚠️ **Duplicate Reservation**")
         builder.blank().line(error_message).blank()
         builder.line(
             "You can only have one reservation per time slot. "
@@ -65,7 +65,7 @@ class NotificationBuilder:
         *,
         test_mode_config: TestModeConfig,
     ) -> str:
-        builder = self._builder_factory().heading("✅ **Reservation Added to Queue!**")
+        builder = self._new_builder().heading("✅ **Reservation Added to Queue!**")
         builder.blank()
 
         display_date = datetime.strptime(

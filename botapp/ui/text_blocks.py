@@ -48,4 +48,15 @@ class MarkdownBlockBuilder:
         return "\n".join(self._lines)
 
 
-__all__ = ["MarkdownBlockBuilder"]
+class MarkdownBuilderBase:
+    """Shared base for components that construct Markdown via builders."""
+
+    def __init__(self, builder_factory=MarkdownBlockBuilder) -> None:
+        t("botapp.ui.text_blocks.MarkdownBuilderBase.__init__")
+        self._builder_factory = builder_factory
+
+    def _new_builder(self) -> MarkdownBlockBuilder:
+        return self._builder_factory()
+
+
+__all__ = ["MarkdownBlockBuilder", "MarkdownBuilderBase"]
