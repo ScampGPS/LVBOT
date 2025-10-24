@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional
-
 from typing import TYPE_CHECKING, Optional
 
 from tracking import t
 
 from automation.browser.recovery.types import RecoveryResult, RecoveryStrategy
+from automation.browser.browser_pool_accessor import (
+    browser_pool_accessor,
+    proxy_attribute,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - type helper
     from automation.browser.browser_pool_recovery import BrowserPoolRecoveryService
@@ -18,19 +20,14 @@ if TYPE_CHECKING:  # pragma: no cover - type helper
 class RecoveryContext:
     """Execution context shared with recovery strategies."""
 
+    browser_pool = browser_pool_accessor("service", read_only=True)
+    logger = proxy_attribute("service", "logger", read_only=True)
+
     def __init__(self, service: "BrowserPoolRecoveryService", failed_courts: Optional[list], error_context: Optional[str]):
         t('automation.browser.recovery.strategies.base.RecoveryContext.__init__')
         self.service = service
         self.failed_courts = failed_courts
         self.error_context = error_context
-
-    @property
-    def browser_pool(self):
-        return self.service.browser_pool
-
-    @property
-    def logger(self):
-        return self.service.logger
 
 
 class RecoveryStrategyExecutor(ABC):

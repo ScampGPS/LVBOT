@@ -6,24 +6,27 @@ import ast
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from tracking.common import (
+    PROJECT_ROOT,
+    ScopedNodeVisitor,
+    iter_python_files,
+)
 
-EXCLUDED_DIRS = {".git", "__pycache__", "venv", ".venv", "tracking"}
-EXCLUDED_FILES = {
-    PROJECT_ROOT / "tracking" / "runtime.py",
-    PROJECT_ROOT / "tracking" / "instrument.py",
-    PROJECT_ROOT / "tracking" / "__init__.py",
-}
 TRACKING_IMPORT = "from tracking import t"
 
 INCLUDE_TESTS_FLAG = "--include-tests"
 INCLUDE_TESTS = INCLUDE_TESTS_FLAG in sys.argv
 if INCLUDE_TESTS:
     sys.argv.remove(INCLUDE_TESTS_FLAG)
+    EXTRA_EXCLUDED_DIRS = set()
 else:
-    EXCLUDED_DIRS = EXCLUDED_DIRS | {"tests"}
+    EXTRA_EXCLUDED_DIRS = {"tests"}
+
+EXTRA_EXCLUDED_FILES = {
+    PROJECT_ROOT / "tracking" / "instrument.py",
+}
 
 
 @dataclass
@@ -31,15 +34,6 @@ class Edit:
     start: int
     end: int
     lines: List[str]
-
-
-def iter_python_files(root: Path) -> Iterable[Path]:
-    for path in sorted(root.rglob("*.py")):
-        if any(part in EXCLUDED_DIRS for part in path.parts):
-            continue
-        if path in EXCLUDED_FILES:
-            continue
-        yield path
 
 
 def _is_str_constant(node: Optional[ast.AST]) -> bool:
@@ -122,34 +116,28 @@ def add_import_if_needed(
     )
 
 
-class TrackingTransformer(ast.NodeVisitor):
+class TrackingTransformer(ScopedNodeVisitor):
     def __init__(
         self, module: str, lines: List[str], newline: str, edits: List[Edit]
     ) -> None:
+        super().__init__()
         self.module = module
         self.lines = lines
         self.newline = newline
         self.edits = edits
-        self.scope: List[str] = []
         self.added_tracking = False
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self.scope.append(node.name)
-        self.generic_visit(node)
-        self.scope.pop()
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+    def handle_function(self, node: ast.FunctionDef) -> None:  # type: ignore[override]
         self._instrument(node)
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+    def handle_async_function(self, node: ast.AsyncFunctionDef) -> None:  # type: ignore[override]
         self._instrument(node)
 
     def _instrument(self, node: ast.AST) -> None:
         if already_tracked(node):
             # Continue walking to handle nested functions even if parent is tracked.
-            self.scope.append(getattr(node, "name", "<lambda>"))
-            self.generic_visit(node)
-            self.scope.pop()
+            with self.scoped(node):
+                self.generic_visit(node)
             return
 
         self.added_tracking = True
@@ -230,9 +218,8 @@ class TrackingTransformer(ast.NodeVisitor):
                 )
             )
 
-        self.scope.append(getattr(node, "name", "<lambda>"))
-        self.generic_visit(node)
-        self.scope.pop()
+        with self.scoped(node):
+            self.generic_visit(node)
 
     def _rewrite_one_liner(self, node: ast.AST, track_call: str) -> None:
         def_line_index = getattr(node, "lineno", 1) - 1
@@ -324,7 +311,11 @@ def process_file(path: Path) -> bool:
 
 def main(argv: List[str]) -> int:
     changed_any = False
-    for file_path in iter_python_files(PROJECT_ROOT):
+    for file_path in iter_python_files(
+        PROJECT_ROOT,
+        extra_excluded_dirs=EXTRA_EXCLUDED_DIRS,
+        extra_excluded_files=EXTRA_EXCLUDED_FILES,
+    ):
         if process_file(file_path):
             print(f"Updated {file_path.relative_to(PROJECT_ROOT)}")
             changed_any = True

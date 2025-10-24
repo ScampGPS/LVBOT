@@ -1,23 +1,7 @@
 from pathlib import Path
 
 from reservations.queue.reservation_repository import ReservationRepository
-
-
-class DummyLogger:
-    def __init__(self):
-        self.entries = []
-
-    def debug(self, *args, **kwargs):
-        self.entries.append(("debug", args, kwargs))
-
-    def info(self, *args, **kwargs):
-        self.entries.append(("info", args, kwargs))
-
-    def warning(self, *args, **kwargs):
-        self.entries.append(("warning", args, kwargs))
-
-    def error(self, *args, **kwargs):
-        self.entries.append(("error", args, kwargs))
+from tests.helpers import DummyLogger
 
 
 def test_repository_round_trip(tmp_path):

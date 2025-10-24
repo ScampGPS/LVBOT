@@ -21,6 +21,10 @@ import pytz
 from automation.executors.booking_orchestrator import DynamicBookingOrchestrator
 from automation.executors import AsyncExecutorConfig
 from automation.browser.manager import BrowserManager
+from automation.browser.browser_pool_accessor import (
+    browser_pool_accessor,
+    proxy_attribute,
+)
 from automation.browser.health.types import HealthStatus
 from botapp.booking.immediate_handler import ImmediateBookingHandler
 from automation.shared.booking_contracts import BookingRequest, BookingResult
@@ -122,6 +126,10 @@ class ReservationScheduler:
     Uses 3 browsers with staggered refresh rates for optimal booking success
     """
 
+    browser_pool = browser_pool_accessor("browser_lifecycle")
+    health_checker = proxy_attribute("browser_lifecycle", "health_checker")
+    recovery_service = proxy_attribute("browser_lifecycle", "recovery_service")
+
     def __init__(
         self,
         config,
@@ -210,30 +218,6 @@ class ReservationScheduler:
             failure_builder=_failure_result_from_reservation,
             result_mapper=_booking_result_to_dict,
         )
-
-    @property
-    def browser_pool(self):
-        return self.browser_lifecycle.browser_pool
-
-    @browser_pool.setter
-    def browser_pool(self, pool):
-        self.browser_lifecycle.browser_pool = pool
-
-    @property
-    def health_checker(self):
-        return self.browser_lifecycle.health_checker
-
-    @health_checker.setter
-    def health_checker(self, checker):
-        self.browser_lifecycle.health_checker = checker
-
-    @property
-    def recovery_service(self):
-        return self.browser_lifecycle.recovery_service
-
-    @recovery_service.setter
-    def recovery_service(self, service):
-        self.browser_lifecycle.recovery_service = service
 
     @staticmethod
     def _get_reservation_field(

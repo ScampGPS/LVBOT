@@ -3,17 +3,7 @@ from datetime import datetime
 
 from automation.browser.health.runner import HealthCheckRunner
 from automation.browser.health.types import CourtHealthStatus, HealthCheckResult, HealthStatus
-
-
-class DummyLogger:
-    def __init__(self):
-        self.messages = []
-
-    def error(self, msg, *args):
-        self.messages.append(("error", msg % args if args else msg))
-
-    def info(self, msg, *args):  # runner may not call info but include for safety
-        self.messages.append(("info", msg % args if args else msg))
+from tests.helpers import DummyLogger
 
 
 @pytest.mark.asyncio

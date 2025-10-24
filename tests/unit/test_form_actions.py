@@ -4,6 +4,7 @@ import pytest
 
 from automation.forms.actions import AcuityFormService
 from automation.shared.booking_contracts import BookingUser
+from tests.helpers import DummyLogger
 
 
 @pytest.fixture(autouse=True)
@@ -49,20 +50,6 @@ def test_validate_required_fields_returns_missing():
     assert 'client.lastName' in missing
     assert 'client.phone' in missing
     assert 'client.email' in missing
-
-
-class DummyLogger:
-    def __init__(self):
-        self.messages = []
-
-    def info(self, *args, **kwargs):
-        self.messages.append(("info", args))
-
-    def warning(self, *args, **kwargs):
-        self.messages.append(("warning", args))
-
-    def error(self, *args, **kwargs):
-        self.messages.append(("error", args))
 
 
 class DummyTracing:
