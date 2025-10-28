@@ -8,7 +8,7 @@ from tracking import t
 
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, Optional, Union
 from enum import Enum
 
@@ -24,6 +24,7 @@ from reservations.queue.request_builder import (
     DEFAULT_BUILDER,
 )
 from infrastructure.settings import get_test_mode
+import pytz
 
 
 class ReservationStatus(Enum):
@@ -92,6 +93,13 @@ class ReservationQueue:
         self.repository = ReservationRepository(file_path, logger=self.logger)
         self.file_path = file_path
         self.queue = self.repository.load()
+        repaired = self._normalise_loaded_entries()
+        if repaired:
+            self.logger.warning(
+                "Normalised %s queued reservations missing identifiers or metadata",
+                repaired,
+            )
+            self._save_queue()
         self.logger.info(f"""RESERVATION QUEUE INITIALIZED
         File: {self.file_path}
         Existing reservations: {len(self.queue)}
@@ -109,13 +117,16 @@ class ReservationQueue:
             str: Unique reservation ID assigned to the new reservation
         """
         t('reservations.queue.reservation_queue.ReservationQueue.add_reservation')
-        from datetime import datetime, timedelta
-        import pytz
 
         if isinstance(reservation_data, ReservationRequest):
             payload = self._serializer.to_storage(reservation_data)
         else:
             payload = self._serializer.normalise_payload(dict(reservation_data))
+
+        # Ensure freshly generated identifiers and statuses are not overridden by
+        # legacy payloads that may contain null values.
+        payload.pop('id', None)
+        payload.pop('status', None)
 
         # Log detailed reservation request
         self.logger.info(f"""NEW RESERVATION REQUEST
@@ -143,35 +154,13 @@ class ReservationQueue:
         reservation_id = uuid.uuid4().hex
         reservation = {
             'id': reservation_id,
-            'status': 'pending',
+            'status': ReservationStatus.PENDING.value,
             **payload,
         }
 
-        # Calculate scheduled execution time
         tz = pytz.timezone('America/Guatemala')
-
-        config = get_test_mode()
-        if config.enabled:
-            delay = max(config.trigger_delay_minutes, 0)
-            scheduled_time = datetime.now(tz) + timedelta(minutes=delay)
-            reservation['status'] = 'scheduled'
-            self.logger.info(
-                "TEST MODE: Scheduling execution in %s minutes", config.trigger_delay_minutes
-            )
-        else:
-            target_date = datetime.strptime(reservation['target_date'], '%Y-%m-%d').date()
-            target_time = datetime.strptime(reservation['target_time'], '%H:%M').time()
-            target_datetime = datetime.combine(target_date, target_time)
-            target_datetime = tz.localize(target_datetime)
-
-            scheduled_time = target_datetime - timedelta(hours=48) - timedelta(seconds=30)
-
-            if scheduled_time <= datetime.now(tz):
-                scheduled_time = datetime.now(tz) + timedelta(minutes=1)
-                reservation['status'] = 'scheduled'
-            else:
-                reservation['status'] = 'scheduled'
-
+        scheduled_time = self._compute_scheduled_execution(reservation, tz)
+        reservation['status'] = ReservationStatus.SCHEDULED.value
         reservation['scheduled_execution'] = scheduled_time.isoformat()
 
         self.queue.append(reservation)
@@ -198,6 +187,79 @@ class ReservationQueue:
         t('reservations.queue.reservation_queue.ReservationQueue.list_reservations')
 
         return [self._serializer.from_storage(item) for item in self.queue]
+
+    def _normalise_loaded_entries(self) -> int:
+        """Repair queue entries loaded from disk that may lack required metadata."""
+
+        repaired = 0
+        tz = pytz.timezone('America/Guatemala')
+        valid_statuses = {status.value for status in ReservationStatus}
+
+        for reservation in self.queue:
+            modified = False
+
+            if not reservation.get('id'):
+                reservation['id'] = uuid.uuid4().hex
+                modified = True
+
+            target_time = reservation.get('target_time')
+            if isinstance(target_time, str) and '_' in target_time:
+                candidate = target_time.split('_')[-1]
+                if len(candidate) == 5 and candidate[2] == ':' and candidate.replace(':', '').isdigit():
+                    reservation['target_time'] = candidate
+                    modified = True
+
+            status = reservation.get('status')
+            if status not in valid_statuses:
+                reservation['status'] = ReservationStatus.PENDING.value
+                modified = True
+
+            scheduled_execution = reservation.get('scheduled_execution')
+            needs_reschedule = False
+            if not scheduled_execution:
+                needs_reschedule = True
+            else:
+                try:
+                    datetime.fromisoformat(scheduled_execution)
+                except (TypeError, ValueError):
+                    needs_reschedule = True
+
+            if needs_reschedule and reservation.get('target_date') and reservation.get('target_time'):
+                try:
+                    scheduled_dt = self._compute_scheduled_execution(reservation, tz)
+                    reservation['scheduled_execution'] = scheduled_dt.isoformat()
+                    reservation['status'] = ReservationStatus.SCHEDULED.value
+                    modified = True
+                except Exception:
+                    # Leave entry as-is if we cannot compute; scheduler will skip it.
+                    self.logger.error(
+                        "Failed to recompute scheduled_execution for reservation %s",
+                        reservation.get('id') or '<unknown>',
+                    )
+
+            if modified:
+                repaired += 1
+
+        return repaired
+
+    @staticmethod
+    def _compute_scheduled_execution(reservation: Mapping[str, Any], tz) -> datetime:
+        """Compute when a reservation should execute based on configuration."""
+
+        config = get_test_mode()
+        if config.enabled:
+            delay = max(config.trigger_delay_minutes, 0)
+            return datetime.now(tz) + timedelta(minutes=delay)
+
+        target_date = datetime.strptime(str(reservation['target_date']), '%Y-%m-%d').date()
+        target_time = datetime.strptime(str(reservation['target_time']), '%H:%M').time()
+        target_datetime = datetime.combine(target_date, target_time)
+        target_datetime = tz.localize(target_datetime)
+
+        scheduled_time = target_datetime - timedelta(hours=48) - timedelta(seconds=30)
+        if scheduled_time <= datetime.now(tz):
+            scheduled_time = datetime.now(tz) + timedelta(minutes=1)
+        return scheduled_time
     
     def get_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         """
