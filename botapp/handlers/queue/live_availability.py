@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes
 
 
 CACHE_KEY = 'queue_live_time_cache'
+MATRIX_CACHE_KEY = 'queue_live_matrix'
 
 
 async def fetch_live_time_slots(
@@ -55,7 +56,15 @@ async def fetch_live_time_slots(
         )
         return slots
 
-    matrix = await _fetch_live_matrix(checker, selected_date, now, logger, log_prefix)
+    matrix = await fetch_live_availability_matrix(
+        deps,
+        context,
+        tz,
+        now,
+        logger,
+        cache_key=MATRIX_CACHE_KEY,
+        log_prefix=log_prefix,
+    )
     if matrix is None:
         return None
 
@@ -99,9 +108,42 @@ async def fetch_live_time_slots(
     return filtered_times
 
 
+async def fetch_live_availability_matrix(
+    deps: Any,
+    context: ContextTypes.DEFAULT_TYPE,
+    tz,
+    now: datetime,
+    logger: logging.Logger,
+    *,
+    cache_key: str = MATRIX_CACHE_KEY,
+    log_prefix: str = "Queue",
+) -> Optional[Dict[str, Dict[int, List[str]]]]:
+    """Return live availability matrix across courts and dates."""
+
+    checker = getattr(deps, 'availability_checker', None)
+    if checker is None:
+        logger.warning(
+            "%s live availability requested but availability checker is unavailable",
+            log_prefix,
+        )
+        return None
+
+    cache_value = context.user_data.setdefault(cache_key, {})
+    if isinstance(cache_value, dict) and cache_value.get('data'):
+        logger.info("%s live availability reusing cached matrix", log_prefix)
+        return cache_value['data']
+
+    matrix = await _fetch_live_matrix(checker, now, logger, log_prefix)
+    if matrix is None:
+        return None
+
+    filtered = _filter_matrix(matrix, tz, now)
+    context.user_data[cache_key] = {'data': filtered}
+    return filtered
+
+
 async def _fetch_live_matrix(
     checker: Any,
-    selected_date: date,
     now: datetime,
     logger: logging.Logger,
     log_prefix: str,
@@ -134,10 +176,45 @@ async def _fetch_live_matrix(
             matrix.setdefault(date_key, {})[court_num] = sorted(times)
 
     logger.info(
-        "%s live availability matrix fetched for %s: %s dates, courts=%s",
+        "%s live availability matrix fetched: %s dates, courts=%s",
         log_prefix,
-        selected_date,
         len(matrix),
         {k: list(v.keys()) for k, v in matrix.items()},
     )
     return matrix
+
+
+def _filter_matrix(
+    matrix: Dict[str, Dict[int, List[str]]],
+    tz,
+    now: datetime,
+) -> Dict[str, Dict[int, List[str]]]:
+    filtered: Dict[str, Dict[int, List[str]]] = {}
+
+    for date_key, courts in matrix.items():
+        filtered_courts: Dict[int, List[str]] = {}
+        try:
+            date_obj = datetime.strptime(date_key, '%Y-%m-%d').date()
+        except ValueError:
+            continue
+
+        for court, times in courts.items():
+            valid_times: List[str] = []
+            for time_str in times:
+                try:
+                    hour, minute = map(int, time_str.split(':'))
+                except ValueError:
+                    continue
+
+                slot_dt = datetime.combine(date_obj, datetime.min.time().replace(hour=hour, minute=minute))
+                slot_dt = tz.localize(slot_dt)
+                if slot_dt >= now:
+                    valid_times.append(time_str)
+
+            if valid_times:
+                filtered_courts[court] = sorted(set(valid_times))
+
+        if filtered_courts:
+            filtered[date_key] = filtered_courts
+
+    return filtered

@@ -463,12 +463,23 @@ def create_court_availability_keyboard(
     selected_date: str,
     layout_type: str = "vertical",
     available_dates: Optional[List[str]] = None,
+    *,
+    callback_prefix: str = "book_now",
+    cycle_prefix: str = "cycle_day_",
+    unavailable_prefix: str = "unavailable",
 ) -> InlineKeyboardMarkup:
     """Create interactive court availability keyboard for immediate booking."""
 
     t('botapp.ui.booking.create_court_availability_keyboard')
     if layout_type == "matrix":
-        return _create_matrix_layout_keyboard(available_times, selected_date, available_dates)
+        return _create_matrix_layout_keyboard(
+            available_times,
+            selected_date,
+            available_dates,
+            callback_prefix=callback_prefix,
+            cycle_prefix=cycle_prefix,
+            unavailable_prefix=unavailable_prefix,
+        )
     return _create_vertical_layout_keyboard(available_times, selected_date)
 
 
@@ -514,6 +525,10 @@ def _create_matrix_layout_keyboard(
     available_times: Dict[int, List[str]],
     selected_date: str,
     available_dates: Optional[List[str]] = None,
+    *,
+    callback_prefix: str,
+    cycle_prefix: str,
+    unavailable_prefix: str,
 ) -> InlineKeyboardMarkup:
     """Create matrix layout keyboard (new grid format)."""
 
@@ -541,7 +556,7 @@ def _create_matrix_layout_keyboard(
         keyboard.append([
             InlineKeyboardButton(
                 f"📅 {day_label} (tap to cycle)",
-                callback_data=f"cycle_day_{next_date}",
+                callback_data=f"{cycle_prefix}{next_date}",
             )
         ])
 
@@ -557,7 +572,15 @@ def _create_matrix_layout_keyboard(
         )
         logger.info("⏰ %s | %s", time_slot, status)
 
-    keyboard.extend(_create_matrix_keyboard_rows(filtered_matrix, selected_date, all_courts))
+    keyboard.extend(
+        _create_matrix_keyboard_rows(
+            filtered_matrix,
+            selected_date,
+            all_courts,
+            callback_prefix=callback_prefix,
+            unavailable_prefix=unavailable_prefix,
+        )
+    )
     keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data='back_to_menu')])
     return InlineKeyboardMarkup(keyboard)
 
@@ -601,6 +624,9 @@ def _create_matrix_keyboard_rows(
     time_matrix: Dict[str, Dict[int, bool]],
     selected_date: str,
     all_courts: List[int],
+    *,
+    callback_prefix: str,
+    unavailable_prefix: str,
 ) -> List[List[InlineKeyboardButton]]:
     """Create keyboard rows from filtered time matrix."""
 
@@ -618,14 +644,14 @@ def _create_matrix_keyboard_rows(
                 row.append(
                     InlineKeyboardButton(
                         time_slot,
-                        callback_data=f"book_now_{selected_date}_{court_num}_{time_slot}",
+                        callback_data=f"{callback_prefix}_{selected_date}_{court_num}_{time_slot}",
                     )
                 )
             else:
                 row.append(
                     InlineKeyboardButton(
                         "-",
-                        callback_data=f"unavailable_{court_num}_{time_slot}",
+                        callback_data=f"{unavailable_prefix}_{court_num}_{time_slot}",
                     )
                 )
         keyboard_rows.append(row)

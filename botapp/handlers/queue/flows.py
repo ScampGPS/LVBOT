@@ -22,7 +22,10 @@ from botapp.handlers.queue.guards import (
     ensure_summary,
 )
 from botapp.handlers.queue.messages import QueueMessageFactory
-from botapp.handlers.queue.live_availability import fetch_live_time_slots
+from botapp.handlers.queue.live_availability import (
+    fetch_live_time_slots,
+    fetch_live_availability_matrix,
+)
 from botapp.handlers.state import reset_flow
 from infrastructure.constants import get_court_hours
 from reservations.queue.request_builder import DEFAULT_BUILDER, ReservationRequestBuilder
@@ -137,11 +140,25 @@ class QueueBookingFlow(QueueFlowBase):
             context.user_data.get('current_flow'),
         )
 
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+
+        self.logger.info(
+            "QueueBookingFlow.handle_matrix_day_cycle user=%s new_date=%s",
+            user_id,
+            new_date,
+        )
+
         store = self._session_store(context)
         reset_flow(context, 'queue_booking')
         context.user_data['current_flow'] = 'queue_booking'
         store.clear()
         context.user_data.pop('queue_live_time_cache', None)
+        context.user_data.pop('queue_live_matrix', None)
+        context.user_data.pop('queue_available_dates', None)
 
         today = date.today()
         config = self._get_test_mode()
@@ -314,13 +331,7 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
-        await self.edit_callback(
-            query,
-            TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=reply_markup,
-        )
+        await self._present_court_selection(query, selected_date, selected_time)
 
     async def select_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle court selection for queue booking."""
@@ -542,6 +553,82 @@ class QueueBookingFlow(QueueFlowBase):
                 'Failed to add reservation to queue',
             )
 
+    async def handle_matrix_time_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle time selection from the matrix keyboard."""
+
+        query = update.callback_query
+        await self.answer_callback(query)
+
+        data = query.data or ''
+        payload = data.replace('queue_matrix_', '')
+        parts = payload.split('_')
+        if len(parts) != 3:
+            self.logger.error("Invalid queue matrix callback format: %s", data)
+            await self.edit_callback(
+                query,
+                f"❌ Invalid time selection format received: {data}. Please try again.",
+            )
+            return
+
+        date_str, court_str, time_str = parts
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            court_num = int(court_str)
+        except ValueError:
+            self.logger.error("Failed to parse matrix selection payload: %s", data)
+            await self.edit_callback(
+                query,
+                f"❌ Invalid time selection format received: {data}. Please try again.",
+            )
+            return
+
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+
+        self.logger.info(
+            "QueueBookingFlow.handle_matrix_time_selection user=%s date=%s court=%s time=%s",
+            user_id,
+            selected_date,
+            court_num,
+            time_str,
+        )
+
+        store = self._session_store(context)
+        store.selected_date = selected_date
+        store.selected_time = time_str
+        store.selected_courts = [court_num]
+
+        await self._present_court_selection(query, selected_date, time_str)
+
+    async def handle_matrix_day_cycle(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Cycle to the next available date within the live matrix."""
+
+        query = update.callback_query
+        await self.answer_callback(query)
+
+        data = query.data or ''
+        new_date_str = data.replace('queue_cycle_', '')
+        try:
+            new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            self.logger.error("Invalid queue cycle callback format: %s", data)
+            await self.edit_callback(
+                query,
+                self.messages.invalid_date(),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+            )
+            return
+
+        store = self._session_store(context)
+        store.selected_date = new_date
+
+        tz = self._MEXICO_TZ
+        now = datetime.now(tz)
+        await self._show_matrix_time_selection(update, context, new_date, tz, now)
+
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Cancel queue booking and clean up state."""
 
@@ -687,6 +774,14 @@ class QueueBookingFlow(QueueFlowBase):
             selected_date,
         )
 
+        config = self._get_test_mode()
+        tz = self._MEXICO_TZ
+        now = datetime.now(tz)
+
+        if self._should_use_matrix(selected_date, config, tz, now):
+            if await self._show_matrix_time_selection(update, context, selected_date, tz, now):
+                return
+
         time_slots = await self._available_time_slots(context, selected_date)
 
         self.logger.info(
@@ -824,6 +919,97 @@ class QueueBookingFlow(QueueFlowBase):
         if candidate == today + timedelta(days=1):
             return f"Tomorrow ({candidate.strftime('%b %d')})"
         return candidate.strftime("%a, %b %d")
+
+    def _should_use_matrix(self, selected_date: date, config, tz, now: datetime) -> bool:
+        if not (config.enabled and config.allow_within_48h):
+            return False
+        start_of_day = tz.localize(datetime.combine(selected_date, datetime.min.time()))
+        return start_of_day < now + timedelta(hours=48)
+
+    async def _show_matrix_time_selection(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        selected_date: date,
+        tz,
+        now: datetime,
+    ) -> bool:
+        """Render the matrix availability keyboard; return True if handled."""
+
+        query = update.callback_query
+
+        matrix = await fetch_live_availability_matrix(
+            self.deps,
+            context,
+            tz,
+            now,
+            self.logger,
+            cache_key='queue_live_matrix',
+            log_prefix='Queue',
+        )
+        if matrix is None:
+            return False
+
+        context.user_data['queue_live_matrix'] = matrix
+        available_dates = sorted(matrix.keys())
+        context.user_data['queue_available_dates'] = available_dates
+
+        store = self._session_store(context)
+        store.selected_date = selected_date
+
+        date_key = selected_date.isoformat()
+        available_times = matrix.get(date_key, {})
+        if not available_times:
+            self.logger.info(
+                "QueueBookingFlow._show_matrix_time_selection no slots for %s",
+                date_key,
+            )
+            await self.edit_callback(
+                query,
+                TelegramUI.format_queue_no_times(selected_date),
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+            )
+            return True
+
+        total_slots = sum(len(times) for times in available_times.values())
+        message = TelegramUI.format_interactive_availability_message(
+            available_times,
+            selected_date,
+            total_slots,
+            layout_type='matrix',
+        )
+
+        keyboard = TelegramUI.create_court_availability_keyboard(
+            available_times,
+            date_key,
+            layout_type='matrix',
+            available_dates=available_dates,
+            callback_prefix='queue_matrix',
+            cycle_prefix='queue_cycle_',
+        )
+
+        await self.edit_callback(
+            query,
+            message,
+            reply_markup=keyboard,
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
+        return True
+
+    async def _present_court_selection(
+        self,
+        query,
+        selected_date: date,
+        selected_time: str,
+    ) -> None:
+        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
+        await self.edit_callback(
+            query,
+            TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=reply_markup,
+        )
 
 
 class QueueReservationManager(QueueFlowBase):

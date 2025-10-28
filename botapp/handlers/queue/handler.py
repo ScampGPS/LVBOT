@@ -147,6 +147,20 @@ class QueueHandler(CallbackResponseMixin):
         "Handle time selection for queue booking flow.",
     )
 
+    handle_queue_matrix_time_selection = _delegate(
+        "booking_flow",
+        "handle_matrix_time_selection",
+        "botapp.handlers.queue.QueueHandler.handle_queue_matrix_time_selection",
+        "Handle matrix time selection for queue booking flow.",
+    )
+
+    handle_queue_matrix_day_cycle = _delegate(
+        "booking_flow",
+        "handle_matrix_day_cycle",
+        "botapp.handlers.queue.QueueHandler.handle_queue_matrix_day_cycle",
+        "Cycle matrix day selection for queue booking flow.",
+    )
+
     handle_queue_booking_court_selection = _delegate(
         "booking_flow",
         "select_courts",
