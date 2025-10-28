@@ -193,6 +193,7 @@ class ReservationQueue:
 
         repaired = 0
         tz = pytz.timezone('America/Guatemala')
+        now = datetime.now(tz)
         valid_statuses = {status.value for status in ReservationStatus}
 
         for reservation in self.queue:
@@ -213,6 +214,17 @@ class ReservationQueue:
             if status not in valid_statuses:
                 reservation['status'] = ReservationStatus.PENDING.value
                 modified = True
+
+            target_dt = self._parse_target_datetime(reservation, tz)
+            if target_dt and target_dt < now:
+                if reservation.get('status') not in {
+                    ReservationStatus.SUCCESS.value,
+                    ReservationStatus.CANCELLED.value,
+                    ReservationStatus.EXPIRED.value,
+                }:
+                    reservation['status'] = ReservationStatus.EXPIRED.value
+                    reservation['expired_at'] = now.isoformat()
+                    modified = True
 
             scheduled_execution = reservation.get('scheduled_execution')
             needs_reschedule = False
@@ -251,15 +263,29 @@ class ReservationQueue:
             delay = max(config.trigger_delay_minutes, 0)
             return datetime.now(tz) + timedelta(minutes=delay)
 
-        target_date = datetime.strptime(str(reservation['target_date']), '%Y-%m-%d').date()
-        target_time = datetime.strptime(str(reservation['target_time']), '%H:%M').time()
-        target_datetime = datetime.combine(target_date, target_time)
-        target_datetime = tz.localize(target_datetime)
+        target_datetime = ReservationQueue._parse_target_datetime(reservation, tz)
+        if target_datetime is None:
+            raise ValueError("Reservation missing target date/time")
 
         scheduled_time = target_datetime - timedelta(hours=48) - timedelta(seconds=30)
         if scheduled_time <= datetime.now(tz):
             scheduled_time = datetime.now(tz) + timedelta(minutes=1)
         return scheduled_time
+
+    @staticmethod
+    def _parse_target_datetime(reservation: Mapping[str, Any], tz) -> Optional[datetime]:
+        target_date = reservation.get('target_date')
+        target_time = reservation.get('target_time')
+        if not target_date or not target_time:
+            return None
+
+        try:
+            date_obj = datetime.strptime(str(target_date), '%Y-%m-%d').date()
+            time_obj = datetime.strptime(str(target_time), '%H:%M').time()
+        except (TypeError, ValueError):
+            return None
+
+        return tz.localize(datetime.combine(date_obj, time_obj))
     
     def get_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         """
