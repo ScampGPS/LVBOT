@@ -17,7 +17,12 @@ from automation.availability import DateTimeHelpers
 from infrastructure.settings import get_test_mode
 from infrastructure.constants import get_court_hours
 from botapp.handlers.booking.ui_factory import BookingUIFactory
-from botapp.handlers.queue.live_availability import fetch_live_time_slots
+from botapp.handlers.queue.live_availability import (
+    fetch_live_time_slots,
+    fetch_live_availability_matrix,
+)
+from botapp.handlers.queue.session import QueueSessionStore
+from telegram.constants import ParseMode
 import pytz
 
 
@@ -771,14 +776,75 @@ class BookingHandler:
             context.user_data['queue_booking_date'] = selected_date  # Store with expected key name
             context.user_data['current_flow'] = 'queue_booking'
 
+            tz = pytz.timezone('America/Mexico_City')
+            now = datetime.now(tz)
+
+            flow_type = context.user_data.get('current_flow', 'immediate')
+
+            if flow_type == 'queue_booking':
+                store = QueueSessionStore(context)
+                store.selected_date = selected_date
+                store.selected_time = None
+                store.selected_courts = []
+
+                within_48h = self._is_within_48_hours(selected_date, tz, now)
+                if config.enabled and config.allow_within_48h and within_48h:
+                    matrix = await fetch_live_availability_matrix(
+                        self.deps,
+                        context,
+                        tz,
+                        now,
+                        self.logger,
+                        cache_key='queue_live_matrix',
+                        log_prefix='Booking',
+                    )
+                    if matrix:
+                        context.user_data['queue_live_matrix'] = matrix
+                        available_dates = sorted(matrix.keys())
+                        context.user_data['queue_available_dates'] = available_dates
+
+                        selected_date_str = selected_date.strftime('%Y-%m-%d')
+                        available_times = matrix.get(selected_date_str, {})
+                        if available_times:
+                            total_slots = sum(len(times) for times in available_times.values())
+                            message = TelegramUI.format_interactive_availability_message(
+                                available_times,
+                                selected_date,
+                                total_slots,
+                                layout_type="matrix",
+                            )
+                            keyboard = TelegramUI.create_court_availability_keyboard(
+                                available_times,
+                                selected_date_str,
+                                layout_type="matrix",
+                                available_dates=available_dates,
+                                callback_prefix='queue_matrix',
+                                cycle_prefix='queue_cycle_',
+                            )
+                            await query.edit_message_text(
+                                message,
+                                parse_mode=ParseMode.MARKDOWN_V2,
+                                reply_markup=keyboard,
+                            )
+                            return
+                        else:
+                            await query.edit_message_text(
+                                TelegramUI.format_queue_no_times(selected_date),
+                                parse_mode=ParseMode.MARKDOWN_V2,
+                                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                            )
+                            return
+                    else:
+                        self.logger.warning(
+                            "Live availability matrix unavailable for %s; falling back to timetable",
+                            selected_date,
+                        )
+
             # Format date for display
             date_label = DateTimeHelpers.get_day_label(selected_date)
 
             # Use centralized court hours from constants
             all_time_slots = get_court_hours(selected_date)
-
-            tz = pytz.timezone('America/Mexico_City')
-            now = datetime.now(tz)
 
             if config.enabled and config.allow_within_48h:
                 live_slots = await fetch_live_time_slots(
@@ -853,6 +919,11 @@ class BookingHandler:
         )
         slot_dt = tz.localize(slot_dt)
         return (slot_dt - now).total_seconds() >= 48 * 3600
+
+    @staticmethod
+    def _is_within_48_hours(target_date: date, tz, now: datetime) -> bool:
+        start_of_day = tz.localize(datetime.combine(target_date, datetime.min.time()))
+        return start_of_day < now + timedelta(hours=48)
 
     async def handle_blocked_date_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
