@@ -14,6 +14,7 @@ from playwright.async_api import Page
 from automation.executors.core import ExecutionResult
 
 from .helpers import confirmation_result
+from .human_behaviors import HumanLikeActions
 
 WORKING_SPEED_MULTIPLIER = 2.5
 _VALIDATION_SLEEP = (0.3, 0.8)
@@ -28,97 +29,24 @@ class NaturalFlowSteps:
         t("automation.executors.flows.natural_flow.NaturalFlowSteps.__init__")
         self.page = page
         self.logger = logger
-        self._last_mouse_pos: Optional[Tuple[float, float]] = None
-
-    @staticmethod
-    def apply_speed(delay_seconds: float) -> float:
-        t("automation.executors.flows.natural_flow.NaturalFlowSteps.apply_speed")
-        return max(0.1, delay_seconds / WORKING_SPEED_MULTIPLIER)
+        self.actions = HumanLikeActions(page, speed_multiplier=WORKING_SPEED_MULTIPLIER)
 
     async def type_text(self, element, text: str) -> None:
         t("automation.executors.flows.natural_flow.NaturalFlowSteps.type_text")
-        await element.click()
-        await asyncio.sleep(self.apply_speed(random.uniform(0.4, 1.0)))
-        await element.fill("")
-        await asyncio.sleep(self.apply_speed(random.uniform(0.3, 0.7)))
-
-        for index, char in enumerate(text):
-            base_delay = random.randint(110, 260) / WORKING_SPEED_MULTIPLIER
-            jitter = random.uniform(-15, 25)
-            await element.type(char, delay=max(35, int(base_delay + jitter)))
-            if random.random() < (0.1 / WORKING_SPEED_MULTIPLIER):
-                await asyncio.sleep(self.apply_speed(random.uniform(0.4, 1.2)))
-            if index and index % 3 == 0 and random.random() < 0.05:
-                await asyncio.sleep(self.apply_speed(random.uniform(0.6, 1.4)))
-
-        await asyncio.sleep(self.apply_speed(random.uniform(0.5, 1.5)))
-
-    async def _mouse_curve_to(self, target_x: float, target_y: float) -> None:
-        start_x, start_y = self._last_mouse_pos or (random.randint(0, 50), random.randint(0, 50))
-
-        control_x1 = start_x + random.uniform(-80, 120)
-        control_y1 = start_y + random.uniform(-80, 120)
-        control_x2 = target_x + random.uniform(-120, 80)
-        control_y2 = target_y + random.uniform(-120, 80)
-
-        steps = random.randint(9, 16)
-        easing = random.uniform(0.6, 1.4)
-
-        for i in range(1, steps + 1):
-            t_ratio = i / steps
-            inv = 1 - t_ratio
-            x = (
-                inv ** 3 * start_x
-                + 3 * inv ** 2 * t_ratio * control_x1
-                + 3 * inv * t_ratio ** 2 * control_x2
-                + t_ratio ** 3 * target_x
-            )
-            y = (
-                inv ** 3 * start_y
-                + 3 * inv ** 2 * t_ratio * control_y1
-                + 3 * inv * t_ratio ** 2 * control_y2
-                + t_ratio ** 3 * target_y
-            )
-
-            try:
-                await self.page.mouse.move(x, y)
-            except Exception:
-                continue
-
-            await asyncio.sleep(self.apply_speed(random.uniform(0.045, 0.095) * easing))
-
-        self._last_mouse_pos = (target_x, target_y)
+        await self.actions.type_text(element, text or "")
 
     async def _scroll_into_view(self, selector: str) -> Optional[object]:
         try:
             element = await self.page.wait_for_selector(selector, timeout=6000)
             await element.scroll_into_view_if_needed()
-            await asyncio.sleep(self.apply_speed(random.uniform(0.4, 1.0)))
+            await self.actions.pause(0.4, 1.0)
             return element
         except Exception:
             return None
 
     async def move_mouse(self) -> None:
         t("automation.executors.flows.natural_flow.NaturalFlowSteps.move_mouse")
-        movement_count = max(1, int(random.randint(1, 2) / WORKING_SPEED_MULTIPLIER))
-        viewport = self.page.viewport_size or {"width": 1280, "height": 720}
-        width = viewport.get("width", 1280)
-        height = viewport.get("height", 720)
-
-        for _ in range(movement_count):
-            target_x = random.randint(int(width * 0.15), int(width * 0.85))
-            target_y = random.randint(int(height * 0.15), int(height * 0.85))
-            await self._mouse_curve_to(target_x, target_y)
-            await asyncio.sleep(self.apply_speed(random.uniform(*_MOUSE_DELAY)))
-            if random.random() < (0.2 / WORKING_SPEED_MULTIPLIER):
-                await asyncio.sleep(self.apply_speed(random.uniform(0.6, 1.2)))
-            if random.random() < 0.15:
-                delta = random.randint(-200, 200)
-                try:
-                    await self.page.mouse.wheel(0, delta)
-                    await asyncio.sleep(self.apply_speed(random.uniform(0.4, 0.9)))
-                except Exception:
-                    pass
+        await self.actions.move_mouse_random()
 
     async def fill_user_form(self, user_info: Dict[str, str]) -> None:
         t("automation.executors.flows.natural_flow.NaturalFlowSteps.fill_user_form")
@@ -133,15 +61,15 @@ class NaturalFlowSteps:
             element = await self._scroll_into_view(selector)
             if not element:
                 continue
-            await self.type_text(element, user_info.get(key, ""))
-            await asyncio.sleep(self.apply_speed(random.uniform(*_FIELD_LINGER)))
-            await self.move_mouse()
+            await self.actions.type_text(element, user_info.get(key, ""))
+            await self.actions.pause(*_FIELD_LINGER)
+            await self.actions.move_mouse_random()
 
         try:
             country_select = await self.page.query_selector('select[name="client.phoneCountry"]')
             if country_select and not await country_select.get_attribute("value"):
                 await country_select.select_option("GT")
-                await asyncio.sleep(self.apply_speed(random.uniform(0.4, 0.9)))
+                await self.actions.pause(0.4, 0.9)
         except Exception:
             pass
 
@@ -164,8 +92,10 @@ class NaturalFlowSteps:
         if not submit_button:
             submit_button = await self.page.query_selector('button:has-text("Confirm")')
         if submit_button:
+            await self.actions.move_mouse_to_element(submit_button)
+            await self.actions.pause(1.0, 2.0)
             await submit_button.click()
-            await asyncio.sleep(self.apply_speed(random.uniform(1.0, 1.8)))
+            await self.actions.pause(1.0, 1.8)
 
     async def execute(
         self,
@@ -180,7 +110,7 @@ class NaturalFlowSteps:
         delay_min, delay_max = initial_delay_range
         delay = random.uniform(delay_min, delay_max)
         self.logger.info("Initial natural delay (%.1f seconds)...", delay)
-        await asyncio.sleep(delay)
+        await self.actions.pause(delay, delay)
 
         await self.move_mouse()
 
@@ -194,14 +124,11 @@ class NaturalFlowSteps:
                 court_number=court_number,
             )
 
-        await asyncio.sleep(self.apply_speed(random.uniform(*_VALIDATION_SLEEP)))
-        try:
-            await time_button.hover()
-        except Exception:
-            pass
-        await asyncio.sleep(self.apply_speed(random.uniform(0.4, 1.2)))
+        await self.actions.pause(*_VALIDATION_SLEEP)
+        await self.actions.move_mouse_to_element(time_button)
+        await self.actions.pause(0.4, 1.2)
         await time_button.click()
-        await asyncio.sleep(self.apply_speed(random.uniform(*_VALIDATION_SLEEP)))
+        await self.actions.pause(*_VALIDATION_SLEEP)
 
         try:
             await self.page.wait_for_selector("form", timeout=8000)
@@ -223,8 +150,8 @@ class NaturalFlowSteps:
             )
 
         await self.fill_user_form(user_info)
-        await asyncio.sleep(self.apply_speed(random.uniform(1.8, 3.5)))
-        await self.move_mouse()
+        await self.actions.pause(1.8, 3.5)
+        await self.actions.move_mouse_random()
         self.logger.info("Submitting booking form (natural mode)...")
         await self.submit()
 
