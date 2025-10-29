@@ -65,6 +65,10 @@ class TestModeConfig:
     retain_failed_reservations: bool
 
 
+# Prevent pytest from attempting to collect the dataclass as a test case.
+TestModeConfig.__test__ = False
+
+
 def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     """Load configuration from the environment and fall back to defaults."""
     t('infrastructure.settings.load_settings')

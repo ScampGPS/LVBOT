@@ -60,6 +60,21 @@ async def confirmation_result(
             user_name=user_info.get("first_name"),
         )
 
+    irregular_tokens = (
+        "uso irregular",
+        "irregular del sitio",
+        "detectó un uso irregular",
+    )
+    if confirmation_text and any(token in normalized for token in irregular_tokens):
+        message = "Irregular usage warning encountered"
+        if logger:
+            logger.warning("Court %s triggered irregular usage warning", court_number)
+        return ExecutionResult(
+            success=False,
+            error_message=message,
+            court_number=court_number,
+        )
+
     if logger and failure_log:
         logger.warning(failure_log, court_number)
 

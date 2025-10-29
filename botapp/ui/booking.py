@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram.helpers import escape_markdown
 
 from infrastructure.constants import get_court_hours
 from infrastructure.settings import get_test_mode
@@ -430,10 +431,18 @@ def format_availability_message(
     """Format court availability message."""
 
     t('botapp.ui.booking.format_availability_message')
-    date_str = target_date.strftime('%A, %B %d')
-    message = f"🎾 **Court Availability**\n📅 {date_str}\n\n"
+    date_str = escape_markdown(target_date.strftime('%A, %B %d'), version=2)
+    hyphen_md = escape_markdown('-', version=2)
+
+    lines: List[str] = [
+        "🎾 *Court Availability*",
+        f"📅 {date_str}",
+        "",
+    ]
+
     if not available_times:
-        return message + "No courts available for this date."
+        lines.append("No courts available for this date.")
+        return "\n".join(lines)
 
     times_by_slot: Dict[str, List[int]] = {}
     for court, times in available_times.items():
@@ -442,13 +451,21 @@ def format_availability_message(
 
     sorted_times = sorted(times_by_slot.keys())
     if show_summary:
-        message += f"⏰ Available slots: {len(sorted_times)}\n"
-        message += f"🎾 Courts with availability: {len(available_times)}\n\n"
+        lines.append(
+            f"⏰ Available slots: {escape_markdown(str(len(sorted_times)), version=2)}"
+        )
+        lines.append(
+            f"🎾 Courts with availability: {escape_markdown(str(len(available_times)), version=2)}"
+        )
+        lines.append("")
 
     for time in sorted_times:
         courts = ', '.join(f"C{c}" for c in sorted(times_by_slot[time]))
-        message += f"• {time} - Courts: {courts}\n"
-    return message
+        time_md = escape_markdown(time, version=2)
+        courts_md = escape_markdown(courts, version=2)
+        lines.append(f"• {time_md} {hyphen_md} Courts: {courts_md}")
+
+    return "\n".join(lines)
 
 
 def format_loading_message(action: str = "Processing") -> str:
@@ -714,10 +731,14 @@ def format_interactive_availability_message(
     else:
         day_label = date_obj.strftime('%A')
 
+    day_label_md = escape_markdown(day_label, version=2)
+    total_slots_md = escape_markdown(str(total_slots), version=2)
+    hyphen_md = escape_markdown('-', version=2)
+
     return (
-        "🎾 **Online Court Availability**\n\n"
+        "🎾 *Online Court Availability*\n\n"
         "Select a time to reserve:\n\n"
-        f"📅 **{day_label} - {total_slots} slots available**"
+        f"📅 *{day_label_md} {hyphen_md} {total_slots_md} slots available*"
     )
 
 

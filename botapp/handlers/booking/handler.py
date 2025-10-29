@@ -467,7 +467,7 @@ class BookingHandler:
                     await query.edit_message_text(
                         message,
                         reply_markup=keyboard,
-                        parse_mode='Markdown'
+                        parse_mode=ParseMode.MARKDOWN_V2,
                     )
                 else:
                     # No availability
@@ -601,6 +601,7 @@ class BookingHandler:
                     layout_type="matrix",
                     available_dates=available_dates
                 )
+                parse_mode = ParseMode.MARKDOWN_V2
             else:
                 # Use standard message format for no availability
                 message = TelegramUI.format_availability_message(
@@ -611,12 +612,13 @@ class BookingHandler:
 
                 # Just back button for no availability
                 reply_markup = TelegramUI.create_back_to_menu_keyboard()
+                parse_mode = ParseMode.MARKDOWN_V2
 
             # Send results
             await query.edit_message_text(
                 message,
-                parse_mode='Markdown',
-                reply_markup=reply_markup
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
             )
 
         except Exception as e:
@@ -1121,7 +1123,7 @@ class BookingHandler:
             await query.edit_message_text(
                 message,
                 reply_markup=reply_markup,
-                parse_mode='Markdown'
+                parse_mode=ParseMode.MARKDOWN_V2,
             )
 
         except ValueError as e:

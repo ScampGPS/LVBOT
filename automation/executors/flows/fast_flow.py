@@ -7,7 +7,7 @@ import asyncio
 import logging
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from playwright.async_api import Page
@@ -86,7 +86,7 @@ async def find_time_slot_with_refresh(
     """Find a time slot, refreshing when necessary until available."""
     t('automation.executors.flows.fast_flow.find_time_slot_with_refresh')
     if target_datetime:
-        booking_window_opens = DateTimeHelpers.get_booking_window_open_time(target_datetime, 48)
+        booking_window_opens = target_datetime - timedelta(hours=48)
         current_time = datetime.now(target_datetime.tzinfo)
         pre_window_attempts = 0
         while current_time < booking_window_opens:
@@ -167,9 +167,16 @@ async def find_time_slot_with_refresh(
     return None
 
 
-async def fill_form(page: Page, user_info: Dict[str, str]) -> None:
+async def fill_form(page: Page, user_info: Dict[str, str], *, logger: Optional[logging.Logger] = None) -> None:
     """Populate the Acuity form fields using the fast flow strategy."""
     t('automation.executors.flows.fast_flow.fill_form')
+
+    try:
+        await page.wait_for_selector('form', timeout=5000)
+    except Exception:
+        if logger:
+            logger.debug("Booking form not detected before filling")
+
     fields = {
         'input[name="client.firstName"]': user_info.get("first_name", ""),
         'input[name="client.lastName"]': user_info.get("last_name", ""),
@@ -178,9 +185,24 @@ async def fill_form(page: Page, user_info: Dict[str, str]) -> None:
     }
 
     for selector, value in fields.items():
-        element = await page.query_selector(selector)
-        if element:
-            await fast_fill(element, value)
+        try:
+            element = await page.wait_for_selector(selector, timeout=5000)
+        except Exception:
+            if logger:
+                logger.debug("Field %s not found", selector)
+            continue
+        await fast_fill(element, value)
+        if logger:
+            logger.debug("Filled %s with %s", selector, value)
+
+    try:
+        country_select = await page.query_selector('select[name="client.phoneCountry"]')
+        if country_select and not await country_select.get_attribute("value"):
+            await country_select.select_option("GT")
+            if logger:
+                logger.debug("Selected phone country GT")
+    except Exception:
+        pass
 
 
 async def execute_fast_flow(
@@ -222,7 +244,7 @@ async def execute_fast_flow(
     await time_button.click()
     await asyncio.sleep(apply_speed(0.3))
 
-    await fill_form(page, user_info)
+    await fill_form(page, user_info, logger=logger)
 
     submit_button = await page.query_selector('button:has-text("Confirmar")')
     if submit_button:

@@ -376,99 +376,11 @@ class QueueBookingFlow(QueueFlowBase):
             cleaned_courts,
         )
 
-        store = self._session_store(context)
-        modifying_id, modifying_option = store.modification
-        if modifying_id and modifying_option == 'courts':
-            reservation = self.deps.reservation_queue.get_reservation(modifying_id)
-            if reservation:
-                reservation['court_preferences'] = cleaned_courts
-                self.deps.reservation_queue.update_reservation(modifying_id, reservation)
-
-                store.set_modification(None, None)
-
-                courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
-                await self.edit_callback(
-                    query,
-                    self.messages.courts_updated(courts_text),
-                    parse_mode='Markdown',
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📋 View Reservation", callback_data=f"manage_queue_{modifying_id}")],
-                        [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')],
-                    ]),
-                )
-                return
-
-        store.selected_courts = cleaned_courts
-
-        selected_date = store.selected_date
-        selected_time = store.selected_time
-
-        self.logger.info(
-            "QueueBookingFlow.select_courts context user=%s date=%s time=%s",
-            user_id,
-            selected_date,
-            selected_time,
-        )
-
-        if not selected_date or not selected_time:
-            self.logger.error("Missing booking details in user context")
-            await self.edit_callback(query, self.messages.session_expired())
-            return
-
-        user_id = query.from_user.id
-        user_profile = self.deps.user_manager.get_user(user_id)
-        required_fields = ('first_name', 'last_name', 'email', 'phone')
-
-        try:
-            ensure_profile_fields(user_profile, required_fields)
-        except IncompleteProfileError as exc:
-            missing = ', '.join(exc.missing_fields)
-            self.logger.warning(
-                "User %s missing required fields for queued booking: %s",
-                user_id,
-                missing,
-            )
-            reply_markup = TelegramUI.create_profile_keyboard()
-            await self.edit_callback(
-                query,
-                self.messages.profile_incomplete(exc.missing_fields),
-                parse_mode='Markdown',
-                reply_markup=reply_markup,
-            )
-            return
-
-        store.summary = {
-            'user_id': user_id,
-            'first_name': user_profile.get('first_name'),
-            'last_name': user_profile.get('last_name'),
-            'email': user_profile.get('email'),
-            'phone': user_profile.get('phone'),
-            'tier': user_profile.get('tier_name') or user_profile.get('tier'),
-            'target_date': selected_date.strftime('%Y-%m-%d'),
-            'target_time': selected_time,
-            'court_preferences': cleaned_courts,
-            'created_at': datetime.now().isoformat(),
-        }
-
-        self.logger.info(
-            "QueueBookingFlow.select_courts summary ready user=%s date=%s time=%s courts=%s",
-            user_id,
-            store.summary['target_date'],
-            store.summary['target_time'],
-            cleaned_courts,
-        )
-
-        reply_markup = TelegramUI.create_queue_confirmation_keyboard()
-        courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
-        await self.edit_callback(
+        await self._complete_court_selection(
             query,
-            TelegramUI.format_queue_confirmation_message(
-                selected_date,
-                selected_time,
-                courts_text,
-            ),
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=reply_markup,
+            context,
+            cleaned_courts,
+            user_id=user_id,
         )
 
     async def confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -599,9 +511,13 @@ class QueueBookingFlow(QueueFlowBase):
         store = self._session_store(context)
         store.selected_date = selected_date
         store.selected_time = time_str
-        store.selected_courts = [court_num]
 
-        await self._present_court_selection(query, selected_date, time_str)
+        await self._complete_court_selection(
+            query,
+            context,
+            [court_num],
+            user_id=user_id,
+        )
 
     async def handle_matrix_day_cycle(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Cycle to the next available date within the live matrix."""
@@ -1007,6 +923,119 @@ class QueueBookingFlow(QueueFlowBase):
         await self.edit_callback(
             query,
             TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=reply_markup,
+        )
+
+    async def _complete_court_selection(
+        self,
+        query,
+        context: ContextTypes.DEFAULT_TYPE,
+        cleaned_courts: Sequence[int],
+        *,
+        user_id: int | None = None,
+    ) -> None:
+        store = self._session_store(context)
+        if user_id is None:
+            user_id = (
+                query.from_user.id
+                if query and getattr(query, 'from_user', None)
+                else None
+            )
+
+        modifying_id, modifying_option = store.modification
+        if modifying_id and modifying_option == 'courts':
+            reservation = self.deps.reservation_queue.get_reservation(modifying_id)
+            if reservation:
+                reservation['court_preferences'] = list(cleaned_courts)
+                self.deps.reservation_queue.update_reservation(modifying_id, reservation)
+
+                store.set_modification(None, None)
+
+                courts_text = format_court_preferences(cleaned_courts, self.AVAILABLE_COURTS)
+                await self.edit_callback(
+                    query,
+                    self.messages.courts_updated(courts_text),
+                    parse_mode='Markdown',
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📋 View Reservation", callback_data=f"manage_queue_{modifying_id}")],
+                        [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')],
+                    ]),
+                )
+                return
+
+        cleaned_list = sorted({int(court) for court in cleaned_courts})
+        store.selected_courts = cleaned_list
+
+        selected_date = store.selected_date
+        selected_time = store.selected_time
+
+        self.logger.info(
+            "QueueBookingFlow.select_courts context user=%s date=%s time=%s",
+            user_id,
+            selected_date,
+            selected_time,
+        )
+
+        if not selected_date or not selected_time:
+            self.logger.error("Missing booking details in user context")
+            await self.edit_callback(query, self.messages.session_expired())
+            return
+
+        if user_id is None and query and getattr(query, 'from_user', None):
+            user_id = query.from_user.id
+
+        user_profile = self.deps.user_manager.get_user(user_id) if user_id is not None else {}
+        required_fields = ('first_name', 'last_name', 'email', 'phone')
+
+        try:
+            ensure_profile_fields(user_profile, required_fields)
+        except IncompleteProfileError as exc:
+            missing = ', '.join(exc.missing_fields)
+            self.logger.warning(
+                "User %s missing required fields for queued booking: %s",
+                user_id,
+                missing,
+            )
+            reply_markup = TelegramUI.create_profile_keyboard()
+            await self.edit_callback(
+                query,
+                self.messages.profile_incomplete(exc.missing_fields),
+                parse_mode='Markdown',
+                reply_markup=reply_markup,
+            )
+            return
+
+        store.summary = {
+            'user_id': user_id,
+            'first_name': user_profile.get('first_name'),
+            'last_name': user_profile.get('last_name'),
+            'email': user_profile.get('email'),
+            'phone': user_profile.get('phone'),
+            'tier': user_profile.get('tier_name') or user_profile.get('tier'),
+            'target_date': selected_date.strftime('%Y-%m-%d'),
+            'target_time': selected_time,
+            'court_preferences': cleaned_list,
+            'created_at': datetime.now().isoformat(),
+        }
+
+        self.logger.info(
+            "QueueBookingFlow.select_courts summary ready user=%s date=%s time=%s courts=%s",
+            user_id,
+            store.summary['target_date'],
+            store.summary['target_time'],
+            cleaned_list,
+        )
+
+        reply_markup = TelegramUI.create_queue_confirmation_keyboard()
+        courts_text = format_court_preferences(cleaned_list, self.AVAILABLE_COURTS)
+        await self.edit_callback(
+            query,
+            TelegramUI.format_queue_confirmation_message(
+                selected_date,
+                selected_time,
+                courts_text,
+            ),
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
         )

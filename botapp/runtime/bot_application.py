@@ -8,6 +8,7 @@ import logging
 from typing import Optional
 
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import Application, ContextTypes
 
 from botapp.bootstrap.container import DependencyContainer
@@ -125,7 +126,7 @@ class BotApplication:
                 datetime.now(),
                 show_summary=True,
             )
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN_V2)
         except Exception as exc:  # pragma: no cover - defensive guard
             self.logger.error("Error checking courts: %s", exc)
             await MessageHandlers.handle_invalid_command(
