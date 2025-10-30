@@ -170,22 +170,220 @@ class BrowserPoolManager:
             context = await self.pool.browser.new_context(
                 viewport={"width": 1920, "height": 1080},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
                 locale="es-GT",
                 timezone_id="America/Guatemala",
+                # Enhanced HTTP headers for realistic browser behavior
+                extra_http_headers={
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Language": "es-GT,es;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "DNT": "1",
+                    "Connection": "keep-alive",
+                    "Upgrade-Insecure-Requests": "1",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "none",
+                    "Sec-Fetch-User": "?1",
+                    "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                    "Sec-Ch-Ua-Mobile": "?0",
+                    "Sec-Ch-Ua-Platform": '"Windows"',
+                    "Cache-Control": "max-age=0",
+                }
             )
             page = await context.new_page()
 
+            # Enhanced stealth script for comprehensive bot detection evasion
             await page.add_init_script(
                 """
-                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                window.chrome = { runtime: {} };
+                // ============================================================
+                // ENHANCED STEALTH MODE - Comprehensive Anti-Bot Detection
+                // ============================================================
+
+                // 1. WEBDRIVER PROPERTY - Hide automation
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+
+                // 2. CHROME OBJECT - Make it look like real Chrome
+                window.chrome = {
+                    runtime: {},
+                    loadTimes: function() {},
+                    csi: function() {},
+                    app: {}
+                };
+
+                // 3. PLUGINS - Add realistic browser plugins
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => {
+                        const plugins = [
+                            {
+                                0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: Plugin},
+                                description: "Portable Document Format",
+                                filename: "internal-pdf-viewer",
+                                length: 1,
+                                name: "Chrome PDF Plugin"
+                            },
+                            {
+                                0: {type: "application/pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: Plugin},
+                                description: "Portable Document Format",
+                                filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                                length: 1,
+                                name: "Chrome PDF Viewer"
+                            },
+                            {
+                                0: {type: "application/x-nacl", suffixes: "", description: "Native Client Executable", enabledPlugin: Plugin},
+                                1: {type: "application/x-pnacl", suffixes: "", description: "Portable Native Client Executable", enabledPlugin: Plugin},
+                                description: "Native Client",
+                                filename: "internal-nacl-plugin",
+                                length: 2,
+                                name: "Native Client"
+                            }
+                        ];
+                        return plugins;
+                    }
+                });
+
+                // 4. LANGUAGES - Add realistic language preferences
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['es-GT', 'es', 'en-US', 'en']
+                });
+
+                // 5. PLATFORM - Set realistic platform
+                Object.defineProperty(navigator, 'platform', {
+                    get: () => 'Win32'
+                });
+
+                // 6. HARDWARE CONCURRENCY - Realistic CPU cores
+                Object.defineProperty(navigator, 'hardwareConcurrency', {
+                    get: () => 8
+                });
+
+                // 7. DEVICE MEMORY - Add realistic device memory
+                Object.defineProperty(navigator, 'deviceMemory', {
+                    get: () => 8
+                });
+
+                // 8. VENDOR - Set to Google Inc.
+                Object.defineProperty(navigator, 'vendor', {
+                    get: () => 'Google Inc.'
+                });
+
+                // 9. MAX TOUCH POINTS - Desktop typically has 0
+                Object.defineProperty(navigator, 'maxTouchPoints', {
+                    get: () => 0
+                });
+
+                // 10. PERMISSIONS API - Handle permission queries properly
                 const originalQuery = window.navigator.permissions.query;
                 window.navigator.permissions.query = (parameters) => (
                     parameters.name === 'notifications'
                         ? Promise.resolve({ state: Notification.permission })
                         : originalQuery(parameters)
                 );
+
+                // 11. CANVAS FINGERPRINTING - Add slight randomization
+                const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+                const originalToBlob = HTMLCanvasElement.prototype.toBlob;
+                const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+
+                const noisify = function(canvas, context) {
+                    if (context) {
+                        const shift = Math.floor(Math.random() * 10) - 5;
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        for (let i = 0; i < imageData.data.length; i += 4) {
+                            imageData.data[i + 0] = imageData.data[i + 0] + shift; // R
+                            imageData.data[i + 1] = imageData.data[i + 1] + shift; // G
+                            imageData.data[i + 2] = imageData.data[i + 2] + shift; // B
+                        }
+                        context.putImageData(imageData, 0, 0);
+                    }
+                };
+
+                HTMLCanvasElement.prototype.toDataURL = function() {
+                    noisify(this, this.getContext('2d'));
+                    return originalToDataURL.apply(this, arguments);
+                };
+
+                HTMLCanvasElement.prototype.toBlob = function() {
+                    noisify(this, this.getContext('2d'));
+                    return originalToBlob.apply(this, arguments);
+                };
+
+                // 12. WEBGL FINGERPRINTING - Mask renderer info
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    // UNMASKED_VENDOR_WEBGL
+                    if (parameter === 37445) {
+                        return 'Intel Inc.';
+                    }
+                    // UNMASKED_RENDERER_WEBGL
+                    if (parameter === 37446) {
+                        return 'Intel Iris OpenGL Engine';
+                    }
+                    return getParameter.apply(this, arguments);
+                };
+
+                // 13. BATTERY API - Remove if exists (privacy concern)
+                if ('getBattery' in navigator) {
+                    navigator.getBattery = undefined;
+                }
+
+                // 14. CONNECTION - Add realistic connection info
+                Object.defineProperty(navigator, 'connection', {
+                    get: () => ({
+                        effectiveType: '4g',
+                        rtt: 50,
+                        downlink: 10,
+                        saveData: false
+                    })
+                });
+
+                // 15. MEDIA DEVICES - Make sure it exists
+                if (!navigator.mediaDevices) {
+                    navigator.mediaDevices = {};
+                }
+                if (!navigator.mediaDevices.enumerateDevices) {
+                    navigator.mediaDevices.enumerateDevices = () => Promise.resolve([]);
+                }
+
+                // 16. NOTIFICATIONS - Set realistic permission
+                Object.defineProperty(Notification, 'permission', {
+                    get: () => 'default'
+                });
+
+                // 17. SCREEN PROPERTIES - Make consistent with viewport
+                Object.defineProperty(screen, 'availWidth', {
+                    get: () => 1920
+                });
+                Object.defineProperty(screen, 'availHeight', {
+                    get: () => 1040
+                });
+                Object.defineProperty(screen, 'width', {
+                    get: () => 1920
+                });
+                Object.defineProperty(screen, 'height', {
+                    get: () => 1080
+                });
+
+                // 18. TIMEZONE - Already set via context, but ensure consistency
+                Object.defineProperty(Intl.DateTimeFormat.prototype, 'resolvedOptions', {
+                    value: function() {
+                        return {
+                            locale: 'es-GT',
+                            calendar: 'gregory',
+                            numberingSystem: 'latn',
+                            timeZone: 'America/Guatemala',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
+                        };
+                    }
+                });
+
+                // ============================================================
+                // END ENHANCED STEALTH MODE
+                // ============================================================
             """
             )
 
