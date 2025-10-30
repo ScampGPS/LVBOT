@@ -4,6 +4,38 @@ from __future__ import annotations
 from tracking import t
 
 from typing import Iterable, List
+from telegram.helpers import escape_markdown
+
+
+def escape_telegram_markdown(text: object, *, escape_special_chars: bool = False) -> str:
+    """
+    Escape text for Telegram Markdown.
+
+    Args:
+        text: Text to escape
+        escape_special_chars: If True, escape special characters like hyphens, periods, etc.
+                            Required when displaying dates, times with special formatting.
+                            Default False uses standard Markdown escaping.
+
+    Returns:
+        Escaped markdown string safe for Telegram
+    """
+    version = 2 if escape_special_chars else 1
+    return escape_markdown(str(text), version=version)
+
+
+def bold_telegram_text(text: object, *, escape_special_chars: bool = False) -> str:
+    """
+    Return bold Telegram Markdown text.
+
+    Args:
+        text: Text to make bold
+        escape_special_chars: If True, escape special characters in the text
+
+    Returns:
+        Bold markdown string
+    """
+    return f"*{escape_telegram_markdown(text, escape_special_chars=escape_special_chars)}*"
 
 
 class MarkdownBlockBuilder:
@@ -64,4 +96,9 @@ class MarkdownBuilderBase:
         return self._new_builder()
 
 
-__all__ = ["MarkdownBlockBuilder", "MarkdownBuilderBase"]
+__all__ = [
+    "MarkdownBlockBuilder",
+    "MarkdownBuilderBase",
+    "escape_telegram_markdown",
+    "bold_telegram_text",
+]

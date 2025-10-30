@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, Callable
 from datetime import datetime, date
 from telegram import Update
 from telegram.ext import ContextTypes
+import asyncio
 import logging
 
 from automation.executors import AsyncExecutorConfig, UnifiedAsyncBookingExecutor
@@ -330,6 +331,9 @@ class ImmediateBookingHandler:
             persist_error="Failed to persist immediate success: %s",
         )
 
+        # Send main menu follow-up after booking confirmation
+        await self._send_main_menu_followup(query, booking_request.user.user_id)
+
     async def _handle_failed_booking(
         self,
         query,
@@ -365,7 +369,7 @@ class ImmediateBookingHandler:
     async def _send_error(self, query, message: str) -> None:
         """
         Send error message with back to menu button
-        
+
         Args:
             query: Callback query
             message: Error message
@@ -374,4 +378,29 @@ class ImmediateBookingHandler:
         await query.edit_message_text(
             f"❌ {message}",
             reply_markup=TelegramUI.create_back_to_menu_keyboard()
+        )
+
+    async def _send_main_menu_followup(self, query, user_id: int) -> None:
+        """
+        Send main menu as a follow-up message after booking confirmation
+
+        Args:
+            query: Callback query
+            user_id: User ID for checking admin status and tier
+        """
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._send_main_menu_followup')
+
+        # Wait a few seconds before showing the menu
+        await asyncio.sleep(5)
+
+        # Get user info for tier badge
+        is_admin = self.user_manager.is_admin(user_id)
+        tier = self.user_manager.get_user_tier(user_id)
+        tier_badge = TelegramUI.format_user_tier_badge(tier.name)
+
+        # Send main menu
+        reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
+        await query.message.reply_text(
+            f"🎾 What would you like to do next? {tier_badge}",
+            reply_markup=reply_markup,
         )

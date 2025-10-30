@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
-from telegram.helpers import escape_markdown
 
+from botapp.ui.text_blocks import escape_telegram_markdown
 from infrastructure.constants import get_court_hours
 from infrastructure.settings import get_test_mode
 
@@ -276,6 +276,18 @@ def format_reservation_confirmation(reservation_details: Dict[str, Any]) -> str:
     )
     if 'confirmation_code' in reservation_details:
         message += f"\n🔑 Confirmation: {reservation_details['confirmation_code']}"
+
+    # Add Google Calendar and Cancel/Modify links if available
+    google_calendar_link = reservation_details.get('google_calendar_link')
+    cancel_modify_link = reservation_details.get('cancel_modify_link')
+
+    if google_calendar_link or cancel_modify_link:
+        message += "\n\n**Actions:**"
+        if google_calendar_link:
+            message += f"\n📅 [Add to Google Calendar]({google_calendar_link})"
+        if cancel_modify_link:
+            message += f"\n✏️ [Cancel/Modify Reservation]({cancel_modify_link})"
+
     return message
 
 
@@ -431,8 +443,8 @@ def format_availability_message(
     """Format court availability message."""
 
     t('botapp.ui.booking.format_availability_message')
-    date_str = escape_markdown(target_date.strftime('%A, %B %d'), version=2)
-    hyphen_md = escape_markdown('-', version=2)
+    date_str = escape_telegram_markdown(target_date.strftime('%A, %B %d'), escape_special_chars=True)
+    hyphen_md = escape_telegram_markdown('-', escape_special_chars=True)
 
     lines: List[str] = [
         "🎾 *Court Availability*",
@@ -452,17 +464,17 @@ def format_availability_message(
     sorted_times = sorted(times_by_slot.keys())
     if show_summary:
         lines.append(
-            f"⏰ Available slots: {escape_markdown(str(len(sorted_times)), version=2)}"
+            f"⏰ Available slots: {escape_telegram_markdown(str(len(sorted_times)), escape_special_chars=True)}"
         )
         lines.append(
-            f"🎾 Courts with availability: {escape_markdown(str(len(available_times)), version=2)}"
+            f"🎾 Courts with availability: {escape_telegram_markdown(str(len(available_times)), escape_special_chars=True)}"
         )
         lines.append("")
 
     for time in sorted_times:
         courts = ', '.join(f"C{c}" for c in sorted(times_by_slot[time]))
-        time_md = escape_markdown(time, version=2)
-        courts_md = escape_markdown(courts, version=2)
+        time_md = escape_telegram_markdown(time, escape_special_chars=True)
+        courts_md = escape_telegram_markdown(courts, escape_special_chars=True)
         lines.append(f"• {time_md} {hyphen_md} Courts: {courts_md}")
 
     return "\n".join(lines)
@@ -731,9 +743,9 @@ def format_interactive_availability_message(
     else:
         day_label = date_obj.strftime('%A')
 
-    day_label_md = escape_markdown(day_label, version=2)
-    total_slots_md = escape_markdown(str(total_slots), version=2)
-    hyphen_md = escape_markdown('-', version=2)
+    day_label_md = escape_telegram_markdown(day_label, escape_special_chars=True)
+    total_slots_md = escape_telegram_markdown(str(total_slots), escape_special_chars=True)
+    hyphen_md = escape_telegram_markdown('-', escape_special_chars=True)
 
     return (
         "🎾 *Online Court Availability*\n\n"

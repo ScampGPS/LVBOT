@@ -4,19 +4,17 @@ from __future__ import annotations
 from tracking import t
 
 from datetime import date
-from telegram.helpers import escape_markdown
+from botapp.ui.text_blocks import escape_telegram_markdown, bold_telegram_text
 
 
 def _md(value: object) -> str:
-    """Escape text for Telegram Markdown V2."""
-
-    return escape_markdown(str(value), version=2)
+    """Escape text for Telegram Markdown with special character escaping."""
+    return escape_telegram_markdown(value, escape_special_chars=True)
 
 
 def _bold(value: object) -> str:
     """Return bold Markdown text with proper escaping."""
-
-    return f"*{_md(value)}*"
+    return bold_telegram_text(value, escape_special_chars=True)
 
 
 def format_time_selection_prompt(selected_date: date, availability_note: str | None = None) -> str:

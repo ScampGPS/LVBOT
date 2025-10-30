@@ -10,25 +10,17 @@ from tracking import t
 
 from automation.shared.booking_contracts import BookingResult
 from botapp.ui.telegram_ui import TelegramUI
-from botapp.ui.text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
+from botapp.ui.text_blocks import (
+    MarkdownBlockBuilder,
+    MarkdownBuilderBase,
+    escape_telegram_markdown,
+    bold_telegram_text,
+)
 from infrastructure.settings import TestModeConfig
-from telegram.helpers import escape_markdown
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
-
-
-def _md(text: object) -> str:
-    """Escape text for Telegram Markdown."""
-
-    return escape_markdown(str(text))
-
-
-def _bold(text: object) -> str:
-    """Return bold Markdown text."""
-
-    return f"*{_md(text)}*"
 
 
 class NotificationBuilder(MarkdownBuilderBase):
@@ -67,11 +59,11 @@ class NotificationBuilder(MarkdownBuilderBase):
 
     def duplicate_warning(self, error_message: str) -> str:
         lines = [
-            f"⚠️ {_bold('Duplicate Reservation')}",
+            f"⚠️ {bold_telegram_text('Duplicate Reservation')}",
             "",
-            _md(error_message),
+            escape_telegram_markdown(error_message),
             "",
-            _md(
+            escape_telegram_markdown(
                 "You can only have one reservation per time slot. Please check your existing reservations or choose a different time."
             ),
         ]
@@ -99,34 +91,34 @@ class NotificationBuilder(MarkdownBuilderBase):
             )
 
         lines = [
-            f"✅ {_bold('Reservation Added to Queue!')}",
+            f"✅ {bold_telegram_text('Reservation Added to Queue!')}",
             "",
-            f"📅 Date: {_md(display_date)}",
-            f"⏱️ Time: {_md(booking_summary['target_time'])}",
-            f"🎾 Courts: {_md(courts_label)}",
+            f"📅 Date: {escape_telegram_markdown(display_date)}",
+            f"⏱️ Time: {escape_telegram_markdown(booking_summary['target_time'])}",
+            f"🎾 Courts: {escape_telegram_markdown(courts_label)}",
             "",
-            f"🤖 {_bold('Queue ID:')} {_md(reservation_id[:8] + '...')}",
+            f"🤖 {bold_telegram_text('Queue ID:')} {escape_telegram_markdown(reservation_id[:8] + '...')}",
             "",
         ]
 
         if test_mode_config.enabled:
-            lines.append(_bold("TEST MODE ACTIVE"))
+            lines.append(bold_telegram_text("TEST MODE ACTIVE"))
             lines.append(
-                _md(
+                escape_telegram_markdown(
                     f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!"
                 )
             )
             lines.append("")
         else:
             lines.append(
-                _md(
+                escape_telegram_markdown(
                     "Your reservation has been successfully added to the queue. The bot will automatically attempt to book this court when the booking window opens."
                 )
             )
             lines.append("")
 
         lines.append(
-            _md("You can view your queued reservations anytime using the My Reservations option.")
+            escape_telegram_markdown("You can view your queued reservations anytime using the My Reservations option.")
         )
 
         return "\n".join(lines)
@@ -178,12 +170,12 @@ def _send_notification(
     if calendar_row:
         keyboard.append(calendar_row)
 
-    # Add cancel/modify button (second row) - special interactive button
-    if cancel_modify_link and result.request_id:
+    # Add cancel/modify button (second row)
+    if cancel_modify_link:
         keyboard.append([
             InlineKeyboardButton(
-                "🗑️ Cancel Reservation",
-                callback_data=f"cancel_reservation:{result.request_id}"
+                "🗑️ Cancel/Modify Reservation",
+                url=cancel_modify_link
             )
         ])
 
