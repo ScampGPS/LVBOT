@@ -9,12 +9,12 @@
   - Canvas & WebGL fingerprint masking
   - Enhanced HTTP headers (Chrome 131)
   - Complete navigator property spoofing
-- ✅ **Solution 2: Enhanced Mouse & Behavioral Patterns** (Modular implementation)
+- ✅ **Solution 2: Enhanced Mouse & Behavioral Patterns** (Always enabled)
   - Scrolling behavior (2-4 actions with random scroll-back)
   - Hesitant clicking (move near → corrections → click)
   - Reading pauses (2-4 seconds)
   - Natural page interaction wrapper method
-  - Configurable via `ENABLE_ENHANCED_BEHAVIORS` flag
+  - Always active - no configuration needed
 
 ### 📊 Results:
 - ❌ Still getting "Irregular usage warning encountered" (last test before Solutions 1 & 2)

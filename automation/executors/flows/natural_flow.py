@@ -21,9 +21,6 @@ _VALIDATION_SLEEP = (0.3, 0.8)
 _MOUSE_DELAY = (0.2, 0.5)
 _FIELD_LINGER = (0.6, 1.4)
 
-# Enhanced behavioral patterns (Solution 2) - Set to True to enable
-ENABLE_ENHANCED_BEHAVIORS = True  # Scroll, hesitation, reading pauses
-
 
 class NaturalFlowSteps:
     """Encapsulates the human-like steps used by the natural booking flow."""
@@ -102,15 +99,9 @@ class NaturalFlowSteps:
         if not submit_button:
             submit_button = await self.page.query_selector('button:has-text("Confirm")')
         if submit_button:
-            # Enhanced behavior: Final reading pause before submission
-            if ENABLE_ENHANCED_BEHAVIORS:
-                await self.actions.reading_pause(duration_range=(1.0, 2.0))
-                await self.actions.click_with_hesitation(submit_button, hesitation_prob=0.8)
-            else:
-                await self.actions.move_mouse_to_element(submit_button)
-                await self.actions.pause(1.0, 2.0)
-                await submit_button.click()
-
+            # Final reading pause before submission
+            await self.actions.reading_pause(duration_range=(1.0, 2.0))
+            await self.actions.click_with_hesitation(submit_button, hesitation_prob=0.8)
             await self.actions.pause(1.0, 1.8)
 
     async def execute(
@@ -128,10 +119,9 @@ class NaturalFlowSteps:
         self.logger.info("Initial natural delay (%.1f seconds)...", delay)
         await self.actions.pause(delay, delay)
 
-        # Enhanced behavior: Natural page interaction (scroll + reading)
-        if ENABLE_ENHANCED_BEHAVIORS:
-            self.logger.info("Performing natural page interaction (scroll + reading)...")
-            await self.actions.natural_page_interaction(scroll=True, reading_pause=True)
+        # Natural page interaction (scroll + reading)
+        self.logger.info("Performing natural page interaction (scroll + reading)...")
+        await self.actions.natural_page_interaction(scroll=True, reading_pause=True)
 
         await self.move_mouse()
 
@@ -147,14 +137,9 @@ class NaturalFlowSteps:
 
         await self.actions.pause(*_VALIDATION_SLEEP)
 
-        # Enhanced behavior: Click with hesitation (or regular click)
-        if ENABLE_ENHANCED_BEHAVIORS:
-            self.logger.info("Clicking time slot with hesitation...")
-            await self.actions.click_with_hesitation(time_button, hesitation_prob=0.7)
-        else:
-            await self.actions.move_mouse_to_element(time_button)
-            await self.actions.pause(0.4, 1.2)
-            await time_button.click()
+        # Click time slot with hesitation
+        self.logger.info("Clicking time slot with hesitation...")
+        await self.actions.click_with_hesitation(time_button, hesitation_prob=0.7)
 
         await self.actions.pause(*_VALIDATION_SLEEP)
 
