@@ -48,5 +48,55 @@
       "executor": "UnifiedAsyncBookingExecutor",
       "flow": "natural"
     }
+  },
+  "imm_20251028230732_125763357": {
+    "id": "imm_20251028230732_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "failed",
+    "created_at": "2025-10-28T23:07:32.641021",
+    "court": "3",
+    "date": "2025-10-29",
+    "time": "20:15",
+    "message": "Booking confirmation not detected",
+    "errors": [
+      "Booking confirmation not detected"
+    ],
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-29",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251028231140_125763357": {
+    "id": "imm_20251028231140_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "failed",
+    "created_at": "2025-10-28T23:11:40.854229",
+    "court": "3",
+    "date": "2025-10-29",
+    "time": "20:15",
+    "message": "Booking confirmation not detected",
+    "errors": [
+      "Booking confirmation not detected"
+    ],
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-29",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
   }
 }
