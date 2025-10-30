@@ -56,10 +56,7 @@ class CallbackHandler:
 
         add = self.router.add_exact
         add('menu_reserve', self.booking.handle_reserve_menu)
-        add('menu_performance', self.booking.handle_performance_menu)
         add('menu_reservations', self.booking.handle_reservations_menu)
-        add('menu_help', self.booking.handle_help_menu)
-        add('menu_about', self.booking.handle_about_menu)
         add('back_to_menu', self.booking.handle_back_to_menu)
         add('reserve_48h_immediate', self.booking.handle_48h_immediate_booking)
         add('reserve_48h_future', self.booking.handle_48h_future_booking)

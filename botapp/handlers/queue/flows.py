@@ -1519,37 +1519,13 @@ class QueueReservationManager(QueueFlowBase):
         if reservation.get('confirmation_id'):
             message += f"🔖 Confirmation: {reservation['confirmation_id']}\n"
 
-        keyboard: list[list[InlineKeyboardButton]] = []
-        if status in {'pending', 'scheduled'}:
-            keyboard.append([
-                InlineKeyboardButton(
-                    "❌ Cancel Reservation",
-                    callback_data=f"res_action_cancel_{reservation_id}",
-                )
-            ])
-        elif status in {'confirmed', 'active', 'completed'}:
-            if reservation.get('can_cancel', True):
-                keyboard.append([
-                    InlineKeyboardButton(
-                        "❌ Cancel Reservation",
-                        callback_data=f"res_action_cancel_{reservation_id}",
-                    )
-                ])
-            if reservation.get('can_modify', False):
-                keyboard.append([
-                    InlineKeyboardButton(
-                        "✏️ Modify Reservation",
-                        callback_data=f"res_action_modify_{reservation_id}",
-                    )
-                ])
-
-        keyboard.append([
-            InlineKeyboardButton("📤 Share Details", callback_data=f"res_action_share_{reservation_id}"),
-        ])
-        keyboard.append([
-            InlineKeyboardButton("⬅️ Back to Reservations", callback_data='menu_reservations'),
-            InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu'),
-        ])
+        # Simple navigation-only keyboard (edit/cancel actions are in Queued Reservations menu)
+        keyboard: list[list[InlineKeyboardButton]] = [
+            [
+                InlineKeyboardButton("⬅️ Back to Reservations", callback_data='menu_reservations'),
+                InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu'),
+            ]
+        ]
 
         return message, keyboard
 

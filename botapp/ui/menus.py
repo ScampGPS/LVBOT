@@ -21,14 +21,9 @@ def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0) ->
             InlineKeyboardButton("📋 Queued Reservations", callback_data='menu_queued'),
         ],
         [
-            InlineKeyboardButton("👤 Profile", callback_data='menu_profile'),
-            InlineKeyboardButton("📊 Performance", callback_data='menu_performance'),
-        ],
-        [
             InlineKeyboardButton("📅 Reservations", callback_data='menu_reservations'),
-            InlineKeyboardButton("💡 Help", callback_data='menu_help'),
+            InlineKeyboardButton("👤 Profile", callback_data='menu_profile'),
         ],
-        [InlineKeyboardButton("ℹ️ About", callback_data='menu_about')],
     ]
 
     if is_admin:

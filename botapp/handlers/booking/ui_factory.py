@@ -32,25 +32,6 @@ class BookingUIFactory:
             reply_markup=keyboard,
         )
 
-    def performance_menu(self) -> BookingMenuView:
-        """Return the view for the performance placeholder menu."""
-
-        content = (
-            "📊 Performance\n\n"
-            "This feature is under development.\n\n"
-            "Soon you'll be able to view:\n"
-            "• Your booking success rate\n"
-            "• Average response time\n"
-            "• Most played courts and times\n"
-            "• Weekly/monthly statistics\n"
-            "• Comparison with other users\n\n"
-            "Coming soon!"
-        )
-        return BookingMenuView(
-            text=content,
-            reply_markup=self._ui.create_back_to_menu_keyboard(),
-        )
-
     def empty_reservations_view(self) -> BookingMenuView:
         """Return the view shown when a user has no reservations."""
 
