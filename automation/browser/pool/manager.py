@@ -7,16 +7,21 @@ import asyncio
 import logging
 import os
 import random
+from pathlib import Path
 from typing import Dict, Optional
 
 from playwright.async_api import async_playwright
 
+from automation.executors.flows.human_behaviors import HumanLikeActions
 from infrastructure.constants import BrowserPoolConfig, BrowserTimeouts
 
 logger = logging.getLogger(__name__)
 
 # Configuration for natural navigation (anti-bot evasion)
 MAIN_SITE_URL = "https://clublavilla.as.me"
+
+# Cookie persistence directory (for returning user simulation)
+BROWSER_STATES_DIR = Path("browser_states")
 
 
 class BrowserPoolManager:
@@ -41,6 +46,42 @@ class BrowserPoolManager:
             self.logger.info("Natural navigation enabled - will visit main site before court pages")
         else:
             self.logger.info("Natural navigation disabled - using direct court page navigation")
+
+    @staticmethod
+    def _get_storage_state_path(court: int) -> Path:
+        """Get path to saved browser state for a court."""
+        BROWSER_STATES_DIR.mkdir(exist_ok=True)
+        return BROWSER_STATES_DIR / f"court_{court}_state.json"
+
+    @staticmethod
+    def _has_saved_state(court: int) -> bool:
+        """Check if saved browser state exists for a court."""
+        return BrowserPoolManager._get_storage_state_path(court).exists()
+
+    @staticmethod
+    def clear_browser_state(court: int) -> bool:
+        """Clear saved browser state for a specific court.
+
+        Args:
+            court: Court number
+
+        Returns:
+            True if file was deleted, False if it didn't exist
+        """
+        state_path = BrowserPoolManager._get_storage_state_path(court)
+        if state_path.exists():
+            state_path.unlink()
+            return True
+        return False
+
+    async def _save_context_state(self, context, court: int) -> None:
+        """Save browser state (cookies, localStorage) for returning user simulation."""
+        try:
+            state_path = self._get_storage_state_path(court)
+            await context.storage_state(path=str(state_path))
+            self.logger.info("Court %s: Browser state saved (returning user simulation)", court)
+        except Exception as e:
+            self.logger.warning("Court %s: Failed to save browser state: %s", court, e)
 
     async def start_pool(self) -> None:
         """Initialize Playwright, launch Chromium, and prepare court pages."""
@@ -167,14 +208,15 @@ class BrowserPoolManager:
             "automation.browser.pool.manager.BrowserPoolManager.create_and_navigate_court_page_safe"
         )
         try:
-            context = await self.pool.browser.new_context(
-                viewport={"width": 1920, "height": 1080},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            # Check for saved browser state (returning user simulation)
+            context_kwargs = {
+                "viewport": {"width": 1920, "height": 1080},
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                locale="es-GT",
-                timezone_id="America/Guatemala",
+                "locale": "es-GT",
+                "timezone_id": "America/Guatemala",
                 # Enhanced HTTP headers for realistic browser behavior
-                extra_http_headers={
+                "extra_http_headers": {
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                     "Accept-Language": "es-GT,es;q=0.9,en-US;q=0.8,en;q=0.7",
                     "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -190,7 +232,15 @@ class BrowserPoolManager:
                     "Sec-Ch-Ua-Platform": '"Windows"',
                     "Cache-Control": "max-age=0",
                 }
-            )
+            }
+
+            # Load saved state if exists (makes browser appear as returning user)
+            if self._has_saved_state(court):
+                state_path = str(self._get_storage_state_path(court))
+                context_kwargs["storage_state"] = state_path
+                self.logger.info("Court %s: Loading saved browser state (returning user)", court)
+
+            context = await self.pool.browser.new_context(**context_kwargs)
             page = await context.new_page()
 
             # Enhanced stealth script for comprehensive bot detection evasion
@@ -407,15 +457,18 @@ class BrowserPoolManager:
                         timeout=BrowserTimeouts.SLOW_NAVIGATION,
                     )
 
-                    # Step 2: Brief natural interaction (2-4 seconds with mouse movement)
-                    await asyncio.sleep(random.uniform(2.0, 4.0))
+                    # Step 2: Sophisticated natural interaction using HumanLikeActions
+                    # (Bezier curves, natural scrolling, reading pauses)
+                    if not self.pool.production_mode:
+                        self.logger.info(
+                            "Court %s: Performing sophisticated warmup (HumanLikeActions)", court
+                        )
+                    actions = HumanLikeActions(page, speed_multiplier=1.8)
+                    await actions.natural_page_interaction(scroll=True, reading_pause=True)
 
-                    # Simple mouse movement to appear human
-                    for _ in range(random.randint(1, 3)):
-                        x = random.randint(200, 1000)
-                        y = random.randint(200, 700)
-                        await page.mouse.move(x, y)
-                        await asyncio.sleep(random.uniform(0.3, 0.7))
+                    # Additional natural mouse movements (using bezier curves)
+                    for _ in range(random.randint(1, 2)):
+                        await actions.move_mouse_random()
 
                     # Step 3: Navigate to court page
                     if not self.pool.production_mode:
@@ -460,6 +513,9 @@ class BrowserPoolManager:
                 )
                 await asyncio.sleep(warmup_delay)
                 self.logger.info("Court %s: Browser warm-up completed", court)
+
+                # Save browser state for future sessions (returning user simulation)
+                await self._save_context_state(context, court)
             else:
                 self.logger.warning(
                     "Court %s: No direct URL available for pre-navigation", court

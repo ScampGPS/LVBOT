@@ -49,6 +49,9 @@ authorized_users.json
 users.json
 queue.json
 
+# Browser session states (cookie persistence for anti-bot)
+browser_states/
+
 # OS
 .DS_Store
 Thumbs.db
