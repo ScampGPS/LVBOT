@@ -16,7 +16,7 @@ from automation.executors.core import ExecutionResult
 from .helpers import confirmation_result
 from .human_behaviors import HumanLikeActions
 
-WORKING_SPEED_MULTIPLIER = 2.5
+WORKING_SPEED_MULTIPLIER = 1.0  # Changed from 2.5 to human speed for anti-bot evasion
 _VALIDATION_SLEEP = (0.3, 0.8)
 _MOUSE_DELAY = (0.2, 0.5)
 _FIELD_LINGER = (0.6, 1.4)
@@ -61,8 +61,15 @@ class NaturalFlowSteps:
             element = await self._scroll_into_view(selector)
             if not element:
                 continue
-            await self.actions.type_text(element, user_info.get(key, ""))
-            await self.actions.pause(*_FIELD_LINGER)
+            value = user_info.get(key, "")
+            if key == "phone":
+                await element.click()
+                await self.actions.pause(0.4, 0.8)
+                await element.fill(str(value))
+                await self.actions.pause(0.6, 1.1)
+            else:
+                await self.actions.type_text(element, str(value))
+                await self.actions.pause(*_FIELD_LINGER)
             await self.actions.move_mouse_random()
 
         try:

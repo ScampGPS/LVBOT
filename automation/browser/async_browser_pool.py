@@ -83,6 +83,18 @@ class AsyncBrowserPool:
         self.production_mode = PRODUCTION_MODE
         self.manager = BrowserPoolManager(self, log=logger)
 
+    def enable_natural_navigation(self, enabled: bool = True) -> None:
+        """Enable or disable natural navigation for anti-bot evasion.
+
+        When enabled, browsers will visit the main site first before navigating
+        to court pages, mimicking natural user behavior.
+
+        Args:
+            enabled: True to enable natural navigation, False for direct navigation
+        """
+        t("automation.browser.async_browser_pool.AsyncBrowserPool.enable_natural_navigation")
+        self.manager.enable_natural_navigation(enabled)
+
     start = _manager_delegate(
         "start_pool",
         "automation.browser.async_browser_pool.AsyncBrowserPool.start",

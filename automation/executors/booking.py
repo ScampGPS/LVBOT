@@ -17,6 +17,9 @@ from .flows.fast_flow import execute_fast_flow
 from .flows.natural_flow import execute_natural_flow
 
 
+NATURAL_INITIAL_DELAY_RANGE = (28.0, 32.0)
+
+
 class BookingFlowExecutor:
     """Unified booking executor supporting natural and fast flows."""
 
@@ -28,6 +31,7 @@ class BookingFlowExecutor:
         self.browser_pool = browser_pool
         self.mode = mode
         self.logger = logging.getLogger("BookingFlowExecutor")
+        self.initial_delay_range = NATURAL_INITIAL_DELAY_RANGE
 
     async def execute_booking(
         self,
@@ -101,8 +105,7 @@ class BookingFlowExecutor:
         time_slot: str,
         user_info: Dict[str, str],
     ) -> ExecutionResult:
-        delay_min = getattr(self, "INITIAL_DELAY_MIN", 3.0)
-        delay_max = getattr(self, "INITIAL_DELAY_MAX", 5.0)
+        delay_min, delay_max = self.initial_delay_range
         return await execute_natural_flow(
             page,
             court_number,

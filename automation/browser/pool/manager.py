@@ -5,6 +5,8 @@ from tracking import t
 
 import asyncio
 import logging
+import os
+import random
 from typing import Dict, Optional
 
 from playwright.async_api import async_playwright
@@ -12,6 +14,9 @@ from playwright.async_api import async_playwright
 from infrastructure.constants import BrowserPoolConfig, BrowserTimeouts
 
 logger = logging.getLogger(__name__)
+
+# Configuration for natural navigation (anti-bot evasion)
+MAIN_SITE_URL = "https://clublavilla.as.me"
 
 
 class BrowserPoolManager:
@@ -21,6 +26,21 @@ class BrowserPoolManager:
         t("automation.browser.pool.manager.BrowserPoolManager.__init__")
         self.pool = pool
         self.logger = log or logger
+        # Default to False for backward compatibility - must be explicitly enabled
+        self.use_natural_navigation = False
+
+    def enable_natural_navigation(self, enabled: bool = True) -> None:
+        """Enable or disable natural navigation for anti-bot evasion.
+
+        Args:
+            enabled: True to enable natural navigation (visit main site first),
+                    False to use direct navigation (default/legacy behavior)
+        """
+        self.use_natural_navigation = enabled
+        if enabled:
+            self.logger.info("Natural navigation enabled - will visit main site before court pages")
+        else:
+            self.logger.info("Natural navigation disabled - using direct court page navigation")
 
     async def start_pool(self) -> None:
         """Initialize Playwright, launch Chromium, and prepare court pages."""
@@ -174,9 +194,41 @@ class BrowserPoolManager:
 
             if court in self.pool.DIRECT_COURT_URLS:
                 court_url = self.pool.DIRECT_COURT_URLS[court]
+
+                # Natural navigation: Visit main site first for anti-bot evasion
+                if self.use_natural_navigation:
+                    if not self.pool.production_mode:
+                        self.logger.info(
+                            "Court %s: Natural navigation - visiting main site first", court
+                        )
+
+                    # Step 1: Visit main site
+                    await page.goto(
+                        MAIN_SITE_URL,
+                        wait_until="networkidle",
+                        timeout=BrowserTimeouts.SLOW_NAVIGATION,
+                    )
+
+                    # Step 2: Brief natural interaction (2-4 seconds with mouse movement)
+                    await asyncio.sleep(random.uniform(2.0, 4.0))
+
+                    # Simple mouse movement to appear human
+                    for _ in range(random.randint(1, 3)):
+                        x = random.randint(200, 1000)
+                        y = random.randint(200, 700)
+                        await page.mouse.move(x, y)
+                        await asyncio.sleep(random.uniform(0.3, 0.7))
+
+                    # Step 3: Navigate to court page
+                    if not self.pool.production_mode:
+                        self.logger.info(
+                            "Court %s: Now navigating to court page", court
+                        )
+
+                # Navigate to court page (either directly or after main site)
                 if not self.pool.production_mode:
                     self.logger.debug(
-                        "Court %s: Pre-navigating to %s", court, court_url
+                        "Court %s: Navigating to %s", court, court_url
                     )
 
                 await page.goto(

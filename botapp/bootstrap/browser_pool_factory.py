@@ -20,6 +20,11 @@ def build_browser_resources(
     # Future refactors can leverage ``config.browser`` to fine-tune pool behaviour.
     _ = config
     browser_pool = AsyncBrowserPool()
+
+    # Enable natural navigation for anti-bot evasion
+    # This ensures all browsers open to main site first before navigating to court pages
+    browser_pool.enable_natural_navigation(True)
+
     browser_manager = BrowserManager(pool=browser_pool)
     availability_checker = AvailabilityChecker(browser_pool)
 

@@ -294,6 +294,11 @@ class ReservationScheduler:
                 log_prefix="Using pre-initialized browser pool from main thread"
             )
 
+        # Enable natural navigation for reserved bookings (anti-bot evasion)
+        if self.browser_pool:
+            self.logger.info("Enabling natural navigation for reserved bookings")
+            self.browser_pool.enable_natural_navigation(True)
+
         self.logger.info("Reservation scheduler started with browser pool ready")
 
         # Check for existing reservations and attempt to book ready ones
@@ -318,6 +323,11 @@ class ReservationScheduler:
             self.browser_lifecycle.ensure_services(
                 log_prefix="Using pre-initialized browser pool from main thread"
             )
+
+        # Enable natural navigation for reserved bookings (anti-bot evasion)
+        if self.browser_pool:
+            self.logger.info("Enabling natural navigation for reserved bookings")
+            self.browser_pool.enable_natural_navigation(True)
 
         self.scheduler_thread = threading.Thread(
             target=lambda: asyncio.run(
