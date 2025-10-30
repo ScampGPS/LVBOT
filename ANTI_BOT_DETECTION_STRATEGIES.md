@@ -16,10 +16,16 @@
   - Natural page interaction wrapper method
   - Always active - no configuration needed
 
+### 📊 Configuration:
+- Speed multiplier: 1.8 (optimized for real human speed)
+- Scroll actions: 1-2 quick scrolls (reduced from 2-4)
+- Hesitation probability: 50-60% (reduced from 70-80%)
+- Reading pauses: 0.5-1.5s (reduced from 2-4s)
+- Target booking time: **~30 seconds** (matches real human)
+
 ### 📊 Results:
-- ❌ Still getting "Irregular usage warning encountered" (last test before Solutions 1 & 2)
-- Total booking time: ~37 seconds base (will be 50-60s with enhanced behaviors)
-- **Next:** Test with both stealth + behavioral enhancements
+- ❌ Still getting "Irregular usage warning encountered" (last test before optimizations)
+- **Next:** Test with optimized timing (~30s total)
 
 ## Research Findings
 

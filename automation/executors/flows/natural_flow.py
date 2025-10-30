@@ -16,10 +16,10 @@ from automation.executors.core import ExecutionResult
 from .helpers import confirmation_result
 from .human_behaviors import HumanLikeActions
 
-WORKING_SPEED_MULTIPLIER = 1.0  # Changed from 2.5 to human speed for anti-bot evasion
-_VALIDATION_SLEEP = (0.3, 0.8)
-_MOUSE_DELAY = (0.2, 0.5)
-_FIELD_LINGER = (0.6, 1.4)
+WORKING_SPEED_MULTIPLIER = 1.8  # Optimized for real human speed (~30s total)
+_VALIDATION_SLEEP = (0.2, 0.5)  # Reduced from (0.3, 0.8)
+_MOUSE_DELAY = (0.1, 0.3)        # Reduced from (0.2, 0.5)
+_FIELD_LINGER = (0.4, 0.8)       # Reduced from (0.6, 1.4)
 
 
 class NaturalFlowSteps:
@@ -99,10 +99,14 @@ class NaturalFlowSteps:
         if not submit_button:
             submit_button = await self.page.query_selector('button:has-text("Confirm")')
         if submit_button:
-            # Final reading pause before submission
-            await self.actions.reading_pause(duration_range=(1.0, 2.0))
-            await self.actions.click_with_hesitation(submit_button, hesitation_prob=0.8)
-            await self.actions.pause(1.0, 1.8)
+            # Brief pause before submission
+            await self.actions.reading_pause(duration_range=(0.5, 1.0))  # Reduced from (1.0, 2.0)
+            await self.actions.click_with_hesitation(
+                submit_button,
+                hesitation_prob=0.6,              # Reduced from 0.8
+                correction_count_range=(0, 1)     # Reduced max from 2
+            )
+            await self.actions.pause(0.8, 1.2)  # Reduced from (1.0, 1.8)
 
     async def execute(
         self,
@@ -119,9 +123,14 @@ class NaturalFlowSteps:
         self.logger.info("Initial natural delay (%.1f seconds)...", delay)
         await self.actions.pause(delay, delay)
 
-        # Natural page interaction (scroll + reading)
-        self.logger.info("Performing natural page interaction (scroll + reading)...")
-        await self.actions.natural_page_interaction(scroll=True, reading_pause=True)
+        # Natural page interaction (quick scroll + brief reading)
+        self.logger.info("Performing natural page interaction (quick scroll + brief reading)...")
+        await self.actions.scroll_naturally(
+            scroll_count_range=(1, 2),      # Reduced from (2, 4)
+            scroll_amount_range=(100, 300),  # Reduced max from 400
+            scroll_back_prob=0.15            # Reduced from 0.3
+        )
+        await self.actions.reading_pause(duration_range=(0.8, 1.5))  # Reduced from (2.0, 4.0)
 
         await self.move_mouse()
 
@@ -139,7 +148,11 @@ class NaturalFlowSteps:
 
         # Click time slot with hesitation
         self.logger.info("Clicking time slot with hesitation...")
-        await self.actions.click_with_hesitation(time_button, hesitation_prob=0.7)
+        await self.actions.click_with_hesitation(
+            time_button,
+            hesitation_prob=0.5,              # Reduced from 0.7
+            correction_count_range=(0, 1)     # Reduced max from 2
+        )
 
         await self.actions.pause(*_VALIDATION_SLEEP)
 
@@ -163,7 +176,7 @@ class NaturalFlowSteps:
             )
 
         await self.fill_user_form(user_info)
-        await self.actions.pause(1.8, 3.5)
+        await self.actions.pause(0.8, 1.5)  # Reduced from (1.8, 3.5)
         await self.actions.move_mouse_random()
         self.logger.info("Submitting booking form (natural mode)...")
         await self.submit()
