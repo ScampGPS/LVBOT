@@ -13,7 +13,12 @@
       "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git status\")",
       "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git diff automation/browser/pool/manager.py\")",
       "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .gitignore automation/browser/pool/manager.py tests/bot/test_browser_warmup_playwright.py tests/bot/WARMUP_TEST_README.md\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git diff .claude/settings.local.json\")"
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git diff .claude/settings.local.json\")",
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git commit -F .git_commit_msg2.tmp\")",
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && del .git_commit_msg2.tmp && git status && echo. && git log -2 --oneline\")",
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json && git commit -m \"\"chore: update Claude settings with latest git commands\"\"\")",
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json && git commit -m \"\"chore: update Claude settings\"\"\")",
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json\")"
     ],
     "deny": [],
     "ask": []
