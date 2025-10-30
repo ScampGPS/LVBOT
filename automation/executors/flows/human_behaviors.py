@@ -173,5 +173,132 @@ class HumanLikeActions:
         )
         return float(dims.get("width", 1280)), float(dims.get("height", 720))
 
+    # ------------------------------------------------------------------
+    # Enhanced behavioral patterns (Solution 2 - Anti-bot evasion)
+    # ------------------------------------------------------------------
+    async def scroll_naturally(
+        self,
+        *,
+        scroll_count_range: Tuple[int, int] = (2, 4),
+        scroll_amount_range: Tuple[int, int] = (100, 400),
+        scroll_back_prob: float = 0.3,
+    ) -> None:
+        """Scroll page naturally like a human reading content.
+
+        Args:
+            scroll_count_range: Min/max number of scroll actions
+            scroll_amount_range: Min/max pixels to scroll per action
+            scroll_back_prob: Probability of scrolling back up (like re-reading)
+        """
+        scroll_count = random.randint(*scroll_count_range)
+
+        for _ in range(scroll_count):
+            scroll_amount = random.randint(*scroll_amount_range)
+            try:
+                await self.page.mouse.wheel(0, scroll_amount)
+            except Exception:
+                pass
+            await self.pause(0.8, 1.5)
+
+        # Sometimes scroll back up like re-reading
+        if random.random() < scroll_back_prob:
+            scroll_back = random.randint(50, 150)
+            try:
+                await self.page.mouse.wheel(0, -scroll_back)
+            except Exception:
+                pass
+            await self.pause(0.5, 1.0)
+
+    async def click_with_hesitation(
+        self,
+        element,
+        *,
+        hesitation_prob: float = 0.7,
+        correction_count_range: Tuple[int, int] = (0, 2),
+    ) -> None:
+        """Click element with human-like hesitation and aiming.
+
+        Instead of moving directly to button, move near it first,
+        make small corrections (like aiming), then click.
+
+        Args:
+            element: The element to click
+            hesitation_prob: Probability of showing hesitation (0.0-1.0)
+            correction_count_range: Range for number of small aim corrections
+        """
+        try:
+            box = await element.bounding_box()
+        except Exception:
+            # Fallback to simple click if bounding box fails
+            await element.click()
+            return
+
+        if not box:
+            await element.click()
+            return
+
+        # If hesitating, move near the button first
+        if random.random() < hesitation_prob:
+            # Move to area near button (not directly on it)
+            near_x = box["x"] + box["width"] * random.uniform(0.3, 0.7)
+            near_y = box["y"] + box["height"] * random.uniform(0.3, 0.7)
+
+            # Add slight random offset
+            near_x += random.uniform(-20, 20)
+            near_y += random.uniform(-20, 20)
+
+            await self._mouse_curve_to(near_x, near_y)
+            await self.pause(0.3, 0.8)
+
+            # Small corrections (like fine-tuning aim)
+            correction_count = random.randint(*correction_count_range)
+            for _ in range(correction_count):
+                adjust_x = near_x + random.uniform(-10, 10)
+                adjust_y = near_y + random.uniform(-10, 10)
+                try:
+                    await self.page.mouse.move(adjust_x, adjust_y)
+                except Exception:
+                    pass
+                await self.pause(0.1, 0.3)
+
+        # Now move to button center and click
+        target_x = box["x"] + box["width"] * 0.5
+        target_y = box["y"] + box["height"] * 0.5
+        await self._mouse_curve_to(target_x, target_y)
+        await self.pause(0.2, 0.5)
+
+        await element.click()
+
+    async def reading_pause(
+        self, *, duration_range: Tuple[float, float] = (2.0, 4.0)
+    ) -> None:
+        """Pause as if reading or thinking about the content.
+
+        Args:
+            duration_range: Min/max seconds to pause
+        """
+        await self.pause(*duration_range)
+
+    async def natural_page_interaction(
+        self,
+        *,
+        scroll: bool = True,
+        reading_pause: bool = True,
+    ) -> None:
+        """Perform natural page interaction (scrolling, reading pauses).
+
+        Combines scrolling and reading pauses in a realistic sequence.
+        Use this before performing booking actions.
+
+        Args:
+            scroll: Whether to perform scrolling
+            reading_pause: Whether to add reading pauses
+        """
+        if scroll:
+            await self.scroll_naturally()
+
+        if reading_pause:
+            await self.reading_pause()
+
 
 __all__ = ["HumanLikeActions"]

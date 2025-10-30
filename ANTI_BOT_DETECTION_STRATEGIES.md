@@ -9,11 +9,17 @@
   - Canvas & WebGL fingerprint masking
   - Enhanced HTTP headers (Chrome 131)
   - Complete navigator property spoofing
+- ✅ **Solution 2: Enhanced Mouse & Behavioral Patterns** (Modular implementation)
+  - Scrolling behavior (2-4 actions with random scroll-back)
+  - Hesitant clicking (move near → corrections → click)
+  - Reading pauses (2-4 seconds)
+  - Natural page interaction wrapper method
+  - Configurable via `ENABLE_ENHANCED_BEHAVIORS` flag
 
 ### 📊 Results:
-- ❌ Still getting "Irregular usage warning encountered" (last test before Solution 1)
-- Total booking time: ~37 seconds (reasonable)
-- **Next:** Test with enhanced stealth implementation
+- ❌ Still getting "Irregular usage warning encountered" (last test before Solutions 1 & 2)
+- Total booking time: ~37 seconds base (will be 50-60s with enhanced behaviors)
+- **Next:** Test with both stealth + behavioral enhancements
 
 ## Research Findings
 
@@ -119,7 +125,7 @@ context = await browser.new_context(
 
 ---
 
-### 🥈 Solution 2: Enhanced Mouse & Behavioral Patterns
+### 🥈 Solution 2: Enhanced Mouse & Behavioral Patterns ✅ **IMPLEMENTED**
 **Difficulty:** Medium | **Impact:** Medium-High | **Time:** 2-3 hours
 
 **Problem:** Current mouse movements may still look robotic
@@ -334,11 +340,11 @@ async def solve_recaptcha_if_present(page):
 
 ## Recommended Implementation Order
 
-### Phase 1 (Do First - Highest ROI):
+### Phase 1 (Do First - Highest ROI): ✅ **COMPLETE**
 1. ✅ Natural navigation (DONE)
 2. ✅ Speed multiplier to 1.0 (DONE)
 3. ✅ **Solution 1: Enhanced browser fingerprinting** (DONE - 18 measures implemented)
-4. **Solution 2: Better mouse/behavioral patterns** ⬅️ DO THIS NEXT IF STILL FAILING
+4. ✅ **Solution 2: Better mouse/behavioral patterns** (DONE - Modular HumanLikeActions extension)
 
 ### Phase 2 (If Phase 1 Doesn't Work):
 5. **Solution 3: Session warming**
