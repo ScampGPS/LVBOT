@@ -19,6 +19,7 @@ from botapp.handlers.state import get_session_state, reset_flow
 from botapp.booking.immediate_handler import ImmediateBookingHandler
 from botapp.error_handler import ErrorHandler
 from reservations.queue.reservation_tracker import ReservationTracker
+from reservations.services.cancellation_service import ReservationCancellationService
 
 
 class CallbackHandler:
@@ -45,6 +46,7 @@ class CallbackHandler:
         self.profile = ProfileHandler(self.deps)
         self.queue = QueueHandler(self.deps)
         self.admin = AdminHandler(self.deps)
+        self.cancellation_service = ReservationCancellationService()
 
         self.router = CallbackRouter(self.booking.handle_unknown_menu)
         self._register_routes()
@@ -112,6 +114,7 @@ class CallbackHandler:
         self.router.add_prefix('letter_', self.profile.handle_letter_input)
         self.router.add_prefix('email_char_', self.profile.handle_email_callbacks)
         self.router.add_prefix('admin_view_user_', self._handle_admin_view_user)
+        self.router.add_prefix('cancel_reservation:', self._handle_cancel_reservation)
 
         # Predicate-based routes
         self.router.add_predicate(lambda data: data.startswith('date_'), self._handle_date_callback)
@@ -160,6 +163,80 @@ class CallbackHandler:
 
     async def _handle_immediate_booking_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await self.deps.booking_handler.handle_booking_cancellation(update, context)
+
+    async def _handle_cancel_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle interactive cancellation of a reservation."""
+        query = update.callback_query
+        data = query.data or ''
+
+        # Extract reservation_id from callback data (format: "cancel_reservation:reservation_id")
+        try:
+            reservation_id = data.split(':', 1)[1]
+        except IndexError:
+            await query.message.reply_text("❌ Invalid cancellation request")
+            return
+
+        self.logger.info("User %s requested cancellation of reservation %s", update.effective_user.id, reservation_id)
+
+        # Send initial message
+        await query.message.reply_text("🔄 Cancelling your reservation, please wait...")
+
+        # Get the cancel URL from reservation tracker
+        reservation = self.deps.reservation_tracker.get_reservation(reservation_id)
+
+        if not reservation:
+            self.logger.warning("Reservation %s not found in tracker", reservation_id)
+            await query.message.reply_text(
+                "❌ Could not find reservation information.\n\n"
+                "The reservation may have already been cancelled or the booking details are no longer available."
+            )
+            return
+
+        # Try to get cancel URL from metadata first, then from top-level
+        metadata = reservation.get('metadata', {})
+        cancel_url = metadata.get('cancel_modify_link') or reservation.get('cancel_modify_link')
+
+        if not cancel_url:
+            self.logger.warning("No cancel URL found for reservation %s", reservation_id)
+            await query.message.reply_text(
+                "❌ Could not find cancellation link for this reservation.\n\n"
+                "Please try cancelling directly through your confirmation email."
+            )
+            return
+
+        # Attempt to cancel using disposable browser
+        try:
+            result = await self.cancellation_service.cancel_reservation(cancel_url)
+
+            if result.get('success'):
+                self.logger.info("✅ Successfully cancelled reservation %s", reservation_id)
+
+                # Update reservation status in tracker
+                self.deps.reservation_tracker.cancel_reservation(reservation_id)
+
+                await query.message.reply_text(
+                    "✅ *Reservation Cancelled Successfully!*\n\n"
+                    "Your court reservation has been cancelled.\n"
+                    "You should receive a cancellation confirmation email shortly.",
+                    parse_mode='Markdown'
+                )
+            else:
+                error_msg = result.get('message', 'Unknown error')
+                self.logger.warning("Failed to cancel reservation %s: %s", reservation_id, error_msg)
+
+                await query.message.reply_text(
+                    f"⚠️ *Could Not Cancel Reservation*\n\n"
+                    f"{error_msg}\n\n"
+                    f"You can try cancelling manually using the link in your confirmation email.",
+                    parse_mode='Markdown'
+                )
+
+        except Exception as exc:
+            self.logger.error("Exception during cancellation of %s: %s", reservation_id, exc, exc_info=True)
+            await query.message.reply_text(
+                "❌ An error occurred while cancelling your reservation.\n\n"
+                "Please try cancelling directly through your confirmation email."
+            )
 
     async def _handle_admin_view_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         data = update.callback_query.data or ''

@@ -45,6 +45,11 @@ class BotApplication:
         self.queue = self.reservation_queue
         self.user_db = self.user_manager
 
+        # Update scheduler with bot handler reference after initialization
+        # This enables Telegram notifications for booking results
+        self.scheduler.bot = self
+        self.logger.info("✅ Scheduler bot handler configured for notifications")
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command."""
         t('botapp.runtime.bot_application.BotApplication.start_command')

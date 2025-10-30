@@ -20,6 +20,9 @@ class ExecutionResult:
     confirmation_url: Optional[str] = None
     confirmation_id: Optional[str] = None
     user_name: Optional[str] = None
+    google_calendar_link: Optional[str] = None
+    cancel_modify_link: Optional[str] = None
+    ics_calendar_link: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
     execution_time_seconds: Optional[float] = None
     available_times: Optional[Dict[int, List[str]]] = None

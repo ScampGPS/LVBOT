@@ -13,19 +13,20 @@ from botapp.ui.telegram_ui import TelegramUI
 from botapp.ui.text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 from infrastructure.settings import TestModeConfig
 from telegram.helpers import escape_markdown
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
 
 
 def _md(text: object) -> str:
-    """Escape text for Telegram Markdown V2."""
+    """Escape text for Telegram Markdown."""
 
-    return escape_markdown(str(text), version=2)
+    return escape_markdown(str(text))
 
 
 def _bold(text: object) -> str:
-    """Return bold Markdown V2 text."""
+    """Return bold Markdown text."""
 
     return f"*{_md(text)}*"
 
@@ -45,10 +46,12 @@ class NotificationBuilder(MarkdownBuilderBase):
             builder.bullet(f"Time: {result.time_reserved}")
         if result.confirmation_code:
             builder.bullet(f"Confirmation: `{result.confirmation_code}`")
-        if result.confirmation_url:
-            builder.line(f"[View Confirmation]({result.confirmation_url})")
+
         if result.message:
             builder.blank().line(result.message)
+
+        # Note: Calendar links are now shown as inline buttons instead of text links
+        builder.blank().line("Use the buttons below to add to your calendar or manage your reservation.")
 
         return builder.build()
 
@@ -158,11 +161,40 @@ def _send_notification(
     user_id: int,
     result: BookingResult,
 ) -> Dict[str, object]:
+    # Build inline keyboard with calendar links and cancel button
+    keyboard = []
+
+    # Extract links from metadata
+    google_calendar_link = result.metadata.get("google_calendar_link")
+    ics_calendar_link = result.metadata.get("ics_calendar_link")
+    cancel_modify_link = result.metadata.get("cancel_modify_link")
+
+    # Add calendar buttons (first row)
+    calendar_row = []
+    if google_calendar_link:
+        calendar_row.append(InlineKeyboardButton("📅 Google Calendar", url=google_calendar_link))
+    if ics_calendar_link:
+        calendar_row.append(InlineKeyboardButton("📆 Outlook/iCal", url=ics_calendar_link))
+    if calendar_row:
+        keyboard.append(calendar_row)
+
+    # Add cancel/modify button (second row) - special interactive button
+    if cancel_modify_link and result.request_id:
+        keyboard.append([
+            InlineKeyboardButton(
+                "🗑️ Cancel Reservation",
+                callback_data=f"cancel_reservation:{result.request_id}"
+            )
+        ])
+
+    # Create inline keyboard markup if we have buttons
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else TelegramUI.create_back_to_menu_keyboard()
+
     return {
         "user_id": user_id,
         "message": formatter(result),
         "parse_mode": "Markdown",
-        "reply_markup": TelegramUI.create_back_to_menu_keyboard(),
+        "reply_markup": reply_markup,
     }
 
 

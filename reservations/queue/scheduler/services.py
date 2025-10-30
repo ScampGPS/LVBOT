@@ -209,30 +209,57 @@ class OutcomeRecorder:
         """Send user notifications for booking results."""
 
         t('reservations.queue.scheduler.services.OutcomeRecorder.notify')
+        self._logger.info("🔔 Starting notification process for %d result(s)", len(results))
+
         bot = getattr(self._scheduler, 'bot', None)
         user_db = getattr(self._scheduler, 'user_db', None)
-        if not bot or not user_db:
+
+        if not bot:
+            self._logger.warning("⚠️  No bot instance available - skipping notifications")
+            return
+        if not user_db:
+            self._logger.warning("⚠️  No user_db instance available - skipping notifications")
             return
 
+        self._logger.info("✓ Bot and user_db available, processing notifications...")
+
         for reservation_id, result in results.items():
+            self._logger.info("📝 Processing notification for reservation %s", reservation_id)
+
             reservation = self._scheduler._get_reservation_by_id(reservation_id)
             if not reservation:
+                self._logger.warning("⚠️  Reservation %s not found in database", reservation_id)
                 continue
 
             user_id = self._scheduler._get_reservation_field(reservation, 'user_id')
+            self._logger.info("👤 User ID: %s", user_id)
+
             user = user_db.get_user(user_id) if user_db else None
             if not user:
+                self._logger.warning("⚠️  User %s not found in database", user_id)
                 continue
 
-            message = self._format_message(reservation, result)
+            self._logger.info("📤 Formatting message for user %s...", user_id)
             try:
+                message = self._format_message(reservation, result)
+                self._logger.debug("📄 Message content (first 200 chars): %s", message[:200] if message else "None")
+            except Exception as fmt_exc:
+                self._logger.error("❌ Failed to format message for user %s: %s", user_id, fmt_exc, exc_info=True)
+                continue
+
+            try:
+                self._logger.info("📨 Sending notification to user %s...", user_id)
                 await bot.send_notification(user_id, message)
+                self._logger.info("✅ Notification sent successfully to user %s", user_id)
             except Exception as exc:  # pragma: no cover - notification safety
                 self._logger.error(
                     "❌ Failed to send notification to user %s: %s",
                     user_id,
                     exc,
+                    exc_info=True
                 )
+
+        self._logger.info("✅ Notification process completed")
 
     def _format_message(self, reservation: Dict[str, Any], result: Dict[str, Any]) -> str:
         booking_result = result.get('booking_result')

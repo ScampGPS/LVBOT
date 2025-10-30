@@ -25,6 +25,7 @@ class ReservationService:
         user_manager: Optional[UserManager] = None,
         browser_pool=None,
         executor_config: Optional[AsyncExecutorConfig] = None,
+        bot_handler=None,
     ) -> None:
         t('reservations.services.reservation_service.ReservationService.__init__')
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -37,6 +38,7 @@ class ReservationService:
             browser_pool=browser_pool,
             user_manager=user_manager,
             executor_config=executor_config,
+            bot_handler=bot_handler,
         )
 
     def enqueue(self, request: ReservationRequest) -> str:

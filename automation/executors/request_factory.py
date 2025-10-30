@@ -127,6 +127,12 @@ class ExecutorRequestFactory:
             base_metadata["court_attempted"] = execution.court_attempted
         if execution.execution_time_seconds is not None:
             base_metadata["execution_time_seconds"] = execution.execution_time_seconds
+        if execution.google_calendar_link:
+            base_metadata["google_calendar_link"] = execution.google_calendar_link
+        if execution.cancel_modify_link:
+            base_metadata["cancel_modify_link"] = execution.cancel_modify_link
+        if execution.ics_calendar_link:
+            base_metadata["ics_calendar_link"] = execution.ics_calendar_link
         if metadata:
             base_metadata.update(metadata)
 

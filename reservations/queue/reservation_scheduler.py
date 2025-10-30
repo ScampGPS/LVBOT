@@ -653,7 +653,16 @@ class ReservationScheduler:
             "Booking execution complete: %s", self.orchestrator.get_booking_summary()
         )
         self.logger.info("📊 Results dictionary before notification: %s", results)
-        await self.outcome_recorder.notify(results)
+        self.logger.info("🔄 About to call outcome_recorder.notify() - checking outcome_recorder: %s", self.outcome_recorder)
+
+        try:
+            self.logger.info("⏳ Calling notify() method...")
+            await self.outcome_recorder.notify(results)
+            self.logger.info("✅ notify() completed successfully")
+        except Exception as notify_exc:
+            self.logger.error("❌ CRITICAL: notify() failed with exception: %s", notify_exc, exc_info=True)
+            # Don't re-raise - we want the scheduler to continue even if notification fails
+            self.logger.warning("⚠️  Continuing scheduler operation despite notification failure")
 
     def _build_dispatch_jobs(
         self,
@@ -851,6 +860,19 @@ class ReservationScheduler:
                     elapsed=execution_time,
                 )
             )
+
+            # Remove successful reservation from queue
+            removed = self.queue.remove_reservation(reservation_id)
+            if removed:
+                self.logger.info(
+                    "✅ Successfully removed completed reservation %s... from queue",
+                    reservation_id[:8],
+                )
+            else:
+                self.logger.warning(
+                    "⚠️ Could not remove completed reservation %s... from queue (may have been already removed)",
+                    reservation_id[:8],
+                )
         else:
             self.logger.warning(
                 """❌ QUEUE BOOKING FAILED
