@@ -36,6 +36,7 @@ from .profile import (
     create_email_char_keyboard as _create_email_char_keyboard,
     create_email_confirm_keyboard as _create_email_confirm_keyboard,
     create_edit_profile_keyboard as _create_edit_profile_keyboard,
+    create_language_selection_keyboard as _create_language_selection_keyboard,
     create_letter_keyboard as _create_letter_keyboard,
     create_name_type_keyboard as _create_name_type_keyboard,
     create_phone_keypad as _create_phone_keypad,
@@ -76,6 +77,7 @@ class TelegramUI:
 
     create_profile_keyboard = staticmethod(_create_profile_keyboard)
     create_edit_profile_keyboard = staticmethod(_create_edit_profile_keyboard)
+    create_language_selection_keyboard = staticmethod(_create_language_selection_keyboard)
     create_cancel_edit_keyboard = staticmethod(_create_cancel_edit_keyboard)
     create_phone_keypad = staticmethod(_create_phone_keypad)
     create_name_type_keyboard = staticmethod(_create_name_type_keyboard)

@@ -15,6 +15,7 @@ from botapp.bootstrap.container import DependencyContainer
 from botapp.commands import register_core_handlers
 from botapp.config import BotAppConfig, load_bot_config
 from botapp.error_handler import ErrorHandler
+from botapp.i18n import get_user_translator
 from botapp.notifications import deliver_notification_with_menu
 from botapp.runtime.lifecycle import LifecycleManager
 from botapp.ui.telegram_ui import TelegramUI
@@ -58,10 +59,13 @@ class BotApplication:
         is_admin = self.user_manager.is_admin(user_id)
         tier = self.user_manager.get_user_tier(user_id)
         tier_badge = TelegramUI.format_user_tier_badge(tier.name)
-        reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
+
+        # Get user's language preference
+        tr = get_user_translator(self.user_manager, user_id)
+        reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin, language=tr.get_language())
 
         await update.message.reply_text(
-            f"🎾 Welcome to LVBot! {tier_badge}\n\nChoose an option:",
+            f"{tr.t('welcome.title')} {tier_badge}\n\n{tr.t('welcome.message')}",
             reply_markup=reply_markup,
         )
 

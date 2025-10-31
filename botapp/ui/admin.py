@@ -19,16 +19,11 @@ def create_admin_menu_keyboard(
     keyboard = [
         [InlineKeyboardButton(test_label, callback_data='admin_toggle_test_mode')],
         [
-            InlineKeyboardButton(f"🆕 Pending ({pending_count})", callback_data='admin_pending'),
-            InlineKeyboardButton("👥 All Users", callback_data='admin_users'),
+            InlineKeyboardButton("📅 My Reservations", callback_data='admin_view_my_reservations'),
+            InlineKeyboardButton("👥 All Users", callback_data='admin_view_users_list'),
         ],
         [
-            InlineKeyboardButton("📊 Stats", callback_data='admin_stats'),
-            InlineKeyboardButton("⚙️ Settings", callback_data='admin_settings'),
-        ],
-        [
-            InlineKeyboardButton("🔍 Search User", callback_data='admin_search'),
-            InlineKeyboardButton("📢 Broadcast", callback_data='admin_broadcast'),
+            InlineKeyboardButton("📋 All Reservations", callback_data='admin_view_all_reservations'),
         ],
         [InlineKeyboardButton("🔙 Back to Menu", callback_data='back_to_menu')],
     ]

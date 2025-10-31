@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes
 
 from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.state import get_session_state
+from botapp.i18n import get_user_translator
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.error_handler import ErrorHandler
 
@@ -28,25 +29,19 @@ class ProfileHandler:
 
         try:
             user_profile = self.deps.user_manager.get_user(user_id)
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
             if not user_profile:
                 await query.edit_message_text(
                     "📇 No profile found. Please contact an administrator.",
-                    reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                    reply_markup=TelegramUI.create_back_to_menu_keyboard(language=tr.get_language()),
                 )
                 return
 
-            tier = self.deps.user_manager.get_user_tier(user_id)
-            tier_badge = TelegramUI.format_user_tier_badge(tier.name)
+            # Use the formatted profile message
+            message = TelegramUI.format_user_profile_message(user_profile)
+            keyboard = TelegramUI.create_profile_keyboard(language=tr.get_language())
 
-            message = (
-                "📇 **Profile Overview**\n\n"
-                f"Name: {user_profile.get('first_name', 'Unknown')} {user_profile.get('last_name', '')}\n"
-                f"Email: {user_profile.get('email', 'Not set')}\n"
-                f"Phone: (+502) {user_profile.get('phone', 'Not set')}\n"
-                f"Tier: {tier_badge}\n"
-            )
-
-            keyboard = TelegramUI.create_profile_menu_keyboard()
             await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
         except Exception as exc:  # pragma: no cover - defensive guard
             self.logger.error("Failed to show profile menu: %s", exc)
@@ -55,12 +50,14 @@ class ProfileHandler:
     async def handle_edit_profile(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_profile')
         query = update.callback_query
+        user_id = query.from_user.id
         try:
-            keyboard = TelegramUI.create_profile_edit_keyboard()
+            tr = get_user_translator(self.deps.user_manager, user_id)
+            keyboard = TelegramUI.create_edit_profile_keyboard(language=tr.get_language())
             await query.edit_message_text(
                 "✏️ **Edit Profile**\n\nSelect a field to edit:",
                 parse_mode='Markdown',
-                reply_markup=reply_markup,
+                reply_markup=keyboard,
             )
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to show edit options')
@@ -77,17 +74,12 @@ class ProfileHandler:
             context.user_data['name_input'] = ''
             context.user_data.pop('editing_name_field', None)
 
-            buttons = [
-                [InlineKeyboardButton("Edit First Name", callback_data='edit_first_name')],
-                [InlineKeyboardButton("Edit Last Name", callback_data='edit_last_name')],
-                [InlineKeyboardButton("Back", callback_data='menu_profile')],
-            ]
-            keyboard = InlineKeyboardMarkup(buttons)
+            keyboard = TelegramUI.create_name_type_keyboard()
 
             await query.edit_message_text(
                 "🧑‍💼 **Name Editing**\n\nChoose the name field you want to edit:",
                 parse_mode='Markdown',
-                reply_markup=reply_markup,
+                reply_markup=keyboard,
             )
         except Exception as exc:
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to start name edit')
@@ -465,3 +457,61 @@ class ProfileHandler:
         except Exception as exc:
             self.logger.error("Error handling email callback: %s", exc)
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to process email edit')
+
+    async def handle_edit_language(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Show language selection menu."""
+        t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_language')
+        query = update.callback_query
+        user_id = query.from_user.id
+
+        try:
+            user_profile = self.deps.user_manager.get_user(user_id)
+            current_lang = user_profile.get('language', 'es') if user_profile else 'es'
+            lang_display = "🇪🇸 Español" if current_lang == 'es' else "🇺🇸 English"
+
+            message = (
+                "🌐 **Language Selection**\n\n"
+                f"Current language: {lang_display}\n\n"
+                "Select your preferred language:"
+            )
+
+            keyboard = TelegramUI.create_language_selection_keyboard()
+            await query.edit_message_text(
+                message,
+                parse_mode='Markdown',
+                reply_markup=keyboard,
+            )
+        except Exception as exc:
+            self.logger.error("Error showing language selection: %s", exc)
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to show language options')
+
+    async def handle_language_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle language selection callback."""
+        t('botapp.handlers.profile.handler.ProfileHandler.handle_language_selection')
+        query = update.callback_query
+        user_id = query.from_user.id
+        callback_data = query.data or ''
+
+        try:
+            # Extract language code from callback_data (lang_es or lang_en)
+            lang_code = callback_data.replace('lang_', '')
+
+            if lang_code not in ['es', 'en']:
+                await query.answer("❌ Invalid language")
+                return
+
+            # Update user language preference
+            success = self.deps.user_manager.set_user_language(user_id, lang_code)
+
+            if success:
+                lang_name = "Español" if lang_code == 'es' else "English"
+                await query.answer(f"✅ Language changed to {lang_name}")
+
+                # Show profile menu with updated language
+                await self.handle_profile_menu(update, context)
+            else:
+                await query.answer("❌ Failed to update language")
+
+        except Exception as exc:
+            self.logger.error("Error handling language selection: %s", exc)
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to change language')

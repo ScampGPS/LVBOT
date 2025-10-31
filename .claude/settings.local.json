@@ -1,24 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(export LV_WARMUP_TEST_ENABLE=1)",
-      "Bash(/mnt/c/Users/SaulCamposJr/AppData/Local/Programs/Python/Python312/python.exe -m pytest tests/bot/test_browser_warmup_playwright.py::test_browser_state_helper_methods -v -s)",
-      "Bash(python3 -m pytest:*)",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && set LV_WARMUP_TEST_ENABLE=1 && python -m pytest tests/bot/test_browser_warmup_playwright.py::test_browser_state_helper_methods -v -s\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && set LV_WARMUP_TEST_ENABLE=1 && python -m pytest tests/bot/test_browser_warmup_playwright.py::test_browser_warmup_sophisticated_behavior -v -s\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && set LV_WARMUP_TEST_ENABLE=1 && set && python -m pytest tests/bot/test_browser_warmup_playwright.py::test_browser_warmup_sophisticated_behavior -v -s\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && set LV_WARMUP_TEST_ENABLE=1 && python -m pytest tests/bot/test_browser_warmup_playwright.py -v\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git status\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git diff automation/browser/pool/manager.py\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .gitignore automation/browser/pool/manager.py tests/bot/test_browser_warmup_playwright.py tests/bot/WARMUP_TEST_README.md\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git diff .claude/settings.local.json\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git commit -F .git_commit_msg2.tmp\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && del .git_commit_msg2.tmp && git status && echo. && git log -2 --oneline\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json && git commit -m \"\"chore: update Claude settings with latest git commands\"\"\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json && git commit -m \"\"chore: update Claude settings\"\"\")",
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && git add .claude/settings.local.json\")"
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && python -m pytest tests/bot/test_all_menu_buttons.py -v\")"
     ],
     "deny": [],
     "ask": []

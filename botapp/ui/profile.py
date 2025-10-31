@@ -3,10 +3,11 @@
 from __future__ import annotations
 from tracking import t
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+from botapp.i18n import get_translator
 from .constants import TIER_BADGES
 from .text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 
@@ -20,28 +21,44 @@ def _keyboard(rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
     )
 
 
-def create_profile_keyboard() -> InlineKeyboardMarkup:
+def create_profile_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create profile view keyboard with Edit and Back buttons."""
 
     t("botapp.ui.profile.create_profile_keyboard")
+    tr = get_translator(language)
     return _keyboard(
         [
-            [("✏️ Edit Profile", "edit_profile")],
-            [("🔙 Back to Menu", "back_to_menu")],
+            [(tr.t("profile.edit_profile"), "edit_profile")],
+            [(tr.t("nav.back_to_menu"), "back_to_menu")],
         ]
     )
 
 
-def create_edit_profile_keyboard() -> InlineKeyboardMarkup:
+def create_edit_profile_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create edit profile menu keyboard."""
 
     t("botapp.ui.profile.create_edit_profile_keyboard")
+    tr = get_translator(language)
     return _keyboard(
         [
-            [("👤 Edit Name", "edit_name")],
-            [("📱 Edit Phone", "edit_phone")],
-            [("📧 Edit Email", "edit_email")],
-            [("🔙 Back to Profile", "menu_profile")],
+            [(f"👤 {tr.t('profile.name')}", "edit_name")],
+            [(f"📱 {tr.t('profile.phone')}", "edit_phone")],
+            [(f"📧 {tr.t('profile.email')}", "edit_email")],
+            [(f"🌐 {tr.t('profile.language')}", "edit_language")],
+            [(tr.t("nav.back"), "menu_profile")],
+        ]
+    )
+
+
+def create_language_selection_keyboard() -> InlineKeyboardMarkup:
+    """Create language selection keyboard."""
+
+    t("botapp.ui.profile.create_language_selection_keyboard")
+    return _keyboard(
+        [
+            [("🇪🇸 Español", "lang_es")],
+            [("🇺🇸 English", "lang_en")],
+            [("🔙 Back", "edit_profile")],
         ]
     )
 
@@ -162,6 +179,7 @@ def format_user_tier_badge(tier_name: str) -> str:
 __all__ = [
     "create_profile_keyboard",
     "create_edit_profile_keyboard",
+    "create_language_selection_keyboard",
     "create_cancel_edit_keyboard",
     "create_phone_keypad",
     "create_name_type_keyboard",
@@ -197,6 +215,11 @@ class ProfileViewBuilder(MarkdownBuilderBase):
         )
         builder.line(f"📱 Phone: {phone}")
         builder.line(f"📧 Email: {user_data.get('email', 'Not set')}")
+
+        # Language preference
+        language = user_data.get('language', 'es')
+        language_display = "🇪🇸 Español" if language == 'es' else "🇺🇸 English"
+        builder.line(f"🌐 Language: {language_display}")
 
         court_pref = user_data.get("court_preference", []) or []
         if court_pref:

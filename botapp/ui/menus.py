@@ -4,72 +4,88 @@ from __future__ import annotations
 from tracking import t
 
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
+from botapp.i18n import get_translator
 from infrastructure.settings import get_test_mode
 
 
-def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0) -> InlineKeyboardMarkup:
-    """Create the main menu keyboard."""
+def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0, language: Optional[str] = None) -> InlineKeyboardMarkup:
+    """Create the main menu keyboard.
+
+    Args:
+        is_admin: Whether the user is an admin
+        pending_count: Number of pending items for admin panel
+        language: Language code ('es' or 'en'). Defaults to Spanish if None.
+    """
 
     t('botapp.ui.menus.create_main_menu_keyboard')
+    tr = get_translator(language)
+
     keyboard = [
         [
-            InlineKeyboardButton("🎾 Reserve Court", callback_data='menu_reserve'),
-            InlineKeyboardButton("📋 Queued Reservations", callback_data='menu_queued'),
+            InlineKeyboardButton(tr.t("menu.reserve_court"), callback_data='menu_reserve'),
+            InlineKeyboardButton(tr.t("menu.queued_reservations"), callback_data='menu_queued'),
         ],
         [
-            InlineKeyboardButton("📅 Reservations", callback_data='menu_reservations'),
-            InlineKeyboardButton("👤 Profile", callback_data='menu_profile'),
+            InlineKeyboardButton(tr.t("menu.reservations"), callback_data='menu_reservations'),
+            InlineKeyboardButton(tr.t("menu.profile"), callback_data='menu_profile'),
         ],
     ]
 
     if is_admin:
-        admin_text = "👮 Admin Panel"
         if pending_count > 0:
-            admin_text += f" ({pending_count} pending)"
+            admin_text = tr.t("menu.admin_panel_pending", count=pending_count)
+        else:
+            admin_text = tr.t("menu.admin_panel")
         keyboard.append([InlineKeyboardButton(admin_text, callback_data='menu_admin')])
 
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_yes_no_keyboard() -> ReplyKeyboardMarkup:
+def create_yes_no_keyboard(language: Optional[str] = None) -> ReplyKeyboardMarkup:
     """Create a simple yes/no keyboard."""
 
     t('botapp.ui.menus.create_yes_no_keyboard')
-    return ReplyKeyboardMarkup([["Yes", "No"]], one_time_keyboard=True, resize_keyboard=True)
+    tr = get_translator(language)
+    return ReplyKeyboardMarkup([[tr.t("action.yes"), tr.t("action.no")]], one_time_keyboard=True, resize_keyboard=True)
 
 
-def create_cancel_keyboard() -> ReplyKeyboardMarkup:
+def create_cancel_keyboard(language: Optional[str] = None) -> ReplyKeyboardMarkup:
     """Create a keyboard with only a cancel option."""
 
     t('botapp.ui.menus.create_cancel_keyboard')
-    return ReplyKeyboardMarkup([["Cancel"]], one_time_keyboard=True, resize_keyboard=True)
+    tr = get_translator(language)
+    return ReplyKeyboardMarkup([[tr.t("nav.cancel")]], one_time_keyboard=True, resize_keyboard=True)
 
 
-def create_back_to_menu_keyboard() -> InlineKeyboardMarkup:
+def create_back_to_menu_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create a standard "Back to Menu" inline keyboard."""
 
     t('botapp.ui.menus.create_back_to_menu_keyboard')
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data='back_to_menu')]]
+    tr = get_translator(language)
+    keyboard = [[InlineKeyboardButton(tr.t("nav.back_to_menu"), callback_data='back_to_menu')]]
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_48h_booking_type_keyboard() -> InlineKeyboardMarkup:
+def create_48h_booking_type_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create the 48-hour booking type selection keyboard."""
 
     t('botapp.ui.menus.create_48h_booking_type_keyboard')
+    tr = get_translator(language)
     config = get_test_mode()
-    future_text = "📅 Reserve after 48h"
+
     if config.enabled:
-        future_text = "🧪 TEST: Queue Booking"
+        future_text = tr.t("booking.test_queue")
+    else:
+        future_text = tr.t("booking.reserve_after_48h")
 
     keyboard = [
-        [InlineKeyboardButton("🏃‍♂️ Reserve within 48h", callback_data='reserve_48h_immediate')],
+        [InlineKeyboardButton(tr.t("booking.reserve_within_48h"), callback_data='reserve_48h_immediate')],
         [InlineKeyboardButton(future_text, callback_data='reserve_48h_future')],
-        [InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')],
+        [InlineKeyboardButton(tr.t("nav.back_to_menu"), callback_data='back_to_menu')],
     ]
     return InlineKeyboardMarkup(keyboard)
 

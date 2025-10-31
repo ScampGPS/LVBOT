@@ -46,20 +46,23 @@ class UserManager:
     def get_user(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
         Retrieve a single user profile by user ID
-        
+
         Args:
             user_id: Telegram user ID to lookup
-            
+
         Returns:
             Dict containing user profile data if found, None otherwise
         """
         t('users.manager.UserManager.get_user')
         user_profile = self.users.get(user_id)
         if user_profile:
+            # Ensure language field exists with default value
+            if 'language' not in user_profile:
+                user_profile['language'] = 'es'  # Default to Spanish
             self.logger.debug(f"Retrieved user profile for user_id: {user_id}")
         else:
             self.logger.debug(f"No profile found for user_id: {user_id}")
-        
+
         return user_profile
     
     def save_user(self, user_profile: Dict[str, Any]) -> None:
@@ -159,7 +162,7 @@ class UserManager:
     def set_user_tier(self, user_id: int, tier: UserTier) -> None:
         """
         Set the tier level of a user
-        
+
         Args:
             user_id: Telegram user ID
             tier: UserTier enum value to set
@@ -168,11 +171,11 @@ class UserManager:
         user_profile = self.get_user(user_id)
         if not user_profile:
             user_profile = {'user_id': user_id}
-        
+
         # Update tier and corresponding flags
         user_profile['tier'] = tier.value
         user_profile['tier_name'] = tier.name
-        
+
         # Update boolean flags for backward compatibility
         if tier == UserTier.ADMIN:
             user_profile['is_admin'] = True
@@ -183,9 +186,47 @@ class UserManager:
         else:  # REGULAR
             user_profile['is_admin'] = False
             user_profile['is_vip'] = False
-        
+
         self.save_user(user_profile)
         self.logger.info(f"Set user {user_id} tier to {tier.name}")
+
+    def get_user_language(self, user_id: int) -> str:
+        """
+        Get the preferred language of a user
+
+        Args:
+            user_id: Telegram user ID
+
+        Returns:
+            Language code ('es' or 'en'), defaults to 'es' if not set
+        """
+        t('users.manager.UserManager.get_user_language')
+        user_profile = self.get_user(user_id)
+        if user_profile:
+            return user_profile.get('language', 'es')
+        return 'es'  # Default to Spanish for users not found
+
+    def set_user_language(self, user_id: int, language: str) -> bool:
+        """
+        Set the preferred language for a user
+
+        Args:
+            user_id: Telegram user ID
+            language: Language code ('es' or 'en')
+
+        Returns:
+            True if successful, False if user not found
+        """
+        t('users.manager.UserManager.set_user_language')
+        user_profile = self.get_user(user_id)
+        if not user_profile:
+            self.logger.warning(f"Cannot set language for non-existent user {user_id}")
+            return False
+
+        user_profile['language'] = language
+        self.save_user(user_profile)
+        self.logger.info(f"Set user {user_id} language to {language}")
+        return True
     
     def _save_users(self) -> None:
         """

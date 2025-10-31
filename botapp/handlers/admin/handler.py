@@ -13,13 +13,25 @@ from botapp.handlers.dependencies import CallbackDependencies
 from botapp.handlers.mixins import CallbackResponseMixin
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.error_handler import ErrorHandler
+from botapp.i18n.helpers import get_user_translator
 from infrastructure.settings import get_test_mode, update_test_mode
+from automation.availability.datetime_helpers import DateTimeHelpers
 
 
 class AdminHandler(CallbackResponseMixin):
     def __init__(self, deps: CallbackDependencies) -> None:
         self.deps = deps
         self.logger = deps.logger
+
+    def _get_user_name(self, user_id: int) -> str:
+        """Get user's display name from user_id."""
+        user_data = self.deps.user_manager.get_user(user_id)
+        if user_data:
+            first_name = user_data.get('first_name', '')
+            last_name = user_data.get('last_name', '')
+            name = f"{first_name} {last_name}".strip()
+            return name if name else f"User {user_id}"
+        return f"User {user_id}"
 
     async def handle_admin_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -40,6 +52,9 @@ class AdminHandler(CallbackResponseMixin):
         user_id = query.from_user.id
 
         try:
+            # Get user's translator
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
             # Authorization check - retrieve user profile
             user_profile = self.deps.user_manager.get_user(user_id)
 
@@ -51,10 +66,7 @@ class AdminHandler(CallbackResponseMixin):
                 # Send unauthorized message
                 reply_markup = TelegramUI.create_back_to_menu_keyboard()
                 await query.edit_message_text(
-                    "🔐 **Access Denied**\n\n"
-                    "You are not authorized to access the Admin Panel.\n\n"
-                    "Admin privileges are restricted to authorized personnel only. "
-                    "If you believe this is an error, please contact the system administrator.",
+                    tr.t('admin.access_denied'),
                     parse_mode='Markdown',
                     reply_markup=reply_markup
                 )
@@ -75,12 +87,7 @@ class AdminHandler(CallbackResponseMixin):
 
             # Display admin panel
             await query.edit_message_text(
-                "👮 **Admin Panel**\n\n"
-                "🔧 **System Management Dashboard**\n\n"
-                "Welcome to the LVBot administration interface. "
-                "Use the options below to manage users, monitor system performance, "
-                "and configure bot settings.\n\n"
-                "⚠️ **Notice**: All admin actions are logged for security purposes.",
+                f"{tr.t('admin.title')}\n\n{tr.t('admin.welcome')}",
                 parse_mode='Markdown',
                 reply_markup=reply_markup
             )
@@ -94,7 +101,11 @@ class AdminHandler(CallbackResponseMixin):
 
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_toggle_test_mode')
         query = update.callback_query
+        user_id = query.from_user.id
         await self._safe_answer_callback(query)
+
+        # Get user's translator
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         current = get_test_mode()
         if current.enabled:
@@ -102,16 +113,13 @@ class AdminHandler(CallbackResponseMixin):
                 enabled=False,
                 allow_within_48h=False,
             )
-            status_text = "🛑 Test mode disabled.\n\nQueued reservations will now respect the 48-hour window and normal scheduling."  # noqa: E501
+            status_text = tr.t('admin.test_mode_disabled')
         else:
             new_config = update_test_mode(
                 enabled=True,
                 allow_within_48h=True,
             )
-            status_text = (
-                "🧪 Test mode enabled!\n\n"
-                "Future queue bookings will bypass the 48-hour gate and execute after the configured delay."
-            )
+            status_text = tr.t('admin.test_mode_enabled')
 
         pending_count = len(self.deps.reservation_queue.get_pending_reservations())
 
@@ -142,15 +150,18 @@ class AdminHandler(CallbackResponseMixin):
         """
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_users_list')
         query = update.callback_query
+        user_id = query.from_user.id
 
         try:
+            # Get user's translator
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
             # Get all users
             all_users = self.deps.user_manager.get_all_users()
 
             if not all_users:
                 await query.edit_message_text(
-                    "👥 **Users List**\n\n"
-                    "No users found in the system.",
+                    tr.t('admin.no_users'),
                     parse_mode='Markdown',
                     reply_markup=TelegramUI.create_back_to_menu_keyboard()
                 )
@@ -158,10 +169,10 @@ class AdminHandler(CallbackResponseMixin):
 
             # Create buttons for each user
             keyboard = []
-            for user_id, user_data in all_users.items():
+            for uid, user_data in all_users.items():
                 user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
                 if not user_name:
-                    user_name = f"User {user_id}"
+                    user_name = f"User {uid}"
 
                 # Add admin badge if user is admin
                 if user_data.get('is_admin', False):
@@ -170,24 +181,24 @@ class AdminHandler(CallbackResponseMixin):
                 keyboard.append([
                     InlineKeyboardButton(
                         user_name,
-                        callback_data=f"admin_view_user_{user_id}"
+                        callback_data=f"admin_view_user_{uid}"
                     )
                 ])
 
             # Add back button
-            keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data='menu_reservations')])
+            keyboard.append([InlineKeyboardButton(tr.t('admin.back_to_admin'), callback_data='menu_admin')])
 
             await query.edit_message_text(
-                "👥 **Select User**\n\n"
-                "Choose a user to view their reservations:",
+                tr.t('admin.users_list'),
                 parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
 
         except Exception as e:
             self.logger.error(f"Error showing users list: {e}")
+            tr = get_user_translator(self.deps.user_manager, user_id)
             await query.edit_message_text(
-                "❌ Error loading users list.",
+                tr.t('admin.error_loading_users'),
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
 
@@ -197,55 +208,59 @@ class AdminHandler(CallbackResponseMixin):
         """
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_all_reservations')
         query = update.callback_query
+        user_id = query.from_user.id
 
         try:
+            # Get user's translator
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
             all_reservations = []
 
             # Get all users
             all_users = self.deps.user_manager.get_all_users()
 
             # Collect reservations from all users
-            for user_id in all_users.keys():
+            for uid in all_users.keys():
                 # Get queued reservations
-                queued = self.deps.reservation_queue.get_user_reservations(user_id)
+                queued = self.deps.reservation_queue.get_user_reservations(uid)
                 for res in queued:
                     res['source'] = 'queue'
-                    res['user_name'] = self._get_user_name(user_id)
+                    res['user_name'] = self._get_user_name(uid)
                     all_reservations.append(res)
 
                 # Get active reservations
                 if hasattr(self, 'reservation_tracker'):
-                    active = self.deps.reservation_tracker.get_user_active_reservations(user_id)
+                    active = self.deps.reservation_tracker.get_user_active_reservations(uid)
                     for res in active:
                         res['source'] = 'tracker'
-                        res['user_name'] = self._get_user_name(user_id)
+                        res['user_name'] = self._get_user_name(uid)
                         all_reservations.append(res)
 
             if not all_reservations:
                 await query.edit_message_text(
-                    "📊 **All Reservations**\n\n"
-                    "No active reservations found in the system.",
+                    f"{tr.t('admin.all_reservations')}\n\n{tr.t('admin.no_reservations')}",
                     parse_mode='Markdown',
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("⬅️ Back", callback_data='menu_reservations')],
-                        [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')]
+                        [InlineKeyboardButton(tr.t('admin.back_to_admin'), callback_data='menu_admin')],
+                        [InlineKeyboardButton(tr.t('nav.back_to_menu'), callback_data='back_to_menu')]
                     ])
                 )
                 return
 
             # Sort by date and time
             all_reservations.sort(key=lambda x: (
-                x.get('target_date', x.get('date', '')), 
+                x.get('target_date', x.get('date', '')),
                 x.get('target_time', x.get('time', ''))
             ))
 
             # Display reservations
-            await self.display_all_reservations(query, all_reservations)
+            await self.display_all_reservations(query, all_reservations, user_id)
 
         except Exception as e:
             self.logger.error(f"Error showing all reservations: {e}")
+            tr = get_user_translator(self.deps.user_manager, user_id)
             await query.edit_message_text(
-                "❌ Error loading reservations.",
+                tr.t('admin.error_loading_reservations'),
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
 
@@ -358,15 +373,20 @@ class AdminHandler(CallbackResponseMixin):
                 reply_markup=TelegramUI.create_back_to_menu_keyboard()
             )
 
-    async def display_all_reservations(self, query, all_reservations: List[Dict[str, Any]]) -> None:
+    async def display_all_reservations(self, query, all_reservations: List[Dict[str, Any]], user_id: int) -> None:
         """
         Display all reservations from all users
 
         Args:
             query: The callback query
             all_reservations: List of all reservations with user info
+            user_id: The admin user ID for translations
         """
         t('botapp.handlers.callback_handlers.CallbackHandler._display_all_reservations')
+
+        # Get user's translator
+        tr = get_user_translator(self.deps.user_manager, user_id)
+
         # Group by date for better organization
         reservations_by_date = {}
         for res in all_reservations:
@@ -376,7 +396,7 @@ class AdminHandler(CallbackResponseMixin):
             reservations_by_date[date_key].append(res)
 
         # Create message
-        message = "📊 **All Reservations**\n\n"
+        message = f"{tr.t('admin.all_reservations')}\n\n"
         keyboard = []
 
         for date_str in sorted(reservations_by_date.keys()):
@@ -416,8 +436,8 @@ class AdminHandler(CallbackResponseMixin):
 
         # Add navigation buttons
         keyboard = [
-            [InlineKeyboardButton("⬅️ Back", callback_data='menu_reservations')],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')]
+            [InlineKeyboardButton(tr.t('admin.back_to_admin'), callback_data='menu_admin')],
+            [InlineKeyboardButton(tr.t('nav.back_to_menu'), callback_data='back_to_menu')]
         ]
 
         await query.edit_message_text(
