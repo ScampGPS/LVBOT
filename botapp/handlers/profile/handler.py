@@ -314,7 +314,10 @@ class ProfileHandler:
                 user = query.from_user
                 first_name = user.first_name or ''
                 last_name = user.last_name or ''
-                profile = self.deps.user_manager.get_user(user_id) or {'user_id': user_id}
+                profile = self.deps.user_manager.get_user(user_id) or {
+                    'user_id': user_id,
+                    'language': 'es'  # Default new users to Spanish
+                }
                 profile['first_name'] = first_name
                 profile['last_name'] = last_name
                 self.deps.user_manager.save_user(profile)

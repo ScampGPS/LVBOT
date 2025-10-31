@@ -170,7 +170,10 @@ class UserManager:
         t('users.manager.UserManager.set_user_tier')
         user_profile = self.get_user(user_id)
         if not user_profile:
-            user_profile = {'user_id': user_id}
+            user_profile = {
+                'user_id': user_id,
+                'language': 'es'  # Default new users to Spanish
+            }
 
         # Update tier and corresponding flags
         user_profile['tier'] = tier.value
