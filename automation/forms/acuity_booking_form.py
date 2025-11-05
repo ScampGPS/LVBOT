@@ -185,6 +185,7 @@ async def fill_booking_form(
 
 
 async def fill_form(
+    t('automation.forms.acuity_booking_form.fill_form')
     page: Page,
     user_info: Dict[str, str],
     *,

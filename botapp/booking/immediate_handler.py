@@ -234,6 +234,7 @@ class ImmediateBookingHandler:
 
     async def execute_queue_booking(self, booking_request: BookingRequest) -> BookingResult:
         """Compatibility wrapper used by the reservation scheduler."""
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler.execute_queue_booking')
         return await self._run_booking_attempts(booking_request)
 
     async def _execute_booking(self, booking_request: BookingRequest) -> BookingResult:

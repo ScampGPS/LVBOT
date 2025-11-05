@@ -19,6 +19,7 @@ class ProfileHandler:
     """Handles profile viewing and editing callbacks."""
 
     def __init__(self, deps: CallbackDependencies) -> None:
+        t('botapp.handlers.profile.handler.ProfileHandler.__init__')
         self.deps = deps
         self.logger = deps.logger
 

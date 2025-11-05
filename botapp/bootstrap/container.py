@@ -51,6 +51,7 @@ class BotDependencies:
 
     def as_dict(self) -> Dict[str, Any]:
         """Return dependencies as a mapping keyed by attribute name."""
+        t('botapp.bootstrap.container.BotDependencies.as_dict')
 
         return {
             'config': self.config,

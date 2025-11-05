@@ -177,6 +177,7 @@ class QueueHandler(CallbackResponseMixin):
 
     def clear_queue_booking_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
+        t('botapp.handlers.queue.handler.QueueHandler.clear_queue_booking_state')
 
         self.booking_flow.clear_state(context)
 

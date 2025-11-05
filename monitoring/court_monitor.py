@@ -32,6 +32,7 @@ class CourtMonitor:
         self._started = False
 
     async def start(self) -> None:
+        t('monitoring.court_monitor.CourtMonitor.start')
         if self._started:
             return
 
@@ -42,6 +43,7 @@ class CourtMonitor:
         self._started = True
 
     async def stop(self) -> None:
+        t('monitoring.court_monitor.CourtMonitor.stop')
         if not self._started:
             return
 
@@ -53,6 +55,7 @@ class CourtMonitor:
         self._started = False
 
     async def monitor_slot(
+        t('monitoring.court_monitor.CourtMonitor.monitor_slot')
         self,
         court_number: int,
         target_datetime: datetime,
@@ -106,6 +109,7 @@ class CourtMonitor:
         return {'status': 'timeout', 'court': court_number, 'date': date_key, 'time': slot_time}
 
     async def monitor_all_day(
+        t('monitoring.court_monitor.CourtMonitor.monitor_all_day')
         self,
         court_numbers: Iterable[int],
         *,

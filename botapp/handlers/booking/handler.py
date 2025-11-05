@@ -32,6 +32,7 @@ class BookingHandler:
     AVAILABLE_COURTS = [1, 2, 3]
 
     def __init__(self, deps: CallbackDependencies) -> None:
+        t('botapp.handlers.booking.handler.BookingHandler.__init__')
         self.deps = deps
         self.logger = deps.logger
         self.ui_factory = BookingUIFactory()

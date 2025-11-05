@@ -20,6 +20,7 @@ from automation.availability.datetime_helpers import DateTimeHelpers
 
 class AdminHandler(CallbackResponseMixin):
     def __init__(self, deps: CallbackDependencies) -> None:
+        t('botapp.handlers.admin.handler.AdminHandler.__init__')
         self.deps = deps
         self.logger = deps.logger
 

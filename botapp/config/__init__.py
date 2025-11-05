@@ -58,34 +58,42 @@ class BotAppConfig:
     # --- Compatibility helpers for legacy callers ---
     @property
     def timezone(self) -> str:
+        t('botapp.config.__init__.BotAppConfig.timezone')
         return self.scheduler.timezone
 
     @property
     def browser_refresh_interval(self) -> int:
+        t('botapp.config.__init__.BotAppConfig.browser_refresh_interval')
         return self.scheduler.browser_refresh_interval_seconds
 
     @property
     def booking_window_hours(self) -> int:
+        t('botapp.config.__init__.BotAppConfig.booking_window_hours')
         return self.scheduler.booking_window_hours
 
     @property
     def max_retry_attempts(self) -> int:
+        t('botapp.config.__init__.BotAppConfig.max_retry_attempts')
         return self.scheduler.max_retry_attempts
 
     @property
     def check_interval(self) -> int:
+        t('botapp.config.__init__.BotAppConfig.check_interval')
         return self.scheduler.check_interval_seconds
 
     @property
     def booking_url(self) -> str:
+        t('botapp.config.__init__.BotAppConfig.booking_url')
         return self.browser.booking_url
 
     @property
     def browser_pool_size(self) -> int:
+        t('botapp.config.__init__.BotAppConfig.browser_pool_size')
         return self.browser.pool_size
 
     @property
     def low_resource_mode(self) -> bool:
+        t('botapp.config.__init__.BotAppConfig.low_resource_mode')
         return self.browser.low_resource_mode
 
 

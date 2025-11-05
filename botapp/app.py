@@ -26,6 +26,7 @@ class CleanBot(BotApplication):
     """Backwards-compatible façade exposing the runtime bot application."""
 
     def __init__(self, config=None):
+        t('botapp.app.CleanBot.__init__')
         super().__init__(config=config)
 
 

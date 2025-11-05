@@ -28,6 +28,7 @@ class BrowserLifecycle:
     MAX_POOL_INIT_ATTEMPTS: int = 3
 
     def __post_init__(self) -> None:
+        t('reservations.queue.scheduler.browser_lifecycle.BrowserLifecycle.__post_init__')
         self._pool_initialized = self.browser_pool is not None
         if self.browser_pool and (self.health_checker is None or self.recovery_service is None):
             self.ensure_services(log_prefix="Using pre-initialized browser pool from main thread")
@@ -137,6 +138,7 @@ class BrowserLifecycle:
 
     def ensure_services(self, log_prefix: Optional[str] = None) -> None:
         """Ensure health checker and recovery service exist for the current pool."""
+        t('reservations.queue.scheduler.browser_lifecycle.BrowserLifecycle.ensure_services')
 
         if not self.browser_pool:
             return

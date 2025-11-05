@@ -29,6 +29,7 @@ class ReservationHydrator:
     """Hydrates reservation batches into executable requests."""
 
     def __init__(
+        t('reservations.queue.scheduler.services.ReservationHydrator.__init__')
         self,
         *,
         logger,
@@ -112,6 +113,7 @@ class SchedulerPipeline:
     """Coordinates scheduler stages (health checks, hydration, execution)."""
 
     def __init__(
+        t('reservations.queue.scheduler.services.SchedulerPipeline.__init__')
         self,
         *,
         logger,
@@ -155,6 +157,7 @@ class OutcomeRecorder:
     """Records booking outcomes and notifies users."""
 
     def __init__(
+        t('reservations.queue.scheduler.services.OutcomeRecorder.__init__')
         self,
         *,
         scheduler,

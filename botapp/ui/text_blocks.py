@@ -20,6 +20,7 @@ def escape_telegram_markdown(text: object, *, escape_special_chars: bool = False
     Returns:
         Escaped markdown string safe for Telegram
     """
+    t('botapp.ui.text_blocks.escape_telegram_markdown')
     version = 2 if escape_special_chars else 1
     return escape_markdown(str(text), version=version)
 
@@ -35,6 +36,7 @@ def bold_telegram_text(text: object, *, escape_special_chars: bool = False) -> s
     Returns:
         Bold markdown string
     """
+    t('botapp.ui.text_blocks.bold_telegram_text')
     return f"*{escape_telegram_markdown(text, escape_special_chars=escape_special_chars)}*"
 
 
@@ -48,35 +50,42 @@ class MarkdownBlockBuilder:
         self._lines: List[str] = []
 
     def line(self, text: str = "") -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.line')
         self._lines.append(text)
         return self
 
     def heading(self, text: str) -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.heading')
         if text:
             self._lines.append(text)
         return self
 
     def bullet(self, text: str) -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.bullet')
         if text:
             self._lines.append(f"• {text}")
         return self
 
     def bullets(self, items: Iterable[str]) -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.bullets')
         for item in items:
             if item:
                 self._lines.append(f"• {item}")
         return self
 
     def blank(self) -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.blank')
         self._lines.append("")
         return self
 
     def extend(self, lines: Iterable[str]) -> "MarkdownBlockBuilder":
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.extend')
         for line in lines:
             self._lines.append(line)
         return self
 
     def build(self) -> str:
+        t('botapp.ui.text_blocks.MarkdownBlockBuilder.build')
         return "\n".join(self._lines)
 
 
@@ -92,6 +101,7 @@ class MarkdownBuilderBase:
 
     def create_builder(self) -> MarkdownBlockBuilder:
         """Return a new builder instance for composing Markdown output."""
+        t('botapp.ui.text_blocks.MarkdownBuilderBase.create_builder')
 
         return self._new_builder()
 

@@ -205,6 +205,7 @@ class ConversationStates:
     @classmethod
     def is_reservation_flow(cls, state: str) -> bool:
         """Check if state is part of reservation flow"""
+        t('botapp.state.state_manager.ConversationStates.is_reservation_flow')
         return cls._state_matches(
             state,
             "reserve_",
@@ -214,6 +215,7 @@ class ConversationStates:
     @classmethod
     def is_profile_flow(cls, state: str) -> bool:
         """Check if state is part of profile flow"""
+        t('botapp.state.state_manager.ConversationStates.is_profile_flow')
         return cls._state_matches(
             state,
             "profile_",
@@ -223,6 +225,7 @@ class ConversationStates:
     @classmethod
     def is_admin_flow(cls, state: str) -> bool:
         """Check if state is part of admin flow"""
+        t('botapp.state.state_manager.ConversationStates.is_admin_flow')
         return cls._state_matches(
             state,
             "admin_",

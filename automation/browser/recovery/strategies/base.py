@@ -41,6 +41,7 @@ class RecoveryStrategyExecutor(ABC):
     @abstractmethod
     async def execute(self, context: RecoveryContext) -> RecoveryResult:
         """Run the recovery strategy and return a structured result."""
+        t('automation.browser.recovery.strategies.base.RecoveryStrategyExecutor.execute')
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"{self.__class__.__name__}(strategy={self.strategy.value})"

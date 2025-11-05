@@ -13,6 +13,7 @@ class ReservationRepository:
     """Read/write reservation data to a JSON backing file."""
 
     def __init__(self, file_path: str, *, logger: Any) -> None:
+        t('reservations.queue.reservation_repository.ReservationRepository.__init__')
         self._path = Path(file_path)
         self._logger = logger
 

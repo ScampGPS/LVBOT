@@ -192,14 +192,17 @@ class ExecutorRequestFactory:
 
 
 def build_executor_request(**kwargs):
+    t('automation.executors.request_factory.build_executor_request')
     return ExecutorRequestFactory.build_executor_request(**kwargs)
 
 
 def build_retry_request(**kwargs):
+    t('automation.executors.request_factory.build_retry_request')
     return ExecutorRequestFactory.build_retry_request(**kwargs)
 
 
 def build_booking_result_from_execution(
+    t('automation.executors.request_factory.build_booking_result_from_execution')
     request: BookingRequest,
     execution: ExecutionResult,
     *,

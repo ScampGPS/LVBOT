@@ -41,6 +41,7 @@ class BrowserPoolManager:
             enabled: True to enable natural navigation (visit main site first),
                     False to use direct navigation (default/legacy behavior)
         """
+        t('automation.browser.pool.manager.BrowserPoolManager.enable_natural_navigation')
         self.use_natural_navigation = enabled
         if enabled:
             self.logger.info("Natural navigation enabled - will visit main site before court pages")
@@ -68,6 +69,7 @@ class BrowserPoolManager:
         Returns:
             True if file was deleted, False if it didn't exist
         """
+        t('automation.browser.pool.manager.BrowserPoolManager.clear_browser_state')
         state_path = BrowserPoolManager._get_storage_state_path(court)
         if state_path.exists():
             state_path.unlink()

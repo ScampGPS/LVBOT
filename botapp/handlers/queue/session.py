@@ -99,42 +99,52 @@ class QueueSessionStore:
 
     @property
     def selected_date(self) -> Optional[date]:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_date')
         return self._load().selected_date
 
     @selected_date.setter
     def selected_date(self, value: Optional[date]) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_date')
         self.update(date=value)
 
     @property
     def selected_time(self) -> Optional[str]:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_time')
         return self._load().selected_time
 
     @selected_time.setter
     def selected_time(self, value: Optional[str]) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_time')
         self.update(time=value)
 
     @property
     def selected_courts(self) -> List[int]:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_courts')
         return list(self._load().selected_courts)
 
     @selected_courts.setter
     def selected_courts(self, values: Iterable[int]) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.selected_courts')
         self.update(courts=values)
 
     @property
     def summary(self) -> Dict[str, Any]:
+        t('botapp.handlers.queue.session.QueueSessionStore.summary')
         return dict(self._load().summary)
 
     @summary.setter
     def summary(self, value: Dict[str, Any]) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.summary')
         self.update(summary=value)
 
     @property
     def modification(self) -> tuple[Optional[str], Optional[str]]:
+        t('botapp.handlers.queue.session.QueueSessionStore.modification')
         data = self._load()
         return data.modifying_reservation_id, data.modifying_option
 
     def set_modification(
+        t('botapp.handlers.queue.session.QueueSessionStore.set_modification')
         self,
         reservation_id: Optional[str],
         option: Optional[str],
@@ -145,6 +155,7 @@ class QueueSessionStore:
         )
 
     def clear_summary(self) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.clear_summary')
         self.update(summary={})
 
 

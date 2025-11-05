@@ -19,6 +19,7 @@ class EmergencyLoggerMixin:
     """Provides a shared logger for emergency browser components."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyLoggerMixin.__init__')
         self.logger = logger or logging.getLogger("EmergencyBrowserFallback")
 
 
@@ -26,12 +27,14 @@ class EmergencyBrowserFactory(EmergencyLoggerMixin):
     """Creates and manages the single emergency Playwright browser/context."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFactory.__init__')
         super().__init__(logger=logger)
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self.playwright = None
 
     async def create(self, timeouts: Dict[str, int]) -> Browser:
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFactory.create')
         if not self.playwright:
             self.playwright = await async_playwright().start()
 
@@ -60,6 +63,7 @@ class EmergencyBrowserFactory(EmergencyLoggerMixin):
         return self.browser
 
     async def cleanup(self) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFactory.cleanup')
         try:
             if self.context:
                 await self.context.close()
@@ -81,9 +85,11 @@ class EmergencyFormInteractor(EmergencyLoggerMixin):
     """Handles form navigation, visibility checks, and filling."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor.__init__')
         super().__init__(logger=logger)
 
     async def ensure_form_visible(self, page: Page) -> bool:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor.ensure_form_visible')
         if await self._check_form_visible(page):
             return True
         await self._try_click_continue(page)
@@ -91,12 +97,15 @@ class EmergencyFormInteractor(EmergencyLoggerMixin):
         return await self._check_form_visible(page)
 
     async def check_form_visible(self, page: Page) -> bool:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor.check_form_visible')
         return await self._check_form_visible(page)
 
     async def try_click_continue(self, page: Page) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor.try_click_continue')
         await self._try_click_continue(page)
 
     async def fill_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor.fill_form')
         try:
             await page.fill(
                 'input[name="client.firstName"]', user_info.get("first_name", "")
@@ -140,9 +149,11 @@ class EmergencyConfirmationChecker(EmergencyLoggerMixin):
     """Submits booking and extracts confirmation/error state."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyConfirmationChecker.__init__')
         super().__init__(logger=logger)
 
     async def submit(self, page: Page) -> Dict[str, Any]:
+        t('automation.browser.emergency_browser_fallback.EmergencyConfirmationChecker.submit')
         try:
             submit_btn = await page.query_selector(
                 'button[type="submit"]:has-text("Schedule")'
@@ -181,6 +192,7 @@ class EmergencyConfirmationChecker(EmergencyLoggerMixin):
             return {"success": False, "error": str(exc)}
 
     async def check_for_errors(self, page: Page) -> Optional[str]:
+        t('automation.browser.emergency_browser_fallback.EmergencyConfirmationChecker.check_for_errors')
         return await self._check_for_errors(page)
 
     async def _extract_user_name(self, page: Page) -> Optional[str]:

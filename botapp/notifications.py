@@ -29,10 +29,12 @@ class NotificationBuilder(MarkdownBuilderBase):
     """Build common booking notifications with shared Markdown formatting."""
 
     def __init__(self, builder_factory=MarkdownBlockBuilder, translator: Optional[Translator] = None) -> None:
+        t('botapp.notifications.NotificationBuilder.__init__')
         super().__init__(builder_factory=builder_factory)
         self.translator = translator or create_translator()
 
     def success_message(self, result: BookingResult) -> str:
+        t('botapp.notifications.NotificationBuilder.success_message')
         builder = self.create_builder().heading(self.translator.t("notif.booking_confirmed"))
 
         if result.court_reserved:
@@ -51,6 +53,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         return builder.build()
 
     def failure_message(self, result: BookingResult) -> str:
+        t('botapp.notifications.NotificationBuilder.failure_message')
         builder = self.create_builder().heading(self.translator.t("notif.booking_failed"))
 
         if result.message:
@@ -61,6 +64,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         return builder.build()
 
     def duplicate_warning(self, error_message: str) -> str:
+        t('botapp.notifications.NotificationBuilder.duplicate_warning')
         lines = [
             f"⚠️ {bold_telegram_text(self.translator.t('notif.duplicate_warning'), escape_special_chars=True)}",
             "",
@@ -74,6 +78,7 @@ class NotificationBuilder(MarkdownBuilderBase):
         return "\n".join(lines)
 
     def queue_reservation_added(
+        t('botapp.notifications.NotificationBuilder.queue_reservation_added')
         self,
         booking_summary: Dict[str, object],
         reservation_id: str,
@@ -209,17 +214,20 @@ def _send_notification(
 
 def send_success_notification(user_id: int, result: BookingResult, language: Optional[str] = None) -> Dict[str, object]:
     """Prepare payload for delivering a success notification to Telegram."""
+    t('botapp.notifications.send_success_notification')
 
     return _send_notification(format_success_message, user_id, result, language=language)
 
 
 def send_failure_notification(user_id: int, result: BookingResult) -> Dict[str, object]:
     """Prepare payload for delivering a failure notification to Telegram."""
+    t('botapp.notifications.send_failure_notification')
 
     return _send_notification(format_failure_message, user_id, result)
 
 
 def format_queue_reservation_added(
+    t('botapp.notifications.format_queue_reservation_added')
     booking_summary: Dict[str, object],
     reservation_id: str,
     *,
@@ -236,6 +244,7 @@ def format_queue_reservation_added(
 
 def format_duplicate_reservation_message(error_message: str) -> str:
     """Build a user-friendly duplicate reservation warning message."""
+    t('botapp.notifications.format_duplicate_reservation_message')
 
     return _NOTIFICATIONS.duplicate_warning(error_message)
 

@@ -142,6 +142,7 @@ async def shutdown_active_managers(
 
 def iter_active_managers() -> Iterable[BrowserManager]:
     """Yield currently registered browser managers."""
+    t('automation.browser.manager.iter_active_managers')
 
     if '_ACTIVE_MANAGERS' not in globals():
         return tuple()

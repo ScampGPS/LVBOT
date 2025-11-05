@@ -105,6 +105,7 @@ class RealtimeAvailabilityMonitor:
     # Core monitoring loop
     # ------------------------------------------------------------------
     async def monitor_loop(self) -> None:
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor.monitor_loop')
         if not self.poller:
             raise RuntimeError("Monitor not initialised")
 

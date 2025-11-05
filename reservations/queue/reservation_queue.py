@@ -45,18 +45,22 @@ class QueueRecordSerializer:
     """Serialize and hydrate queue reservation records."""
 
     def __init__(
+        t('reservations.queue.reservation_queue.QueueRecordSerializer.__init__')
         self,
         builder: ReservationRequestBuilder = DEFAULT_BUILDER,
     ) -> None:
         self._builder = builder
 
     def to_storage(self, reservation: ReservationRequest) -> Dict[str, Any]:
+        t('reservations.queue.reservation_queue.QueueRecordSerializer.to_storage')
         return dict(self._builder.to_payload(reservation))
 
     def from_storage(self, payload: Mapping[str, Any]) -> ReservationRequest:
+        t('reservations.queue.reservation_queue.QueueRecordSerializer.from_storage')
         return self._builder.record_from_payload(payload)
 
     def normalise_payload(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
+        t('reservations.queue.reservation_queue.QueueRecordSerializer.normalise_payload')
         record = self.from_storage(payload)
         return self.to_storage(record)
 
