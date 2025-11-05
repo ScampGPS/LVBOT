@@ -40,12 +40,15 @@ def create_profile_keyboard(language: Optional[str] = None, user_data: Optional[
     lang = user_data.get('language', 'es')
     lang_display = "🇪🇸 ES" if lang == 'es' else "🇺🇸 EN"
 
+    # Language button toggles directly to the opposite language
+    target_lang = 'en' if lang == 'es' else 'es'
+
     return _keyboard(
         [
             [(f"👤 {tr.t('profile.name')}", "edit_name"), (name or tr.t('profile.not_set'), "edit_name")],
             [(f"📱 {tr.t('profile.phone')}", "edit_phone"), (phone, "edit_phone")],
             [(f"📧 {tr.t('profile.email')}", "edit_email"), (email, "edit_email")],
-            [(f"🌐 {tr.t('profile.language')}", "edit_language"), (lang_display, "edit_language")],
+            [(f"🌐 {tr.t('profile.language')}", f"lang_{target_lang}"), (lang_display, f"lang_{target_lang}")],
             [(tr.t("nav.back_to_menu"), "back_to_menu")],
         ]
     )
