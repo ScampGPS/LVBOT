@@ -1120,23 +1120,29 @@ class QueueReservationManager(QueueFlowBase):
             user_id,
         )
 
+        # Get user language
+        user = self.deps.user_manager.get_user(user_id) if user_id else None
+        language = user.get('language') if user else None
+        from botapp.i18n.translator import create_translator
+        tr = create_translator(language)
+
         if not reservations:
             await self.edit_callback(
                 query,
-                "📋 **Queued Reservations**\n\n"
-                "You don't have any queued reservations.\n\n"
-                "Use '🎾 Reserve Court' → '📅 Reserve after 48h' to queue a booking!",
+                f"{tr.t('booking.queue_empty_title')}\n\n"
+                f"{tr.t('booking.queue_empty_message')}\n\n"
+                f"{tr.t('booking.queue_empty_cta')}",
                 parse_mode='Markdown',
-                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
             )
             return
 
         reservations.sort(key=lambda item: (item.get('target_date', ''), item.get('target_time', '')))
 
         message = [
-            "📋 **Queued Reservations**\n",
-            f"You have {len(reservations)} queued reservation(s).\n",
-            "Click on a reservation to manage it:\n",
+            f"{tr.t('booking.queue_title')}\n",
+            f"{tr.t('booking.queue_count', count=len(reservations))}\n",
+            f"{tr.t('booking.queue_prompt')}\n",
         ]
 
         keyboard: list[list[InlineKeyboardButton]] = []

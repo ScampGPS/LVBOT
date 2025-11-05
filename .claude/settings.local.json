@@ -5,7 +5,8 @@
       "Bash(python:*)",
       "Bash(/mnt/c/Users/SaulCamposJr/AppData/Local/Programs/Python/Python313/python.exe:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
