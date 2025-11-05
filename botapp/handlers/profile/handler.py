@@ -54,8 +54,9 @@ class ProfileHandler:
         try:
             tr = get_user_translator(self.deps.user_manager, user_id)
             keyboard = TelegramUI.create_edit_profile_keyboard(language=tr.get_language())
+            message = f"{tr.t('profile.edit_profile_title')}\n\n{tr.t('profile.select_field')}"
             await query.edit_message_text(
-                "✏️ **Edit Profile**\n\nSelect a field to edit:",
+                message,
                 parse_mode='Markdown',
                 reply_markup=keyboard,
             )
@@ -68,6 +69,7 @@ class ProfileHandler:
         user_id = query.from_user.id
 
         try:
+            tr = get_user_translator(self.deps.user_manager, user_id)
             session = get_session_state(context)
             session.profile.name_input = ''
             session.profile.editing_name_field = None
@@ -75,9 +77,10 @@ class ProfileHandler:
             context.user_data.pop('editing_name_field', None)
 
             keyboard = TelegramUI.create_name_type_keyboard()
+            message = f"{tr.t('profile.name_editing')}\n\n{tr.t('profile.choose_name_field')}"
 
             await query.edit_message_text(
-                "🧑‍💼 **Name Editing**\n\nChoose the name field you want to edit:",
+                message,
                 parse_mode='Markdown',
                 reply_markup=keyboard,
             )
@@ -112,6 +115,10 @@ class ProfileHandler:
 
     async def handle_edit_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_phone')
+        query = update.callback_query
+        user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
+
         try:
             await self._start_contact_edit(
                 update,
@@ -122,10 +129,10 @@ class ProfileHandler:
                 icon='📱',
                 label='Phone Number',
                 message_builder=lambda current: (
-                    "📱 **Edit Phone Number**\n\n"
-                    f"Current: (+502) {current if current else 'Not set'}\n\n"
+                    f"{tr.t('profile.edit_phone_title')}\n\n"
+                    f"{tr.t('profile.current')}: (+502) {current if current else tr.t('profile.not_set')}\n\n"
                     "(+502) ________\n\n"
-                    "Use the keypad below to enter your phone number:"
+                    f"{tr.t('profile.use_keypad')}"
                 ),
                 keyboard_factory=TelegramUI.create_phone_keypad,
             )
@@ -134,6 +141,10 @@ class ProfileHandler:
 
     async def handle_edit_email(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_email')
+        query = update.callback_query
+        user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
+
         try:
             await self._start_contact_edit(
                 update,
@@ -144,10 +155,10 @@ class ProfileHandler:
                 icon='📧',
                 label='Email',
                 message_builder=lambda current: (
-                    "📧 **Edit Email**\n\n"
-                    f"Current: {current if current else 'Not set'}\n\n"
-                    "Email: \\_\n\n"
-                    "Use the keyboard below:"
+                    f"{tr.t('profile.edit_email_title')}\n\n"
+                    f"{tr.t('profile.current')}: {current if current else tr.t('profile.not_set')}\n\n"
+                    f"{tr.t('profile.email_label')}: \\_\n\n"
+                    f"{tr.t('profile.use_keyboard')}"
                 ),
                 keyboard_factory=TelegramUI.create_email_char_keyboard,
             )
@@ -181,6 +192,7 @@ class ProfileHandler:
     ) -> None:
         query = update.callback_query
         user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         session = get_session_state(context)
         session.profile.name_input = ''
@@ -191,11 +203,14 @@ class ProfileHandler:
         user_profile = self.deps.user_manager.get_user(user_id) or {}
         current_value = user_profile.get(field, '')
 
+        # Translate the label
+        translated_label = tr.t(f'profile.{field}')
+
         message = (
-            f"{icon} **Edit {label}**\n\n"
-            f"Current: {current_value if current_value else 'Not set'}\n\n"
-            f"{label}: \\_\n\n"
-            "Use the keyboard below:"
+            f"{icon} {tr.t('profile.edit_field', field=translated_label)}\n\n"
+            f"{tr.t('profile.current')}: {current_value if current_value else tr.t('profile.not_set')}\n\n"
+            f"{translated_label}: \\_\n\n"
+            f"{tr.t('profile.use_keyboard')}"
         )
         reply_markup = TelegramUI.create_letter_keyboard()
         await query.edit_message_text(
@@ -241,6 +256,8 @@ class ProfileHandler:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_phone_keypad')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         try:
             session = get_session_state(context)
@@ -255,17 +272,17 @@ class ProfileHandler:
                 if len(phone_input) < 8:
                     phone_input += digit
                 else:
-                    await query.answer("❌ Phone number must be 8 digits")
+                    await query.answer(tr.t('profile.phone_8_digits'))
                     return
             elif callback_data == 'phone_delete':
                 phone_input = phone_input[:-1]
             elif callback_data == 'phone_done':
                 if len(phone_input) != 8:
-                    await query.answer("❌ Phone number must be exactly 8 digits")
+                    await query.answer(tr.t('profile.phone_exactly_8'))
                     return
 
                 full_phone = f"+502 {phone_input}"
-                profile = self.deps.user_manager.get_user(query.from_user.id) or {'user_id': query.from_user.id}
+                profile = self.deps.user_manager.get_user(user_id) or {'user_id': user_id}
                 profile['phone'] = phone_input
                 self.deps.user_manager.save_user(profile)
 
@@ -275,7 +292,7 @@ class ProfileHandler:
                 context.user_data.pop('editing_field', None)
 
                 await query.edit_message_text(
-                    f"✅ Phone number updated to {full_phone}",
+                    tr.t('profile.phone_updated', phone=full_phone),
                     reply_markup=TelegramUI.create_back_to_menu_keyboard(),
                 )
                 return
@@ -284,9 +301,9 @@ class ProfileHandler:
             context.user_data['phone_input'] = phone_input
 
             message = (
-                "📱 **Edit Phone Number**\n\n"
+                f"{tr.t('profile.edit_phone_title')}\n\n"
                 f"(+502) {phone_input}\n\n"
-                "Use the keypad below to continue:"
+                f"{tr.t('profile.use_keypad')}"
             )
             reply_markup = TelegramUI.create_phone_keypad(current=phone_input)
 
@@ -305,6 +322,7 @@ class ProfileHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         try:
             session = get_session_state(context)
@@ -322,7 +340,7 @@ class ProfileHandler:
                 profile['last_name'] = last_name
                 self.deps.user_manager.save_user(profile)
 
-                await query.answer("✅ Name updated from Telegram!")
+                await query.answer(tr.t('profile.name_updated_telegram'))
                 await self.handle_edit_name(update, context)
                 return
 
@@ -340,6 +358,7 @@ class ProfileHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         session = get_session_state(context)
         name_input = session.profile.name_input
@@ -361,7 +380,8 @@ class ProfileHandler:
             context.user_data.pop('name_input', None)
             context.user_data.pop('editing_name_field', None)
 
-            await query.answer(f"✅ {editing_field.replace('_', ' ').title()} updated!")
+            field_display = tr.t(f'profile.{editing_field}')
+            await query.answer(f"✅ {field_display} updated!")
             await self.handle_edit_name(update, context)
             return
         else:
@@ -373,18 +393,18 @@ class ProfileHandler:
             if len(name_input) < 20:
                 name_input += letter
             else:
-                await query.answer("❌ Name too long")
+                await query.answer(tr.t('profile.name_too_long'))
                 return
 
         session.profile.name_input = name_input
         context.user_data['name_input'] = name_input
 
-        field_display = "First Name" if editing_field == 'first_name' else "Last Name"
+        field_display = tr.t(f'profile.{editing_field}')
         emoji = "👤" if editing_field == 'first_name' else "👥"
         message = (
-            f"{emoji} **Edit {field_display}**\n\n"
+            f"{emoji} {tr.t('profile.edit_field', field=field_display)}\n\n"
             f"{field_display}: {name_input}\\_\n\n"
-            "Use the keyboard below:"
+            f"{tr.t('profile.use_keyboard')}"
         )
         reply_markup = TelegramUI.create_letter_keyboard()
 
@@ -396,6 +416,7 @@ class ProfileHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         try:
             session = get_session_state(context)
@@ -408,7 +429,7 @@ class ProfileHandler:
                     session.profile.email_input = email_input
                     context.user_data['email_input'] = email_input
                 else:
-                    await query.answer("❌ Email too long")
+                    await query.answer(tr.t('profile.email_too_long'))
                     return
             elif callback_data == 'email_delete':
                 if email_input:
@@ -417,11 +438,13 @@ class ProfileHandler:
                     context.user_data['email_input'] = email_input
             elif callback_data == 'email_done':
                 if '@' not in email_input:
-                    await query.answer("❌ Email must contain @")
+                    await query.answer(tr.t('profile.email_must_have_at'))
                     return
 
                 message = (
-                    f"📧 **Confirm Email**\n\nEmail: {email_input}\n\nIs this correct?"
+                    f"{tr.t('profile.confirm_email_title')}\n\n"
+                    f"{tr.t('profile.email_label')}: {email_input}\n\n"
+                    f"{tr.t('profile.is_correct')}"
                 )
                 reply_markup = TelegramUI.create_email_confirm_keyboard(email_input)
 
@@ -441,14 +464,14 @@ class ProfileHandler:
                 session.profile.editing_field = None
                 context.user_data.pop('email_input', None)
 
-                await query.answer("✅ Email updated!")
+                await query.answer(tr.t('profile.email_updated'))
                 await self.handle_profile_menu(update, context)
                 return
 
             message = (
-                "📧 **Edit Email**\n\n"
-                f"Email: {email_input}\\_\n\n"
-                "Use the keyboard below:"
+                f"{tr.t('profile.edit_email_title')}\n\n"
+                f"{tr.t('profile.email_label')}: {email_input}\\_\n\n"
+                f"{tr.t('profile.use_keyboard')}"
             )
             reply_markup = TelegramUI.create_email_char_keyboard()
             await query.edit_message_text(
@@ -466,6 +489,7 @@ class ProfileHandler:
         t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_language')
         query = update.callback_query
         user_id = query.from_user.id
+        tr = get_user_translator(self.deps.user_manager, user_id)
 
         try:
             user_profile = self.deps.user_manager.get_user(user_id)
@@ -473,9 +497,9 @@ class ProfileHandler:
             lang_display = "🇪🇸 Español" if current_lang == 'es' else "🇺🇸 English"
 
             message = (
-                "🌐 **Language Selection**\n\n"
-                f"Current language: {lang_display}\n\n"
-                "Select your preferred language:"
+                f"{tr.t('profile.language_selection')}\n\n"
+                f"{tr.t('profile.current_language')}: {lang_display}\n\n"
+                f"{tr.t('profile.select_language')}"
             )
 
             keyboard = TelegramUI.create_language_selection_keyboard()
