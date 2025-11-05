@@ -628,6 +628,34 @@ class QueueBookingFlow(QueueFlowBase):
 
         await self._show_time_selection_callback(update, context, selected_date)
 
+    async def back_to_time(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Return the user to the time selection step."""
+
+        query = update.callback_query
+        await self.answer_callback(query)
+
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        self.logger.info("QueueBookingFlow.back_to_time user=%s", user_id)
+
+        store = self._session_store(context)
+        selected_date = store.selected_date
+
+        if not selected_date:
+            self.logger.error("Missing selected_date when going back to time selection")
+            await self.edit_callback(
+                query,
+                self.messages.session_expired(),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+            )
+            return
+
+        # Show time selection again for the selected date
+        await self._show_time_selection(update, context, selected_date)
+
     async def back_to_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Return the user to the court selection step."""
 

@@ -194,6 +194,13 @@ class QueueHandler(CallbackResponseMixin):
         "Handle cancellation of queue booking reservation.",
     )
 
+    handle_back_to_queue_time = _delegate(
+        "booking_flow",
+        "back_to_time",
+        "botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_queue_time",
+        "Handle returning to the time selection screen.",
+    )
+
     handle_back_to_queue_courts = _delegate(
         "booking_flow",
         "back_to_courts",

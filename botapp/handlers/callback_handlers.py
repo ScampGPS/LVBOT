@@ -79,6 +79,7 @@ class CallbackHandler:
         add('queue_confirm', self.queue.handle_queue_booking_confirm)
         add('queue_cancel', self.queue.handle_queue_booking_cancel)
         add('back_to_queue_dates', self.booking.handle_48h_future_booking)
+        add('back_to_queue_time', self.queue.handle_back_to_queue_time)
         add('back_to_queue_courts', self.queue.handle_back_to_queue_courts)
 
         add('menu_admin', self.admin.handle_admin_menu)
