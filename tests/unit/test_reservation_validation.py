@@ -22,6 +22,7 @@ def test_ensure_unique_slot_allows_unique():
         user_id=1,
         target_date="2024-01-01",
         target_time="09:00",
+        courts=[1],
         logger=logging.getLogger("test"),
     )
 
@@ -34,6 +35,7 @@ def test_ensure_unique_slot_raises_for_conflict():
             "target_date": "2024-01-01",
             "target_time": "08:00",
             "status": "scheduled",
+            "court_preferences": [1],
         }
     ]
 
@@ -43,5 +45,51 @@ def test_ensure_unique_slot_raises_for_conflict():
             user_id=1,
             target_date="2024-01-01",
             target_time="08:00",
+            courts=[1],
+            logger=logging.getLogger("test"),
+        )
+
+
+def test_ensure_unique_slot_allows_different_courts():
+    reservations = [
+        {
+            "id": "abc",
+            "user_id": 1,
+            "target_date": "2024-01-01",
+            "target_time": "08:00",
+            "status": "scheduled",
+            "court_preferences": [2],
+        }
+    ]
+
+    ensure_unique_slot(
+        reservations,
+        user_id=1,
+        target_date="2024-01-01",
+        target_time="08:00",
+        courts=[1],
+        logger=logging.getLogger("test"),
+    )
+
+
+def test_ensure_unique_slot_conflict_when_existing_any_court():
+    reservations = [
+        {
+            "id": "abc",
+            "user_id": 1,
+            "target_date": "2024-01-01",
+            "target_time": "08:00",
+            "status": "scheduled",
+            "court_preferences": [],
+        }
+    ]
+
+    with pytest.raises(ValueError):
+        ensure_unique_slot(
+            reservations,
+            user_id=1,
+            target_date="2024-01-01",
+            target_time="08:00",
+            courts=[3],
             logger=logging.getLogger("test"),
         )

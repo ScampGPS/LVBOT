@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && python -m pytest tests/bot/test_all_menu_buttons.py -v\")"
+      "Bash(cmd.exe /c \"cd C:\\Users\\SaulCamposJr\\Documents\\code\\Python\\LVBot && python -m pytest tests/bot/test_all_menu_buttons.py -v\")",
+      "Bash(python:*)",
+      "Bash(/mnt/c/Users/SaulCamposJr/AppData/Local/Programs/Python/Python313/python.exe:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

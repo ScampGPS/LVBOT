@@ -229,14 +229,10 @@ class DynamicBookingOrchestrator:
                     """)
             
             # Distribute attempts across browsers
-            browser_assignments = []
-            for i, attempt in enumerate(attempts):
-                browser = self.browser_strategies[i % len(self.browser_strategies)]
-                browser_assignments.append({
-                    'browser': browser,
-                    'attempt': attempt,
-                    'strategy': 'refresh_staggered'
-                })
+            browser_assignments = [
+                self._create_assignment(attempt, position=i)
+                for i, attempt in enumerate(attempts)
+            ]
             
             plan = {
                 'time_slot': time_slot,
@@ -250,7 +246,20 @@ class DynamicBookingOrchestrator:
             
             self._log_plan(plan)
             return plan
-    
+
+    def _create_assignment(self, attempt: BookingAttempt, position: int = 0) -> Dict[str, Any]:
+        """Build a browser assignment for the provided attempt."""
+
+        browser = self.browser_strategies[position % len(self.browser_strategies)]
+        attempt.browser_id = browser.get("id")
+        current_number = getattr(attempt, 'attempt_number', 0) or 0
+        attempt.attempt_number = current_number + 1 if current_number else 1
+        return {
+            'browser': browser,
+            'attempt': attempt,
+            'strategy': 'refresh_staggered',
+        }
+
     def handle_booking_result(self, reservation_id: str, success: bool, 
                             court_booked: Optional[int] = None) -> Optional[Dict]:
         """
@@ -305,10 +314,14 @@ class DynamicBookingOrchestrator:
                     attempt.status = BookingStatus.FALLBACK
                     attempt.target_court = fallback_court
                     self.court_status[fallback_court] = 'attempting'
-                    
-                    remaining = [c for c in attempt.fallback_courts 
-                               if c != fallback_court and 
-                               self.court_status.get(c) == 'available']
+
+                    remaining = [
+                        c
+                        for c in attempt.fallback_courts
+                        if c != fallback_court
+                        and self.court_status.get(c) == 'available'
+                    ]
+                    attempt.fallback_courts = remaining
                     
                     self.logger.info(f"""FALLBACK PLAN CREATED
                     Reservation ID: {reservation_id}
@@ -316,10 +329,10 @@ class DynamicBookingOrchestrator:
                     Remaining fallbacks: {remaining}
                     """)
                     
+                    assignment = self._create_assignment(attempt)
                     return {
-                        'reservation_id': reservation_id,
-                        'fallback_court': fallback_court,
-                        'remaining_fallbacks': remaining
+                        'assignment': assignment,
+                        'remaining_fallbacks': remaining,
                     }
                 else:
                     # No fallbacks available

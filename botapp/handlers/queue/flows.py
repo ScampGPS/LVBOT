@@ -13,6 +13,7 @@ from telegram.ext import ContextTypes
 
 from botapp.error_handler import ErrorHandler
 from botapp.handlers.queue.session import QueueSessionStore
+from reservations.queue.court_utils import normalize_court_sequence
 from botapp.handlers.queue.guards import (
     IncompleteProfileError,
     MissingModificationContextError,
@@ -359,16 +360,14 @@ class QueueBookingFlow(QueueFlowBase):
         ]
 
         if not selected_courts:
-            selected_courts = list(self.AVAILABLE_COURTS)
+            cleaned_courts = list(self.AVAILABLE_COURTS)
         else:
-            # Validate courts within available range
-            selected_courts = [
-                court_number
-                for court_number in selected_courts
-                if court_number in self.AVAILABLE_COURTS
-            ]
-
-        cleaned_courts = sorted(set(selected_courts))
+            cleaned_courts = normalize_court_sequence(
+                selected_courts,
+                allowed=self.AVAILABLE_COURTS,
+            )
+            if not cleaned_courts:
+                cleaned_courts = list(self.AVAILABLE_COURTS)
 
         self.logger.info(
             "QueueBookingFlow.select_courts parsed user=%s courts=%s",
@@ -964,7 +963,10 @@ class QueueBookingFlow(QueueFlowBase):
                 )
                 return
 
-        cleaned_list = sorted({int(court) for court in cleaned_courts})
+        cleaned_list = normalize_court_sequence(
+            cleaned_courts,
+            allowed=self.AVAILABLE_COURTS,
+        )
         store.selected_courts = cleaned_list
 
         selected_date = store.selected_date

@@ -15,17 +15,20 @@ def record_outcome(
 ) -> None:
     """Update orchestrator state and queue statistics for a booking result."""
 
+    fallback = scheduler.orchestrator.handle_booking_result(
+        reservation_id,
+        success=bool(result.get("success")),
+        court_booked=result.get("court"),
+    )
+
     if result.get("success"):
-        scheduler.orchestrator.handle_booking_result(
-            reservation_id,
-            success=True,
-            court_booked=result.get("court"),
-        )
         scheduler._update_reservation_success(reservation_id, result)
-    else:
-        scheduler.orchestrator.handle_booking_result(
-            reservation_id,
-            success=False,
-        )
-        error_msg = result.get("error", "Unknown error")
-        scheduler._update_reservation_failed(reservation_id, error_msg)
+        return
+
+    if fallback:
+        result["retry_scheduled"] = True
+        scheduler.schedule_fallback_retry(reservation_id, fallback)
+        return
+
+    error_msg = result.get("error", "Unknown error")
+    scheduler._update_reservation_failed(reservation_id, error_msg)

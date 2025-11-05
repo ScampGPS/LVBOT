@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from telegram.ext import ContextTypes
 
 from botapp.handlers.state import get_session_state
+from reservations.queue.court_utils import normalize_court_sequence
 
 
 @dataclass
@@ -33,7 +34,6 @@ LEGACY_MODIFY_OPTION_KEY = 'modifying_option'
 
 
 _MISSING = object()
-
 
 class QueueSessionStore:
     """Stateful helper encapsulating queue booking session persistence."""
@@ -77,10 +77,7 @@ class QueueSessionStore:
             data.selected_time = time
 
         if courts is not _MISSING:
-            cleaned: List[int] = []
-            if courts:
-                cleaned = sorted({int(court) for court in courts})
-            data.selected_courts = cleaned
+            data.selected_courts = normalize_court_sequence(courts)
 
         if summary is not _MISSING:
             data.summary = dict(summary or {})

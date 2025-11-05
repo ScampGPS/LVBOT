@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Dict, Sequence
+from typing import Dict, Optional, Sequence
 
 from tracking import t
 
 from automation.shared.booking_contracts import BookingResult
+from botapp.i18n.translator import Translator, create_translator
 from botapp.ui.telegram_ui import TelegramUI
 from botapp.ui.text_blocks import (
     MarkdownBlockBuilder,
@@ -19,6 +20,7 @@ from botapp.ui.text_blocks import (
 from infrastructure.settings import TestModeConfig
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+# Deprecated: Use translator instead
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
 
@@ -26,29 +28,30 @@ FAILURE_HEADER = "❌ *Booking Attempt Failed*"
 class NotificationBuilder(MarkdownBuilderBase):
     """Build common booking notifications with shared Markdown formatting."""
 
-    def __init__(self, builder_factory=MarkdownBlockBuilder) -> None:
+    def __init__(self, builder_factory=MarkdownBlockBuilder, translator: Optional[Translator] = None) -> None:
         super().__init__(builder_factory=builder_factory)
+        self.translator = translator or create_translator()
 
     def success_message(self, result: BookingResult) -> str:
-        builder = self.create_builder().heading(SUCCESS_HEADER)
+        builder = self.create_builder().heading(self.translator.t("notif.booking_confirmed"))
 
         if result.court_reserved:
-            builder.bullet(f"Court: {result.court_reserved}")
+            builder.bullet(f"{self.translator.t('notif.court')}: {result.court_reserved}")
         if result.time_reserved:
-            builder.bullet(f"Time: {result.time_reserved}")
+            builder.bullet(f"{self.translator.t('notif.time')}: {result.time_reserved}")
         if result.confirmation_code:
-            builder.bullet(f"Confirmation: `{result.confirmation_code}`")
+            builder.bullet(f"{self.translator.t('notif.confirmation')}: `{result.confirmation_code}`")
 
         if result.message:
             builder.blank().line(result.message)
 
         # Note: Calendar links are now shown as inline buttons instead of text links
-        builder.blank().line("Use the buttons below to add to your calendar or manage your reservation.")
+        builder.blank().line(self.translator.t("notif.calendar_help"))
 
         return builder.build()
 
     def failure_message(self, result: BookingResult) -> str:
-        builder = self.create_builder().heading(FAILURE_HEADER)
+        builder = self.create_builder().heading(self.translator.t("notif.booking_failed"))
 
         if result.message:
             builder.line(result.message)
@@ -59,12 +62,13 @@ class NotificationBuilder(MarkdownBuilderBase):
 
     def duplicate_warning(self, error_message: str) -> str:
         lines = [
-            f"⚠️ {bold_telegram_text('Duplicate Reservation')}",
+            f"⚠️ {bold_telegram_text(self.translator.t('notif.duplicate_warning'), escape_special_chars=True)}",
             "",
-            escape_telegram_markdown(error_message),
+            escape_telegram_markdown(error_message, escape_special_chars=True),
             "",
             escape_telegram_markdown(
-                "You can only have one reservation per time slot. Please check your existing reservations or choose a different time."
+                self.translator.t("notif.duplicate_message"),
+                escape_special_chars=True,
             ),
         ]
         return "\n".join(lines)
@@ -91,34 +95,36 @@ class NotificationBuilder(MarkdownBuilderBase):
             )
 
         lines = [
-            f"✅ {bold_telegram_text('Reservation Added to Queue!')}",
+            f"✅ {bold_telegram_text('Reservation Added to Queue!', escape_special_chars=True)}",
             "",
-            f"📅 Date: {escape_telegram_markdown(display_date)}",
-            f"⏱️ Time: {escape_telegram_markdown(booking_summary['target_time'])}",
-            f"🎾 Courts: {escape_telegram_markdown(courts_label)}",
+            f"📅 Date: {escape_telegram_markdown(display_date, escape_special_chars=True)}",
+            f"⏱️ Time: {escape_telegram_markdown(booking_summary['target_time'], escape_special_chars=True)}",
+            f"🎾 Courts: {escape_telegram_markdown(courts_label, escape_special_chars=True)}",
             "",
-            f"🤖 {bold_telegram_text('Queue ID:')} {escape_telegram_markdown(reservation_id[:8] + '...')}",
+            f"🤖 {bold_telegram_text('Queue ID:', escape_special_chars=True)} {escape_telegram_markdown(reservation_id[:8] + '...', escape_special_chars=True)}",
             "",
         ]
 
         if test_mode_config.enabled:
-            lines.append(bold_telegram_text("TEST MODE ACTIVE"))
+            lines.append(bold_telegram_text("TEST MODE ACTIVE", escape_special_chars=True))
             lines.append(
                 escape_telegram_markdown(
-                    f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!"
+                    f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!",
+                    escape_special_chars=True,
                 )
             )
             lines.append("")
         else:
             lines.append(
                 escape_telegram_markdown(
-                    "Your reservation has been successfully added to the queue. The bot will automatically attempt to book this court when the booking window opens."
+                    "Your reservation has been successfully added to the queue. The bot will automatically attempt to book this court when the booking window opens.",
+                    escape_special_chars=True,
                 )
             )
             lines.append("")
 
         lines.append(
-            escape_telegram_markdown("You can view your queued reservations anytime using the My Reservations option.")
+            escape_telegram_markdown("You can view your queued reservations anytime using the My Reservations option.", escape_special_chars=True)
         )
 
         return "\n".join(lines)
@@ -128,8 +134,15 @@ _NOTIFICATIONS = NotificationBuilder()
 
 
 def _format_notification(method_name: str, doc: str):
-    def _format(result: BookingResult) -> str:
-        builder_method = getattr(_NOTIFICATIONS, method_name)
+    def _format(result: BookingResult, language: Optional[str] = None) -> str:
+        # Create builder with appropriate translator if language is specified
+        if language:
+            translator = create_translator(language)
+            builder = NotificationBuilder(translator=translator)
+        else:
+            builder = _NOTIFICATIONS
+
+        builder_method = getattr(builder, method_name)
         return builder_method(result)
 
     _format.__name__ = f"format_{method_name}"
@@ -152,9 +165,13 @@ def _send_notification(
     formatter,
     user_id: int,
     result: BookingResult,
+    language: Optional[str] = None,
 ) -> Dict[str, object]:
     # Build inline keyboard with calendar links and cancel button
     keyboard = []
+
+    # Create translator for button text
+    translator = create_translator(language) if language else create_translator()
 
     # Extract links from metadata
     google_calendar_link = result.metadata.get("google_calendar_link")
@@ -164,9 +181,9 @@ def _send_notification(
     # Add calendar buttons (first row)
     calendar_row = []
     if google_calendar_link:
-        calendar_row.append(InlineKeyboardButton("📅 Google Calendar", url=google_calendar_link))
+        calendar_row.append(InlineKeyboardButton(translator.t("calendar.add_google"), url=google_calendar_link))
     if ics_calendar_link:
-        calendar_row.append(InlineKeyboardButton("📆 Outlook/iCal", url=ics_calendar_link))
+        calendar_row.append(InlineKeyboardButton(translator.t("calendar.add_outlook"), url=ics_calendar_link))
     if calendar_row:
         keyboard.append(calendar_row)
 
@@ -174,7 +191,7 @@ def _send_notification(
     if cancel_modify_link:
         keyboard.append([
             InlineKeyboardButton(
-                "🗑️ Cancel/Modify Reservation",
+                translator.t("reservation.cancel_modify"),
                 url=cancel_modify_link
             )
         ])
@@ -184,16 +201,16 @@ def _send_notification(
 
     return {
         "user_id": user_id,
-        "message": formatter(result),
+        "message": formatter(result, language=language),
         "parse_mode": "Markdown",
         "reply_markup": reply_markup,
     }
 
 
-def send_success_notification(user_id: int, result: BookingResult) -> Dict[str, object]:
+def send_success_notification(user_id: int, result: BookingResult, language: Optional[str] = None) -> Dict[str, object]:
     """Prepare payload for delivering a success notification to Telegram."""
 
-    return _send_notification(format_success_message, user_id, result)
+    return _send_notification(format_success_message, user_id, result, language=language)
 
 
 def send_failure_notification(user_id: int, result: BookingResult) -> Dict[str, object]:

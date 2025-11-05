@@ -60,19 +60,25 @@ async def test_dispatch_to_executors_reports_timeouts():
 
 
 class DummyScheduler:
-    def __init__(self):
+    def __init__(self, fallback_response=None):
         self.success_calls = []
         self.failed_calls = []
+        self.fallback_calls = []
         self.orchestrator = SimpleNamespace(handle_booking_result=self.handle_booking_result)
+        self._fallback_response = fallback_response
 
     def handle_booking_result(self, reservation_id, **kwargs):
         self.recorded = (reservation_id, kwargs)
+        return self._fallback_response
 
     def _update_reservation_success(self, reservation_id, result):
         self.success_calls.append((reservation_id, result))
 
     def _update_reservation_failed(self, reservation_id, error):
         self.failed_calls.append((reservation_id, error))
+
+    def schedule_fallback_retry(self, reservation_id, fallback):
+        self.fallback_calls.append((reservation_id, fallback))
 
 
 def test_record_outcome_success_invokes_handlers():
@@ -83,6 +89,7 @@ def test_record_outcome_success_invokes_handlers():
 
     assert scheduler.success_calls == [("res-success", result)]
     assert scheduler.failed_calls == []
+    assert scheduler.fallback_calls == []
 
 
 def test_record_outcome_failure_invokes_handlers():
@@ -93,3 +100,20 @@ def test_record_outcome_failure_invokes_handlers():
 
     assert scheduler.failed_calls == [("res-fail", "boom")]
     assert scheduler.success_calls == []
+    assert scheduler.fallback_calls == []
+
+
+def test_record_outcome_schedules_fallback():
+    fallback_payload = {
+        "assignment": {"attempt": SimpleNamespace(target_court=2)},
+        "remaining_fallbacks": [3],
+    }
+    scheduler = DummyScheduler(fallback_response=fallback_payload)
+    result = {"success": False, "error": "first failure"}
+
+    record_outcome(scheduler, "res-retry", result)
+
+    assert scheduler.failed_calls == []
+    assert scheduler.success_calls == []
+    assert scheduler.fallback_calls == [("res-retry", fallback_payload)]
+    assert result.get("retry_scheduled") is True

@@ -17,7 +17,7 @@ from .flows.fast_flow import execute_fast_flow
 from .flows.natural_flow import execute_natural_flow
 
 
-NATURAL_INITIAL_DELAY_RANGE = (28.0, 32.0)
+NATURAL_INITIAL_DELAY_RANGE = (4.0, 6.0)  # ~5s initial delay for human-like behavior
 
 
 class BookingFlowExecutor:

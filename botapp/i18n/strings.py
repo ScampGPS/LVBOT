@@ -27,6 +27,33 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "booking.reserve_within_48h": "🏃‍♂️ Reservar dentro de 48h",
         "booking.reserve_after_48h": "📅 Reservar después de 48h",
         "booking.test_queue": "🧪 TEST: Reserva en Cola",
+        "booking.menu_title": "🎾 Reservar Cancha",
+        "booking.menu_prompt": "Elige el tipo de reserva:",
+        "booking.empty_title": "📅 **Mis Reservas**",
+        "booking.empty_message": "No tienes reservas activas.",
+        "booking.empty_cta": "Usa '🎾 Reservar Cancha' para crear una nueva reserva.",
+        "booking.checking_48h": "🔍 Revisando disponibilidad de canchas para las próximas 48 horas...",
+        "booking.system_unavailable": "⚠️ **El sistema de reservas no está disponible temporalmente**\n\nEl sistema de reservas de canchas está experimentando problemas de conectividad. Normalmente se soluciona en pocos minutos.\n\nPor favor intenta de nuevo en unos momentos.",
+        "booking.no_slots_48h": "😔 No hay canchas disponibles en las próximas 48 horas.\n\n💡 Intenta más tarde o usa 'Reservar después de 48h' para programar con más anticipación.",
+        "booking.error_checking": "❌ Hubo un error al consultar la disponibilidad.\nPor favor intenta nuevamente más tarde.",
+        "booking.future_title": "📅 Reservar Cancha (Reserva futura)",
+        "booking.future_prompt": "Selecciona el año de tu reserva:",
+        "booking.month_prompt": "Selecciona el mes de tu reserva:",
+        "booking.date_prompt": "Selecciona la fecha de tu reserva:",
+        "booking.checking_availability": "🔍 Revisando disponibilidad de canchas, por favor espera...",
+        "booking.invalid_date_format": "❌ Formato de fecha inválido: {date}. Por favor intenta de nuevo.",
+        "booking.select_time_title": "⏰ Reserva en cola - {date}",
+        "booking.select_time_prompt": "Selecciona tu horario preferido:\n(se te notificará cuando abra la reserva)",
+        "booking.no_times_for_date": "❌ No hay horarios disponibles el {date}.\nTodos los horarios están dentro de la ventana de 48 horas.\nPor favor selecciona otra fecha.",
+        "booking.invalid_date_selection": "❌ Selección de fecha inválida. Por favor intenta de nuevo.",
+        "booking.blocked_date_alert": "⚠️ Esta fecha está dentro de las próximas 48 horas. Redirigiendo a una reserva inmediata...",
+        "booking.blocked_date_test": "🧪 Modo prueba: procediendo con reserva en cola para una fecha dentro de 48h",
+        "booking.day_cycle_loading": "🔄 Cargando disponibilidad...",
+        "booking.day_cycle_unavailable": "⚠️ **No se pudo cargar la disponibilidad de canchas**\n\nIntenta nuevamente en unos momentos.",
+        "booking.error_processing_date": "❌ Error al procesar la selección de fecha.",
+        "booking.use_immediate_prompt": "⚠️ Esta fecha está dentro de las próximas 48 horas.\n\nUsa 'Reservar dentro de 48h' para reservar de inmediato.",
+        "booking.use_immediate_button": "🏃‍♂️ Usar reserva inmediata",
+        "error.reservations_load": "❌ Error al cargar las reservas. Por favor intenta de nuevo.",
 
         # Common actions
         "action.yes": "Sí",
@@ -66,12 +93,13 @@ STRINGS: Dict[str, Dict[str, str]] = {
 
         # Calendar buttons
         "calendar.add_google": "📅 Agregar a Google Calendar",
-        "calendar.add_outlook": "📅 Agregar a Outlook",
+        "calendar.add_outlook": "📆 Outlook/iCal",
         "calendar.add_apple": "📅 Agregar a Apple Calendar",
 
         # Reservation management
         "reservation.cancel": "❌ Cancelar Reserva",
         "reservation.modify": "✏️ Modificar Reserva",
+        "reservation.cancel_modify": "🗑️ Cancelar/Modificar Reserva",
         "reservation.view_all": "Ver Todas las Reservas",
 
         # Months
@@ -115,6 +143,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "error.generic": "Ocurrió un error. Por favor intenta de nuevo.",
         "error.unauthorized": "No tienes permiso para esta acción.",
         "error.invalid_input": "Entrada inválida. Por favor intenta de nuevo.",
+        "error.unknown_option": "Opción desconocida. Usa los botones del menú o /start para comenzar nuevamente.",
 
         # Welcome/Start messages
         "welcome.title": "¡Bienvenido al Bot de Reservas de Tenis!",
@@ -127,13 +156,17 @@ STRINGS: Dict[str, Dict[str, str]] = {
 
         # Admin Panel
         "admin.title": "👮 **Panel de Admin**",
+        "admin.reservations_menu.title": "👮 **Reservas - Panel de Admin**",
+        "admin.reservations_menu.prompt": "Selecciona qué reservas deseas ver:",
         "admin.access_denied": "🔐 **Acceso Denegado**\n\nNo estás autorizado para acceder al Panel de Admin.\n\nLos privilegios de administrador están restringidos solo a personal autorizado. Si crees que esto es un error, por favor contacta al administrador del sistema.",
         "admin.welcome": "🔧 **Panel de Gestión del Sistema**\n\nBienvenido a la interfaz de administración de LVBot. Usa las opciones de abajo para gestionar usuarios, monitorear el rendimiento del sistema y configurar ajustes del bot.\n\n⚠️ **Aviso**: Todas las acciones de administrador son registradas por seguridad.",
         "admin.test_mode_enabled": "🧪 Test mode habilitado!\n\nLas reservas futuras en cola omitirán la ventana de 48 horas y se ejecutarán después del retraso configurado.",
         "admin.test_mode_disabled": "🛑 Test mode deshabilitado.\n\nLas reservas en cola ahora respetarán la ventana de 48 horas y la programación normal.",
         "admin.users_list": "👥 **Seleccionar Usuario**\n\nElige un usuario para ver sus reservas:",
+        "admin.view_by_user_button": "👥 Ver por usuario",
         "admin.no_users": "👥 **Lista de Usuarios**\n\nNo se encontraron usuarios en el sistema.",
         "admin.all_reservations": "📊 **Todas las Reservas**",
+        "admin.view_all_reservations_button": "📊 Todas las reservas",
         "admin.no_reservations": "No se encontraron reservas activas en el sistema.",
         "admin.user_reservations": "📅 **Reservas de {user_name}**",
         "admin.no_user_reservations": "No se encontraron reservas activas.",
@@ -161,6 +194,33 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "booking.reserve_within_48h": "🏃‍♂️ Reserve within 48h",
         "booking.reserve_after_48h": "📅 Reserve after 48h",
         "booking.test_queue": "🧪 TEST: Queue Booking",
+        "booking.menu_title": "🎾 Reserve Court",
+        "booking.menu_prompt": "Choose booking type:",
+        "booking.empty_title": "📅 **My Reservations**",
+        "booking.empty_message": "You don't have any active reservations.",
+        "booking.empty_cta": "Use '🎾 Reserve Court' to make a booking!",
+        "booking.checking_48h": "🔍 Checking court availability for the next 48 hours...",
+        "booking.system_unavailable": "⚠️ **Court Availability System Temporarily Unavailable**\n\nThe booking system is currently experiencing connectivity issues. This usually resolves within a few minutes.\n\nPlease try again shortly.",
+        "booking.no_slots_48h": "😔 No courts available in the next 48 hours.\n\n💡 Try checking again later or use 'Reserve after 48h' to schedule further in advance.",
+        "booking.error_checking": "❌ Sorry, there was an error checking availability.\nPlease try again later.",
+        "booking.future_title": "📅 Reserve Court (Future Booking)",
+        "booking.future_prompt": "Select the year for your reservation:",
+        "booking.month_prompt": "Select the month for your reservation:",
+        "booking.date_prompt": "Select the date for your reservation:",
+        "booking.checking_availability": "🔍 Checking court availability, please wait...",
+        "booking.invalid_date_format": "❌ Invalid date format received: {date}. Please try again.",
+        "booking.select_time_title": "⏰ Queue Booking - {date}",
+        "booking.select_time_prompt": "Select your preferred time:\n(You'll be notified when booking opens)",
+        "booking.no_times_for_date": "❌ No available times on {date}.\nAll time slots are within the 48-hour booking window.\nPlease select a different date.",
+        "booking.invalid_date_selection": "❌ Invalid date selection. Please try again.",
+        "booking.blocked_date_alert": "⚠️ This date is within 48 hours. Redirecting to immediate booking...",
+        "booking.blocked_date_test": "🧪 Test mode: proceeding with queue booking for a within-48h date",
+        "booking.day_cycle_loading": "🔄 Loading availability...",
+        "booking.day_cycle_unavailable": "⚠️ **Unable to load court availability**\n\nPlease try again in a moment.",
+        "booking.error_processing_date": "❌ Error processing date selection.",
+        "booking.use_immediate_prompt": "⚠️ This date is within the next 48 hours.\n\nPlease use 'Reserve within 48h' for immediate booking.",
+        "booking.use_immediate_button": "🏃‍♂️ Use immediate booking",
+        "error.reservations_load": "❌ Error loading reservations. Please try again.",
 
         # Common actions
         "action.yes": "Yes",
@@ -199,13 +259,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.view_profile": "👤 View Profile",
 
         # Calendar buttons
-        "calendar.add_google": "📅 Add to Google Calendar",
-        "calendar.add_outlook": "📅 Add to Outlook",
-        "calendar.add_apple": "📅 Add to Apple Calendar",
+        "calendar.add_google": "📅 Google Calendar",
+        "calendar.add_outlook": "📆 Outlook/iCal",
+        "calendar.add_apple": "📅 Apple Calendar",
 
         # Reservation management
         "reservation.cancel": "❌ Cancel Reservation",
         "reservation.modify": "✏️ Modify Reservation",
+        "reservation.cancel_modify": "🗑️ Cancel/Modify Reservation",
         "reservation.view_all": "View All Reservations",
 
         # Months
@@ -249,6 +310,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "error.generic": "An error occurred. Please try again.",
         "error.unauthorized": "You don't have permission for this action.",
         "error.invalid_input": "Invalid input. Please try again.",
+        "error.unknown_option": "Unknown option. Please use the menu buttons or /start to begin again.",
 
         # Welcome/Start messages
         "welcome.title": "Welcome to the Tennis Booking Bot!",
@@ -261,13 +323,17 @@ STRINGS: Dict[str, Dict[str, str]] = {
 
         # Admin Panel
         "admin.title": "👮 **Admin Panel**",
+        "admin.reservations_menu.title": "👮 **Admin Reservations Menu**",
+        "admin.reservations_menu.prompt": "Select which reservations to view:",
         "admin.access_denied": "🔐 **Access Denied**\n\nYou are not authorized to access the Admin Panel.\n\nAdmin privileges are restricted to authorized personnel only. If you believe this is an error, please contact the system administrator.",
         "admin.welcome": "🔧 **System Management Dashboard**\n\nWelcome to the LVBot administration interface. Use the options below to manage users, monitor system performance, and configure bot settings.\n\n⚠️ **Notice**: All admin actions are logged for security purposes.",
         "admin.test_mode_enabled": "🧪 Test mode enabled!\n\nFuture queue bookings will bypass the 48-hour gate and execute after the configured delay.",
         "admin.test_mode_disabled": "🛑 Test mode disabled.\n\nQueued reservations will now respect the 48-hour window and normal scheduling.",
         "admin.users_list": "👥 **Select User**\n\nChoose a user to view their reservations:",
+        "admin.view_by_user_button": "👥 View by User",
         "admin.no_users": "👥 **Users List**\n\nNo users found in the system.",
         "admin.all_reservations": "📊 **All Reservations**",
+        "admin.view_all_reservations_button": "📊 All reservations",
         "admin.no_reservations": "No active reservations found in the system.",
         "admin.user_reservations": "📅 **Reservations for {user_name}**",
         "admin.no_user_reservations": "No active reservations found.",

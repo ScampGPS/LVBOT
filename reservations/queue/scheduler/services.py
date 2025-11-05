@@ -226,12 +226,37 @@ class OutcomeRecorder:
         for reservation_id, result in results.items():
             self._logger.info("📝 Processing notification for reservation %s", reservation_id)
 
-            reservation = self._scheduler._get_reservation_by_id(reservation_id)
-            if not reservation:
-                self._logger.warning("⚠️  Reservation %s not found in database", reservation_id)
+            if result.get('retry_scheduled'):
+                self._logger.info(
+                    "⏳ Retry in progress for reservation %s - deferring notification",
+                    reservation_id,
+                )
                 continue
 
-            user_id = self._scheduler._get_reservation_field(reservation, 'user_id')
+            reservation = self._scheduler._get_reservation_by_id(reservation_id)
+            booking_result = result.get('booking_result')
+
+            if reservation:
+                user_id = self._scheduler._get_reservation_field(reservation, 'user_id')
+            elif isinstance(booking_result, BookingResult):
+                user_id = booking_result.user.user_id
+                self._logger.warning(
+                    "⚠️  Reservation %s missing from queue; using booking result metadata",
+                    reservation_id,
+                )
+                reservation = {
+                    'target_date': booking_result.metadata.get('target_date'),
+                    'target_time': booking_result.metadata.get('target_time'),
+                    'court_reserved': booking_result.court_reserved,
+                    'user_id': user_id,
+                }
+            else:
+                self._logger.warning(
+                    "⚠️  Reservation %s not found and no booking result available",
+                    reservation_id,
+                )
+                continue
+
             self._logger.info("👤 User ID: %s", user_id)
 
             user = user_db.get_user(user_id) if user_db else None

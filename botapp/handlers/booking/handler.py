@@ -24,6 +24,7 @@ from botapp.handlers.queue.live_availability import (
 from botapp.handlers.queue.session import QueueSessionStore
 from telegram.constants import ParseMode
 import pytz
+from botapp.i18n import get_user_translator
 
 
 class BookingHandler:
@@ -34,6 +35,9 @@ class BookingHandler:
         self.deps = deps
         self.logger = deps.logger
         self.ui_factory = BookingUIFactory()
+
+    def _get_translator(self, user_id: int):
+        return get_user_translator(self.deps.user_manager, user_id)
 
     async def handle_reserve_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -52,7 +56,8 @@ class BookingHandler:
         self.logger.debug(f"_handle_reserve_menu: Method entry for user_id={user_id}")
 
         query = update.callback_query
-        view = self.ui_factory.booking_type_selection()
+        tr = self._get_translator(user_id)
+        view = self.ui_factory.booking_type_selection(translator=tr)
 
         # Debug: Log pre-message sending
         self.logger.debug(f"_handle_reserve_menu: About to send booking type selection to user_id={user_id}")
@@ -76,6 +81,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_reservations_menu')
         query = update.callback_query
         user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
 
         try:
             # Check if user is admin
@@ -83,7 +90,7 @@ class BookingHandler:
 
             if is_admin:
                 # Show admin options menu
-                admin_view = self.ui_factory.admin_reservations_menu()
+                admin_view = self.ui_factory.admin_reservations_menu(translator=tr)
 
                 await query.edit_message_text(
                     admin_view.text,
@@ -108,7 +115,7 @@ class BookingHandler:
                     all_reservations.append(res)
 
             if not all_reservations:
-                view = self.ui_factory.empty_reservations_view()
+                view = self.ui_factory.empty_reservations_view(translator=tr)
                 await query.edit_message_text(
                     view.text,
                     parse_mode='Markdown',
@@ -167,8 +174,8 @@ class BookingHandler:
         except Exception as e:
             self.logger.error(f"Error in reservations menu: {e}")
             await query.edit_message_text(
-                "❌ Error loading reservations. Please try again.",
-                reply_markup=TelegramUI.create_back_to_menu_keyboard()
+                tr.t('error.reservations_load'),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language)
             )
 
     async def handle_back_to_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -193,11 +200,14 @@ class BookingHandler:
         tier = self.deps.user_manager.get_user_tier(user_id)
         tier_badge = TelegramUI.format_user_tier_badge(tier.name)
 
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
+
         # Use the existing main menu from TelegramUI
-        reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
+        reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin, language=language)
 
         await query.edit_message_text(
-            f"🎾 Welcome to LVBot! {tier_badge}\n\nChoose an option:",
+            f"{tr.t('welcome.title')} {tier_badge}\n\n{tr.t('welcome.message')}",
             reply_markup=reply_markup
         )
 
@@ -215,6 +225,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_48h_immediate_booking')
         query = update.callback_query
         user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
 
         self.logger.info(f"User {user_id} selected immediate 48h booking")
 
@@ -222,17 +234,14 @@ class BookingHandler:
         context.user_data['current_flow'] = 'availability_check'
 
         # Show loading message
-        await query.edit_message_text("🔍 Checking court availability for the next 48 hours...")
+        await query.edit_message_text(tr.t('booking.checking_48h'))
 
         try:
             # Check if browser pool is available first
             if not hasattr(self.deps.availability_checker, 'browser_pool') or not self.deps.availability_checker.browser_pool:
                 await query.edit_message_text(
-                    "⚠️ **Court Availability System Temporarily Unavailable**\n\n"
-                    "The court booking system is currently experiencing connectivity issues. "
-                    "This usually resolves within a few minutes.\n\n"
-                    "Please try again in a few moments.",
-                    reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                    tr.t('booking.system_unavailable'),
+                    reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
                     parse_mode='Markdown'
                 )
                 return
@@ -317,10 +326,9 @@ class BookingHandler:
                     )
                 else:
                     # No availability
-                    keyboard = TelegramUI.create_back_to_menu_keyboard()
+                    keyboard = TelegramUI.create_back_to_menu_keyboard(language=language)
                     await query.edit_message_text(
-                        "😔 No courts available in the next 48 hours.\n\n"
-                        "💡 Try checking again later or use 'Reserve after 48h' to book further in advance.",
+                        tr.t('booking.no_slots_48h'),
                         reply_markup=keyboard
                     )
             else:
@@ -328,11 +336,11 @@ class BookingHandler:
 
         except Exception as e:
             self.logger.error(f"Error in immediate booking handler: {e}")
-            keyboard = TelegramUI.create_back_to_menu_keyboard()
+            keyboard = TelegramUI.create_back_to_menu_keyboard(language=language)
             await query.edit_message_text(
-                "❌ Sorry, there was an error checking availability.\n"
-                "Please try again later.",
-                reply_markup=keyboard
+                tr.t('booking.error_checking'),
+                reply_markup=keyboard,
+                parse_mode='Markdown'
             )
 
     async def handle_48h_future_booking(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -349,6 +357,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_48h_future_booking')
         query = update.callback_query
         user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
 
         self.logger.info(f"User {user_id} selected future booking (after 48h)")
 
@@ -359,8 +369,7 @@ class BookingHandler:
         keyboard = TelegramUI.create_year_selection_keyboard()
 
         await query.edit_message_text(
-            "📅 Reserve Court (Future Booking)\n\n"
-            "Select the year for your reservation:",
+            f"{tr.t('booking.future_title')}\n\n{tr.t('booking.future_prompt')}",
             reply_markup=keyboard
         )
 
@@ -378,6 +387,18 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_date_selection')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
 
         # Parse date from callback data using helper function
         selected_date = DateTimeHelpers.parse_callback_date(callback_data)
@@ -385,22 +406,19 @@ class BookingHandler:
             date_str = callback_data.replace('date_', '') if callback_data.startswith('date_') else callback_data
             self.logger.error(f"Invalid date format in availability callback: {date_str}")
             await query.edit_message_text(
-                f"❌ Invalid date format received: {date_str}. Please try again."
+                tr.t('booking.invalid_date_format').format(date=date_str)
             )
             return
 
         # Show loading message
-        await query.edit_message_text("🔍 Checking court availability, please wait...")
+        await query.edit_message_text(tr.t('booking.checking_availability'))
 
         try:
             # Check if browser pool is available
             if not hasattr(self.deps.availability_checker, 'browser_pool') or not self.deps.availability_checker.browser_pool:
                 await query.edit_message_text(
-                    "⚠️ **Court Availability System Temporarily Unavailable**\n\n"
-                    "The court booking system is currently experiencing connectivity issues. "
-                    "This usually resolves within a few minutes.\n\n"
-                    "Please try again in a few moments.",
-                    reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                    tr.t('booking.system_unavailable'),
+                    reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
                     parse_mode='Markdown'
                 )
                 return
@@ -457,7 +475,7 @@ class BookingHandler:
                 )
 
                 # Just back button for no availability
-                reply_markup = TelegramUI.create_back_to_menu_keyboard()
+                reply_markup = TelegramUI.create_back_to_menu_keyboard(language=language)
                 parse_mode = ParseMode.MARKDOWN_V2
 
             # Send results
@@ -469,8 +487,7 @@ class BookingHandler:
 
         except Exception as e:
             self.logger.error(f"Exception in date selection: {e}")
-            await ErrorHandler.handle_booking_error(update, context, 'system_error', 
-                                                   'Failed to check court availability')
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', tr.t('booking.error_checking'))
 
     async def handle_year_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -486,6 +503,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_year_selection')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
 
         # Extract year from callback data
         year = int(callback_data.split('_')[1])
@@ -497,8 +516,7 @@ class BookingHandler:
         keyboard = TelegramUI.create_month_selection_keyboard(year)
 
         await query.edit_message_text(
-            f"📅 Reserve Court - {year}\n\n"
-            "Select the month for your reservation:",
+            f"{tr.t('booking.future_title')} - {year}\n\n{tr.t('booking.month_prompt')}",
             reply_markup=keyboard
         )
 
@@ -516,6 +534,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_month_selection')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
 
         # Extract year and month from callback data (format: month_YYYY_MM)
         parts = callback_data.split('_')
@@ -538,8 +558,7 @@ class BookingHandler:
         keyboard = TelegramUI.create_day_selection_keyboard(year, month, flow_type=flow_type)
 
         await query.edit_message_text(
-            f"📅 Reserve Court\n\n"
-            "Select the date for your reservation:",
+            f"{tr.t('booking.menu_title')}\n\n{tr.t('booking.date_prompt')}",
             reply_markup=keyboard
         )
 
@@ -608,13 +627,12 @@ class BookingHandler:
             if days_ahead < 2 and not (config.enabled and config.allow_within_48h):
                 # Date is within 48h, suggest immediate booking (unless in test mode)
                 keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🏃‍♂️ Use Immediate Booking", callback_data='reserve_48h_immediate')],
-                    [InlineKeyboardButton("⬅️ Back", callback_data='back_to_booking_type')]
+                    [InlineKeyboardButton(tr.t('booking.use_immediate_button'), callback_data='reserve_48h_immediate')],
+                    [InlineKeyboardButton(tr.t('nav.back'), callback_data='back_to_booking_type')]
                 ])
 
                 await query.edit_message_text(
-                    "⚠️ This date is within the next 48 hours.\n\n"
-                    "Please use 'Reserve within 48h' for immediate booking.",
+                    tr.t('booking.use_immediate_prompt'),
                     reply_markup=keyboard
                 )
                 return
@@ -679,7 +697,7 @@ class BookingHandler:
                             await query.edit_message_text(
                                 TelegramUI.format_queue_no_times(selected_date),
                                 parse_mode=ParseMode.MARKDOWN_V2,
-                                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
                             )
                             return
                     else:
@@ -723,10 +741,8 @@ class BookingHandler:
             # If no times available on this date, show error
             if not available_time_slots:
                 await query.edit_message_text(
-                    f"❌ No available times on {date_label}\n\n"
-                    f"All time slots are within the 48-hour booking window.\n"
-                    f"Please select a different date.",
-                    reply_markup=TelegramUI.create_back_to_menu_keyboard()
+                    tr.t('booking.no_times_for_date').format(date=date_label),
+                    reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language)
                 )
                 return
 
@@ -738,17 +754,16 @@ class BookingHandler:
             )
 
             await query.edit_message_text(
-                f"⏰ Queue Booking - {date_label}\n\n"
-                f"Select your preferred time:\n"
-                f"(You'll be notified when booking opens)",
+                f"{tr.t('booking.select_time_title').format(date=date_label)}\n\n"
+                f"{tr.t('booking.select_time_prompt')}",
                 reply_markup=keyboard
             )
 
         except Exception as e:
             self.logger.error(f"Error parsing future date: {e}")
-            keyboard = TelegramUI.create_back_to_menu_keyboard()
+            keyboard = TelegramUI.create_back_to_menu_keyboard(language=language)
             await query.edit_message_text(
-                "❌ Invalid date selection. Please try again.",
+                tr.t('booking.invalid_date_selection'),
                 reply_markup=keyboard
             )
 
@@ -807,7 +822,7 @@ class BookingHandler:
 
                 # Answer the callback
                 await query.answer(
-                    "🧪 Test mode: Proceeding with queue booking for within 48h date",
+                    tr.t('booking.blocked_date_test'),
                     show_alert=True
                 )
 
@@ -831,7 +846,7 @@ class BookingHandler:
 
                 # Answer the callback to show user feedback
                 await query.answer(
-                    "⚠️ This date is within 48 hours. Redirecting to immediate booking...",
+                    tr.t('booking.blocked_date_alert'),
                     show_alert=True
                 )
 
@@ -844,7 +859,7 @@ class BookingHandler:
 
         except Exception as e:
             self.logger.error(f"Error handling blocked date: {e}")
-            await query.answer("❌ Error processing date selection")
+            await query.answer(tr.t('booking.error_processing_date'))
 
     async def handle_back_to_month(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -860,6 +875,8 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_back_to_month')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
 
         # Extract year from callback data (format: back_to_month_YYYY)
         year = int(callback_data.split('_')[-1])
@@ -868,8 +885,7 @@ class BookingHandler:
         keyboard = TelegramUI.create_month_selection_keyboard(year)
 
         await query.edit_message_text(
-            f"📅 Reserve Court - {year}\n\n"
-            "Select the month for your reservation:",
+            f"{tr.t('booking.future_title')} - {year}\n\n{tr.t('booking.month_prompt')}",
             reply_markup=keyboard
         )
 
@@ -905,7 +921,7 @@ class BookingHandler:
 
             if not complete_matrix:
                 self.logger.warning("No pre-loaded matrix found - fetching real-time availability")
-                await query.edit_message_text("🔄 Loading availability...")
+                await query.edit_message_text(tr.t('booking.day_cycle_loading'))
 
                 # Fetch fresh availability using V3 checker
                 availability_results = await self.deps.availability_checker.check_availability()
@@ -922,9 +938,8 @@ class BookingHandler:
 
                 if not complete_matrix:
                     await query.edit_message_text(
-                        "⚠️ **Unable to load court availability**\n\n"
-                        "Please try again in a moment.",
-                        reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                        tr.t('booking.day_cycle_unavailable'),
+                        reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
                         parse_mode='Markdown'
                     )
                     return
@@ -963,8 +978,9 @@ class BookingHandler:
                 )
             else:
                 # No availability for new date
-                message = f"😔 No courts available for {TelegramUI._get_day_label_for_date(new_date_str)}"
-                reply_markup = TelegramUI.create_back_to_menu_keyboard()
+                date_label = TelegramUI._get_day_label_for_date(new_date_str)
+                message = tr.t('booking.no_times_for_date').format(date=date_label)
+                reply_markup = TelegramUI.create_back_to_menu_keyboard(language=language)
 
             await query.edit_message_text(
                 message,
@@ -975,13 +991,12 @@ class BookingHandler:
         except ValueError as e:
             self.logger.error(f"Invalid date in day cycling callback: {new_date_str}")
             await query.edit_message_text(
-                "❌ Invalid date. Please try again.",
-                reply_markup=TelegramUI.create_back_to_menu_keyboard()
+                tr.t('booking.invalid_date_selection'),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language)
             )
         except Exception as e:
             self.logger.error(f"Error in day cycling: {e}")
-            await ErrorHandler.handle_booking_error(update, context, 'system_error', 
-                                                   'Failed to cycle to new day')
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', tr.t('booking.error_processing_date'))
 
     async def handle_unknown_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
@@ -998,9 +1013,11 @@ class BookingHandler:
         """
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_unknown_menu')
         query = update.callback_query
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
         self.logger.warning(f"Unknown callback data: {query.data}")
         await query.edit_message_text(
-            "❓ Unknown option\n\nPlease use the menu buttons or /start to begin again."
+            f"❓ {tr.t('error.unknown_option')}"
         )
 
     async def _extract_availability_for_date_cached(self, target_date: date) -> Dict[int, List]:

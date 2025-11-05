@@ -12,14 +12,15 @@ from typing import Dict, Tuple, Optional
 from playwright.async_api import Page
 
 from automation.executors.core import ExecutionResult
+from automation.debug import get_logger
 
 from .helpers import confirmation_result
 from .human_behaviors import HumanLikeActions
 
-WORKING_SPEED_MULTIPLIER = 1.8  # Optimized for real human speed (~30s total)
-_VALIDATION_SLEEP = (0.2, 0.5)  # Reduced from (0.3, 0.8)
-_MOUSE_DELAY = (0.1, 0.3)        # Reduced from (0.2, 0.5)
-_FIELD_LINGER = (0.4, 0.8)       # Reduced from (0.6, 1.4)
+WORKING_SPEED_MULTIPLIER = 1.5  # Conservative speed to avoid detection
+_VALIDATION_SLEEP = (0.3, 0.6)  # More natural validation pauses
+_MOUSE_DELAY = (0.15, 0.35)     # Natural mouse delays
+_FIELD_LINGER = (0.5, 0.9)      # Natural field review time
 
 
 class NaturalFlowSteps:
@@ -30,6 +31,8 @@ class NaturalFlowSteps:
         self.page = page
         self.logger = logger
         self.actions = HumanLikeActions(page, speed_multiplier=WORKING_SPEED_MULTIPLIER)
+        self.debug_logger = get_logger()
+        self.debug_logger.attach_listeners(page)
 
     async def type_text(self, element, text: str) -> None:
         t("automation.executors.flows.natural_flow.NaturalFlowSteps.type_text")
@@ -39,7 +42,7 @@ class NaturalFlowSteps:
         try:
             element = await self.page.wait_for_selector(selector, timeout=6000)
             await element.scroll_into_view_if_needed()
-            await self.actions.pause(0.4, 1.0)
+            await self.actions.pause(0.3, 0.6)  # Natural scroll pause
             return element
         except Exception:
             return None
@@ -64,9 +67,9 @@ class NaturalFlowSteps:
             value = user_info.get(key, "")
             if key == "phone":
                 await element.click()
-                await self.actions.pause(0.4, 0.8)
+                await self.actions.pause(0.4, 0.7)
                 await element.fill(str(value))
-                await self.actions.pause(0.6, 1.1)
+                await self.actions.pause(0.6, 1.0)
             else:
                 await self.actions.type_text(element, str(value))
                 await self.actions.pause(*_FIELD_LINGER)
@@ -76,7 +79,7 @@ class NaturalFlowSteps:
             country_select = await self.page.query_selector('select[name="client.phoneCountry"]')
             if country_select and not await country_select.get_attribute("value"):
                 await country_select.select_option("GT")
-                await self.actions.pause(0.4, 0.9)
+                await self.actions.pause(0.4, 0.8)
         except Exception:
             pass
 
@@ -99,14 +102,14 @@ class NaturalFlowSteps:
         if not submit_button:
             submit_button = await self.page.query_selector('button:has-text("Confirm")')
         if submit_button:
-            # Brief pause before submission
-            await self.actions.reading_pause(duration_range=(0.5, 1.0))  # Reduced from (1.0, 2.0)
+            # Natural pause before submission - review the form
+            await self.actions.reading_pause(duration_range=(1.0, 2.0))  # Review form before submit
             await self.actions.click_with_hesitation(
                 submit_button,
-                hesitation_prob=0.6,              # Reduced from 0.8
-                correction_count_range=(0, 1)     # Reduced max from 2
+                hesitation_prob=0.5,              # Natural hesitation
+                correction_count_range=(0, 1)     # Occasional corrections
             )
-            await self.actions.pause(0.8, 1.2)  # Reduced from (1.0, 1.8)
+            await self.actions.pause(1.0, 1.5)  # Wait for page to respond
 
     async def execute(
         self,
@@ -123,14 +126,16 @@ class NaturalFlowSteps:
         self.logger.info("Initial natural delay (%.1f seconds)...", delay)
         await self.actions.pause(delay, delay)
 
-        # Natural page interaction (quick scroll + brief reading)
-        self.logger.info("Performing natural page interaction (quick scroll + brief reading)...")
+        # Natural page interaction (natural scroll + reading)
+        self.logger.info("Performing natural page interaction (scroll + reading)...")
+        await self.debug_logger.capture_state(self.page, "01_initial_page_load")
+
         await self.actions.scroll_naturally(
-            scroll_count_range=(1, 2),      # Reduced from (2, 4)
-            scroll_amount_range=(100, 300),  # Reduced max from 400
-            scroll_back_prob=0.15            # Reduced from 0.3
+            scroll_count_range=(2, 3),      # Natural scrolling to review page
+            scroll_amount_range=(150, 350), # Natural scroll amounts
+            scroll_back_prob=0.2            # Sometimes scroll back to review
         )
-        await self.actions.reading_pause(duration_range=(0.8, 1.5))  # Reduced from (2.0, 4.0)
+        await self.actions.reading_pause(duration_range=(1.5, 3.0))  # Read the page content
 
         await self.move_mouse()
 
@@ -146,20 +151,24 @@ class NaturalFlowSteps:
 
         await self.actions.pause(*_VALIDATION_SLEEP)
 
-        # Click time slot with hesitation
-        self.logger.info("Clicking time slot with hesitation...")
+        # Click time slot with natural hesitation
+        self.logger.info("Clicking time slot...")
+        await self.debug_logger.capture_state(self.page, "02_before_time_click")
+
         await self.actions.click_with_hesitation(
             time_button,
-            hesitation_prob=0.5,              # Reduced from 0.7
-            correction_count_range=(0, 1)     # Reduced max from 2
+            hesitation_prob=0.6,              # Natural hesitation before committing
+            correction_count_range=(0, 1)     # Sometimes correct cursor position
         )
 
         await self.actions.pause(*_VALIDATION_SLEEP)
 
         try:
             await self.page.wait_for_selector("form", timeout=8000)
+            await self.debug_logger.capture_state(self.page, "03_after_time_click_form_loaded")
         except Exception:
             self.logger.error("Booking form not found after selecting time slot")
+            await self.debug_logger.capture_state(self.page, "03_ERROR_no_form_after_click")
             return ExecutionResult(
                 success=False,
                 error_message="Booking form not found",
@@ -176,12 +185,17 @@ class NaturalFlowSteps:
             )
 
         await self.fill_user_form(user_info)
-        await self.actions.pause(0.8, 1.5)  # Reduced from (1.8, 3.5)
+        await self.debug_logger.capture_state(self.page, "04_after_form_fill")
+
+        await self.actions.pause(1.2, 2.0)  # Review form after filling
         await self.actions.move_mouse_random()
         self.logger.info("Submitting booking form (natural mode)...")
-        await self.submit()
+        await self.debug_logger.capture_state(self.page, "05_before_submit")
 
-        return await confirmation_result(
+        await self.submit()
+        await self.debug_logger.capture_state(self.page, "06_after_submit")
+
+        result = await confirmation_result(
             self.page,
             court_number,
             time_slot,
@@ -190,6 +204,12 @@ class NaturalFlowSteps:
             success_log="Booking confirmed for Court %s",
             failure_log="Booking result uncertain for Court %s",
         )
+
+        await self.debug_logger.capture_state(self.page, "07_final_result")
+        self.debug_logger.save_logs()
+        self.debug_logger.print_summary()
+
+        return result
 
 
 async def execute_natural_flow(

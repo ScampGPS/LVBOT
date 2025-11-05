@@ -142,12 +142,16 @@ class ReservationQueue:
         user_id = payload.get('user_id')
         target_date_raw = payload.get('target_date')
         target_time_raw = payload.get('target_time')
+        requested_courts = payload.get('court_preferences')
+        if (not requested_courts) and payload.get('court_number') is not None:
+            requested_courts = [payload.get('court_number')]
 
         ensure_unique_slot(
             self.queue,
             user_id=user_id,
             target_date=target_date_raw,
             target_time=target_time_raw,
+            courts=requested_courts,
             logger=self.logger,
         )
 

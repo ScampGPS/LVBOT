@@ -98,5 +98,160 @@
       "executor": "UnifiedAsyncBookingExecutor",
       "flow": "natural"
     }
+  },
+  "imm_20251030122544_125763357": {
+    "id": "imm_20251030122544_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "failed",
+    "created_at": "2025-10-30T12:25:44.128091",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "20:15",
+    "message": "Page.query_selector: Connection closed while reading from the driver",
+    "errors": [
+      "Page.query_selector: Connection closed while reading from the driver"
+    ],
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251030132255_125763357": {
+    "id": "imm_20251030132255_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "failed",
+    "created_at": "2025-10-30T13:22:55.575351",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "20:15",
+    "message": "Booking confirmation not detected",
+    "errors": [
+      "Booking confirmation not detected"
+    ],
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251030132805_125763357": {
+    "id": "imm_20251030132805_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-10-30T13:28:05.721290",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "20:15",
+    "confirmation_id": null,
+    "confirmation_url": null,
+    "message": null,
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251030154131_125763357": {
+    "id": "imm_20251030154131_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-10-30T15:41:31.882025",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "18:15",
+    "confirmation_id": null,
+    "confirmation_url": null,
+    "message": null,
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "18:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "google_calendar_link": "https://www.google.com/calendar/render?action=TEMPLATE&text=TENNIS+CANCHA+3+%28A+TENNIS+CANCHA+3%29&dates=20251101T001500Z/20251101T011500Z&location=&details=%0A%0AVer%2Fmodificar+cita%3A%0Ahttps%3A%2F%2Fapp.acuityscheduling.com%2Fschedule.php%3Fowner%3D20292217%26id%255B%255D%3Dcec17ee62f3b7869ea2a5c7f8156a19c%26action%3Dappt%26ref%3Dcalendar%0A%0A%28created+by+Acuity+Scheduling%29%0AAcuityID%3D1564772197%0AGoogle&sf=true&output=xml",
+      "cancel_modify_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&id%5B%5D=cec17ee62f3b7869ea2a5c7f8156a19c",
+      "ics_calendar_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&m=ics&id%5B%5D=cec17ee62f3b7869ea2a5c7f8156a19c",
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251030154642_125763357": {
+    "id": "imm_20251030154642_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-10-30T15:46:42.060474",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "18:15",
+    "confirmation_id": null,
+    "confirmation_url": null,
+    "message": null,
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "18:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "google_calendar_link": "https://www.google.com/calendar/render?action=TEMPLATE&text=TENNIS+CANCHA+3+%28A+TENNIS+CANCHA+3%29&dates=20251101T001500Z/20251101T011500Z&location=&details=%0A%0AVer%2Fmodificar+cita%3A%0Ahttps%3A%2F%2Fapp.acuityscheduling.com%2Fschedule.php%3Fowner%3D20292217%26id%255B%255D%3D9f45516b3b4c7f1c78d96a21fa993c06%26action%3Dappt%26ref%3Dcalendar%0A%0A%28created+by+Acuity+Scheduling%29%0AAcuityID%3D1564774996%0AGoogle&sf=true&output=xml",
+      "cancel_modify_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&id%5B%5D=9f45516b3b4c7f1c78d96a21fa993c06",
+      "ics_calendar_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&m=ics&id%5B%5D=9f45516b3b4c7f1c78d96a21fa993c06",
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
+  },
+  "imm_20251030162147_125763357": {
+    "id": "imm_20251030162147_125763357",
+    "user_id": 125763357,
+    "type": "immediate",
+    "status": "confirmed",
+    "created_at": "2025-10-30T16:21:47.380858",
+    "court": "3",
+    "date": "2025-10-31",
+    "time": "20:15",
+    "confirmation_id": null,
+    "confirmation_url": null,
+    "message": null,
+    "metadata": {
+      "source": "immediate",
+      "target_date": "2025-10-31",
+      "target_time": "20:15",
+      "court_number": 3,
+      "trigger": "immediate_handler",
+      "callback_action": "confirm",
+      "telegram_user_id": 125763357,
+      "google_calendar_link": "https://www.google.com/calendar/render?action=TEMPLATE&text=TENNIS+CANCHA+3+%28A+TENNIS+CANCHA+3%29&dates=20251031T021500Z/20251031T031500Z&location=&details=%0A%0AVer%2Fmodificar+cita%3A%0Ahttps%3A%2F%2Fapp.acuityscheduling.com%2Fschedule.php%3Fowner%3D20292217%26id%255B%255D%3Db21a86c6d679c7f2a8f5078f8162cff0%26action%3Dappt%26ref%3Dcalendar%0A%0A%28created+by+Acuity+Scheduling%29%0AAcuityID%3D1564793073%0AGoogle&sf=true&output=xml",
+      "cancel_modify_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&id%5B%5D=b21a86c6d679c7f2a8f5078f8162cff0",
+      "ics_calendar_link": "https://app.acuityscheduling.com/schedule.php?owner=20292217&action=appt&m=ics&id%5B%5D=b21a86c6d679c7f2a8f5078f8162cff0",
+      "executor": "UnifiedAsyncBookingExecutor",
+      "flow": "natural"
+    }
   }
 }

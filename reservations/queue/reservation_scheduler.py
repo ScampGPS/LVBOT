@@ -43,6 +43,7 @@ from reservations.queue.scheduler.services import (
 )
 from reservations.queue.request_builder import ReservationRequestBuilder
 from reservations.queue.persistence import persist_queue_outcome
+from reservations.queue.court_utils import normalize_court_sequence
 from botapp.notifications import (
     NotificationBuilder,
     format_failure_message,
@@ -953,6 +954,93 @@ class ReservationScheduler:
                 "⚠️ Could not remove failed reservation %s... from queue (may have been already removed)",
                 reservation_id[:8],
             )
+
+    def schedule_fallback_retry(
+        self,
+        reservation_id: str,
+        fallback_data: Dict[str, Any],
+    ) -> None:
+        """Schedule a retry using the provided fallback assignment."""
+
+        t(
+            "reservations.queue.reservation_scheduler.ReservationScheduler.schedule_fallback_retry"
+        )
+        asyncio.create_task(
+            self._run_fallback_retry(reservation_id, fallback_data),
+            name=f"queue-fallback-{reservation_id[:8]}",
+        )
+
+    async def _run_fallback_retry(
+        self,
+        reservation_id: str,
+        fallback_data: Dict[str, Any],
+    ) -> None:
+        """Execute a queued reservation retry using fallback courts."""
+
+        t(
+            "reservations.queue.reservation_scheduler.ReservationScheduler._run_fallback_retry"
+        )
+        assignment = fallback_data.get('assignment')
+        if not assignment:
+            self.logger.warning(
+                "Fallback retry requested without assignment for reservation %s",
+                reservation_id[:8],
+            )
+            return
+
+        attempt = assignment.get('attempt')
+        if not attempt:
+            self.logger.warning(
+                "Fallback assignment missing attempt for reservation %s",
+                reservation_id[:8],
+            )
+            return
+
+        reservation = self._get_reservation_by_id(reservation_id)
+        if not reservation:
+            self.logger.warning(
+                "Reservation %s not found when scheduling fallback",
+                reservation_id[:8],
+            )
+            return
+
+        fallback_court = getattr(attempt, 'target_court', None)
+        if fallback_court is None:
+            self.logger.warning(
+                "Fallback attempt missing target court for reservation %s",
+                reservation_id[:8],
+            )
+            return
+
+        remaining = fallback_data.get('remaining_fallbacks', []) or []
+        updated_preferences = normalize_court_sequence(
+            [fallback_court, *remaining]
+        )
+        if updated_preferences:
+            reservation['court_preferences'] = updated_preferences
+
+        reservation['status'] = reservation.get('status', 'scheduled') or 'scheduled'
+        self.queue.update_reservation(reservation_id, reservation)
+
+        self.logger.info(
+            "🔁 Fallback retry scheduled for reservation %s... on court %s",
+            reservation_id[:8],
+            fallback_court,
+        )
+
+        raw_date = self._get_reservation_field(reservation, 'target_date')
+        if isinstance(raw_date, date):
+            target_date = raw_date
+        else:
+            target_date = datetime.fromisoformat(str(raw_date)).date()
+
+        await self._execute_single_booking(
+            assignment,
+            reservation,
+            index=1,
+            total=1,
+            target_date=target_date,
+        )
 
     async def _notify_booking_results(self, results: Dict[str, Any]):
         """Send notifications to users about booking results"""
