@@ -576,6 +576,9 @@ class BookingHandler:
         t('botapp.handlers.callback_handlers.CallbackHandler._handle_future_date_selection')
         query = update.callback_query
         callback_data = query.data
+        user_id = query.from_user.id
+        tr = self._get_translator(user_id)
+        language = tr.get_language()
 
         # Extract date from callback data (format: future_date_YYYY-MM-DD)
         date_str = callback_data.replace('future_date_', '')
