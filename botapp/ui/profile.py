@@ -199,46 +199,52 @@ class ProfileViewBuilder(MarkdownBuilderBase):
         t("botapp.ui.profile.ProfileViewBuilder.__init__")
         super().__init__(builder_factory=builder_factory)
 
-    def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False) -> str:
+    def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False, translator=None) -> str:
         t("botapp.ui.profile.ProfileViewBuilder.build")
+
+        # Get translator for user's language
+        if translator is None:
+            from botapp.i18n.translator import create_translator
+            language = user_data.get('language')
+            translator = create_translator(language)
 
         builder = self.create_builder()
         status_emoji = "✅" if user_data.get("is_active", True) else "🔴"
 
-        phone = user_data.get("phone", "Not set")
-        if phone and phone != "Not set":
+        phone = user_data.get("phone", translator.t("profile.not_set"))
+        if phone and phone != translator.t("profile.not_set"):
             phone = f"(+502) {phone}"
 
-        builder.heading(f"{status_emoji} **User Profile**").blank()
+        builder.heading(f"{status_emoji} **{translator.t('profile.title')}**").blank()
         builder.line(
-            f"👤 Name: {user_data.get('first_name', '')} {user_data.get('last_name', '')}"
+            f"👤 {translator.t('profile.name')}: {user_data.get('first_name', '')} {user_data.get('last_name', '')}"
         )
-        builder.line(f"📱 Phone: {phone}")
-        builder.line(f"📧 Email: {user_data.get('email', 'Not set')}")
+        builder.line(f"📱 {translator.t('profile.phone')}: {phone}")
+        builder.line(f"📧 {translator.t('profile.email')}: {user_data.get('email', translator.t('profile.not_set'))}")
 
         # Language preference
         language = user_data.get('language', 'es')
         language_display = "🇪🇸 Español" if language == 'es' else "🇺🇸 English"
-        builder.line(f"🌐 Language: {language_display}")
+        builder.line(f"🌐 {translator.t('profile.language')}: {language_display}")
 
         court_pref = user_data.get("court_preference", []) or []
         if court_pref:
-            courts_text = ", ".join([f"Court {c}" for c in court_pref])
+            courts_text = ", ".join([translator.t("court.label", number=c) for c in court_pref])
         else:
-            courts_text = "Not set"
-        builder.line(f"🎾 Court Preference: {courts_text}")
-        builder.line(f"📊 Total Reservations: {user_data.get('total_reservations', 0)}")
+            courts_text = translator.t("profile.not_set")
+        builder.line(f"🎾 {translator.t('profile.court_preference')}: {courts_text}")
+        builder.line(f"📊 {translator.t('profile.total_reservations')}: {user_data.get('total_reservations', 0)}")
 
         if user_data.get("telegram_username"):
-            builder.line(f"💬 Telegram: @{user_data['telegram_username']}")
+            builder.line(f"💬 {translator.t('profile.telegram')}: @{user_data['telegram_username']}")
 
         extras = []
         if is_hardcoded:
-            extras.append("⚡ *Premium User (Hardcoded)*")
+            extras.append(translator.t("profile.premium_user"))
         if user_data.get("is_vip"):
-            extras.append("⭐ *VIP User* (Priority booking)")
+            extras.append(translator.t("profile.vip_user"))
         if user_data.get("is_admin"):
-            extras.append("👮 *Administrator*")
+            extras.append(translator.t("profile.administrator"))
 
         if extras:
             for extra in extras:

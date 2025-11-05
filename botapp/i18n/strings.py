@@ -21,6 +21,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "nav.back_to_menu": "🔙 Volver al Menú",
         "nav.back": "🔙 Atrás",
         "nav.back_to_year": "🔙 Volver a Año",
+        "nav.back_to_month": "🔙 Volver a Mes",
         "nav.cancel": "Cancelar",
 
         # Booking type selection
@@ -96,6 +97,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.language": "Idioma",
         "profile.edit_profile": "✏️ Editar Perfil",
         "profile.view_profile": "👤 Ver Perfil",
+        "profile.title": "Perfil de Usuario",
+        "profile.court_preference": "Preferencia de Cancha",
+        "profile.total_reservations": "Total de Reservas",
+        "profile.telegram": "Telegram",
+        "profile.not_set": "No configurado",
+        "profile.vip_user": "⭐ *Usuario VIP* (Reserva prioritaria)",
+        "profile.administrator": "👮 *Administrador*",
+        "profile.premium_user": "⚡ *Usuario Premium (Hardcoded)*",
 
         # Calendar buttons
         "calendar.add_google": "📅 Agregar a Google Calendar",
@@ -194,6 +203,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "nav.back_to_menu": "🔙 Back to Menu",
         "nav.back": "🔙 Back",
         "nav.back_to_year": "🔙 Back to Year",
+        "nav.back_to_month": "🔙 Back to Month",
         "nav.cancel": "Cancel",
 
         # Booking type selection
@@ -269,6 +279,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.language": "Language",
         "profile.edit_profile": "✏️ Edit Profile",
         "profile.view_profile": "👤 View Profile",
+        "profile.title": "User Profile",
+        "profile.court_preference": "Court Preference",
+        "profile.total_reservations": "Total Reservations",
+        "profile.telegram": "Telegram",
+        "profile.not_set": "Not set",
+        "profile.vip_user": "⭐ *VIP User* (Priority booking)",
+        "profile.administrator": "👮 *Administrator*",
+        "profile.premium_user": "⚡ *Premium User (Hardcoded)*",
 
         # Calendar buttons
         "calendar.add_google": "📅 Google Calendar",
