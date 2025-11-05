@@ -61,6 +61,3 @@ Thumbs.db
 # Environment overrides
 .env
 config/.env
-
-# Tracking
-tracking/function_call_counts.json
