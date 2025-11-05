@@ -654,7 +654,21 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
+        # Get user language for translated buttons
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else None
+        )
+        language = None
+        if user_id:
+            user = self.deps.user_manager.get_user(user_id)
+            language = user.get('language') if user else None
+
+        from botapp.i18n.translator import create_translator
+        translator = create_translator(language)
+
+        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS, translator=translator)
         await self.edit_callback(
             query,
             f"⏰ **Queue Booking**\n\n"
@@ -918,7 +932,21 @@ class QueueBookingFlow(QueueFlowBase):
         selected_date: date,
         selected_time: str,
     ) -> None:
-        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS)
+        # Get user language for translated buttons
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else None
+        )
+        language = None
+        if user_id:
+            user = self.deps.user_manager.get_user(user_id)
+            language = user.get('language') if user else None
+
+        from botapp.i18n.translator import create_translator
+        translator = create_translator(language)
+
+        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS, translator=translator)
         await self.edit_callback(
             query,
             TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),

@@ -28,20 +28,29 @@ def create_court_selection_keyboard(available_courts: List[int]) -> ReplyKeyboar
     return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
 
 
-def create_queue_court_selection_keyboard(available_courts: List[int]) -> InlineKeyboardMarkup:
+def create_queue_court_selection_keyboard(available_courts: List[int], translator=None) -> InlineKeyboardMarkup:
     """Create inline court selection keyboard for queue booking flow."""
 
     t('botapp.ui.booking.create_queue_court_selection_keyboard')
+
+    # Import here to avoid circular dependency
+    if translator is None:
+        from botapp.i18n.translator import create_translator
+        translator = create_translator()
+
     keyboard = []
     for i in range(0, len(available_courts), 3):
         row = [
-            InlineKeyboardButton(f"Court {court}", callback_data=f'queue_court_{court}')
+            InlineKeyboardButton(
+                translator.t("court.label", number=court),
+                callback_data=f'queue_court_{court}'
+            )
             for court in available_courts[i:i+3]
         ]
         keyboard.append(row)
 
-    keyboard.append([InlineKeyboardButton("All Courts", callback_data='queue_court_all')])
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='back_to_queue_time')])
+    keyboard.append([InlineKeyboardButton(translator.t("court.all"), callback_data='queue_court_all')])
+    keyboard.append([InlineKeyboardButton(translator.t("nav.back"), callback_data='back_to_queue_time')])
     return InlineKeyboardMarkup(keyboard)
 
 
