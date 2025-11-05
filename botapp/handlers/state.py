@@ -33,6 +33,7 @@ class ProfileEditState:
     name_input: str = ""
     editing_name_field: Optional[str] = None
     email_input: str = ""
+    court_preference: Optional[list] = None
 
 
 @dataclass

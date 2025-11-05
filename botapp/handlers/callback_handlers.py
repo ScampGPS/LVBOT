@@ -72,6 +72,9 @@ class CallbackHandler:
         add('edit_phone', self.profile.handle_edit_phone)
         add('edit_email', self.profile.handle_edit_email)
         add('edit_language', self.profile.handle_edit_language)
+        add('edit_court_preference', self.profile.handle_edit_court_preference)
+        add('court_pref_done', self.profile.handle_court_preference_callbacks)
+        add('noop', self.profile.handle_court_preference_callbacks)
         add('cancel_edit', self.profile.handle_cancel_edit)
 
         add('menu_queue_booking', self.queue.handle_queue_booking_menu)
@@ -113,6 +116,10 @@ class CallbackHandler:
         self.router.add_prefix('letter_', self.profile.handle_letter_input)
         self.router.add_prefix('email_char_', self.profile.handle_email_callbacks)
         self.router.add_prefix('lang_', self.profile.handle_language_selection)
+        self.router.add_prefix('court_move_up_', self.profile.handle_court_preference_callbacks)
+        self.router.add_prefix('court_move_down_', self.profile.handle_court_preference_callbacks)
+        self.router.add_prefix('court_remove_', self.profile.handle_court_preference_callbacks)
+        self.router.add_prefix('court_add_', self.profile.handle_court_preference_callbacks)
         self.router.add_prefix('admin_view_user_', self._handle_admin_view_user)
         self.router.add_prefix('cancel_reservation:', self._handle_cancel_reservation)
 

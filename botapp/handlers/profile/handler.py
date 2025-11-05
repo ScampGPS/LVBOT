@@ -518,3 +518,113 @@ class ProfileHandler:
         except Exception as exc:
             self.logger.error("Error handling language selection: %s", exc)
             await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to change language')
+
+    async def handle_edit_court_preference(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Show court preference editing interface."""
+        t('botapp.handlers.profile.handler.ProfileHandler.handle_edit_court_preference')
+        query = update.callback_query
+        user_id = query.from_user.id
+
+        try:
+            user_profile = self.deps.user_manager.get_user(user_id)
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
+            if not user_profile:
+                await query.answer("❌ Profile not found")
+                return
+
+            # Get current court preference or default to empty
+            court_pref = user_profile.get('court_preference', []) or []
+
+            # Store in session for editing
+            session = get_session_state(context)
+            session.profile.court_preference = court_pref.copy()
+            context.user_data['editing_court_preference'] = court_pref.copy()
+
+            message = (
+                f"🎾 **{tr.t('profile.court_preference')}**\n\n"
+                f"{tr.t('profile.court_preference_help', default='Use ⬆️⬇️ to reorder, ❌ to remove, ➕ to add courts.')}\n\n"
+                f"{tr.t('profile.court_order_matters', default='The order determines booking priority.')}"
+            )
+
+            keyboard = TelegramUI.create_court_preference_keyboard(court_pref, translator=tr)
+            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=keyboard)
+
+        except Exception as exc:
+            self.logger.error("Error showing court preference editor: %s", exc)
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to show court editor')
+
+    async def handle_court_preference_callbacks(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle court preference editing callbacks."""
+        t('botapp.handlers.profile.handler.ProfileHandler.handle_court_preference_callbacks')
+        query = update.callback_query
+        user_id = query.from_user.id
+        callback_data = query.data or ''
+
+        try:
+            session = get_session_state(context)
+            court_pref = session.profile.court_preference or context.user_data.get('editing_court_preference', [])
+            tr = get_user_translator(self.deps.user_manager, user_id)
+
+            if callback_data.startswith('court_move_up_'):
+                index = int(callback_data.replace('court_move_up_', ''))
+                if index > 0 and index < len(court_pref):
+                    # Swap with previous
+                    court_pref[index], court_pref[index - 1] = court_pref[index - 1], court_pref[index]
+                    await query.answer("⬆️ Moved up")
+
+            elif callback_data.startswith('court_move_down_'):
+                index = int(callback_data.replace('court_move_down_', ''))
+                if index >= 0 and index < len(court_pref) - 1:
+                    # Swap with next
+                    court_pref[index], court_pref[index + 1] = court_pref[index + 1], court_pref[index]
+                    await query.answer("⬇️ Moved down")
+
+            elif callback_data.startswith('court_remove_'):
+                court_num = int(callback_data.replace('court_remove_', ''))
+                if court_num in court_pref:
+                    court_pref.remove(court_num)
+                    await query.answer("❌ Court removed")
+
+            elif callback_data.startswith('court_add_'):
+                court_num = int(callback_data.replace('court_add_', ''))
+                if court_num not in court_pref:
+                    court_pref.append(court_num)
+                    await query.answer("➕ Court added")
+
+            elif callback_data == 'court_pref_done':
+                # Save to user profile
+                profile = self.deps.user_manager.get_user(user_id) or {'user_id': user_id}
+                profile['court_preference'] = court_pref
+                self.deps.user_manager.save_user(profile)
+
+                # Clear session
+                session.profile.court_preference = None
+                context.user_data.pop('editing_court_preference', None)
+
+                await query.answer("✅ Court preference saved!")
+                await self.handle_profile_menu(update, context)
+                return
+
+            elif callback_data == 'noop':
+                # No operation button (spacers)
+                await query.answer()
+                return
+
+            # Update session
+            session.profile.court_preference = court_pref
+            context.user_data['editing_court_preference'] = court_pref
+
+            # Refresh display
+            message = (
+                f"🎾 **{tr.t('profile.court_preference')}**\n\n"
+                f"{tr.t('profile.court_preference_help', default='Use ⬆️⬇️ to reorder, ❌ to remove, ➕ to add courts.')}\n\n"
+                f"{tr.t('profile.court_order_matters', default='The order determines booking priority.')}"
+            )
+
+            keyboard = TelegramUI.create_court_preference_keyboard(court_pref, translator=tr)
+            await query.edit_message_text(message, parse_mode='Markdown', reply_markup=keyboard)
+
+        except Exception as exc:
+            self.logger.error("Error handling court preference callback: %s", exc)
+            await ErrorHandler.handle_booking_error(update, context, 'system_error', 'Failed to update court preference')

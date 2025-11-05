@@ -43,12 +43,20 @@ def create_profile_keyboard(language: Optional[str] = None, user_data: Optional[
     # Language button toggles directly to the opposite language
     target_lang = 'en' if lang == 'es' else 'es'
 
+    # Court preference display
+    court_pref = user_data.get("court_preference", []) or []
+    if court_pref:
+        courts_text = ", ".join([tr.t("court.label", number=c) for c in court_pref])[:25]
+    else:
+        courts_text = tr.t('profile.not_set')
+
     return _keyboard(
         [
             [(f"👤 {tr.t('profile.name')}", "edit_name"), (name or tr.t('profile.not_set'), "edit_name")],
             [(f"📱 {tr.t('profile.phone')}", "edit_phone"), (phone, "edit_phone")],
             [(f"📧 {tr.t('profile.email')}", "edit_email"), (email, "edit_email")],
             [(f"🌐 {tr.t('profile.language')}", f"lang_{target_lang}"), (lang_display, f"lang_{target_lang}")],
+            [(f"🎾 {tr.t('profile.court_preference')}", "edit_court_preference"), (courts_text, "edit_court_preference")],
             [(tr.t("nav.back_to_menu"), "back_to_menu")],
         ]
     )
@@ -157,6 +165,55 @@ def create_email_confirm_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def create_court_preference_keyboard(current_preference: list[int], translator=None) -> InlineKeyboardMarkup:
+    """Create keyboard for editing court preference order."""
+
+    t("botapp.ui.profile.create_court_preference_keyboard")
+    if translator is None:
+        from botapp.i18n.translator import create_translator
+        translator = create_translator()
+
+    # Show current order with up/down arrows
+    rows = []
+    for i, court in enumerate(current_preference):
+        court_label = translator.t("court.label", number=court)
+        buttons = []
+
+        # Add up arrow if not first
+        if i > 0:
+            buttons.append(("⬆️", f"court_move_up_{i}"))
+        else:
+            buttons.append(("   ", "noop"))
+
+        # Court label (center)
+        buttons.append((f"{court_label}", "noop"))
+
+        # Add down arrow if not last
+        if i < len(current_preference) - 1:
+            buttons.append(("⬇️", f"court_move_down_{i}"))
+        else:
+            buttons.append(("   ", "noop"))
+
+        # Remove button
+        buttons.append(("❌", f"court_remove_{court}"))
+
+        rows.append(buttons)
+
+    # Add court button if not all courts are selected
+    available_courts = [1, 2, 3, 4, 5, 6]
+    missing_courts = [c for c in available_courts if c not in current_preference]
+    if missing_courts:
+        add_row = []
+        for court in missing_courts:
+            add_row.append((f"➕ {translator.t('court.label', number=court)}", f"court_add_{court}"))
+        rows.append(add_row)
+
+    rows.append([("✅ " + translator.t("action.done"), "court_pref_done")])
+    rows.append([(translator.t("nav.back"), "menu_profile")])
+
+    return _keyboard(rows)
+
+
 def create_email_char_keyboard() -> InlineKeyboardMarkup:
     """Create keyboard for email character input."""
 
@@ -206,6 +263,7 @@ __all__ = [
     "create_letter_keyboard",
     "create_email_confirm_keyboard",
     "create_email_char_keyboard",
+    "create_court_preference_keyboard",
     "format_user_profile_message",
     "format_user_tier_badge",
     "ProfileViewBuilder",
@@ -235,11 +293,6 @@ class ProfileViewBuilder(MarkdownBuilderBase):
 
         if compact:
             # Compact mode: Only show stats and badges (editable fields are in buttons)
-            court_pref = user_data.get("court_preference", []) or []
-            if court_pref:
-                courts_text = ", ".join([translator.t("court.label", number=c) for c in court_pref])
-                builder.line(f"🎾 {translator.t('profile.court_preference')}: {courts_text}")
-
             builder.line(f"📊 {translator.t('profile.total_reservations')}: {user_data.get('total_reservations', 0)}")
 
             if user_data.get("telegram_username"):
