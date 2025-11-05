@@ -105,6 +105,11 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.vip_user": "⭐ *Usuario VIP* (Reserva prioritaria)",
         "profile.administrator": "👮 *Administrador*",
         "profile.premium_user": "⚡ *Usuario Premium (Hardcoded)*",
+        "profile.edit_name": "✏️ Editar Nombre",
+        "profile.edit_phone": "📱 Editar Teléfono",
+        "profile.edit_email": "📧 Editar Correo",
+        "profile.edit_language": "🌐 Cambiar Idioma",
+        "profile.edit_courts": "🎾 Editar Preferencia de Canchas",
 
         # Calendar buttons
         "calendar.add_google": "📅 Agregar a Google Calendar",
@@ -287,6 +292,11 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.vip_user": "⭐ *VIP User* (Priority booking)",
         "profile.administrator": "👮 *Administrator*",
         "profile.premium_user": "⚡ *Premium User (Hardcoded)*",
+        "profile.edit_name": "✏️ Edit Name",
+        "profile.edit_phone": "📱 Edit Phone",
+        "profile.edit_email": "📧 Edit Email",
+        "profile.edit_language": "🌐 Change Language",
+        "profile.edit_courts": "🎾 Edit Court Preference",
 
         # Calendar buttons
         "calendar.add_google": "📅 Google Calendar",

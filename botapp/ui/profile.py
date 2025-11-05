@@ -22,13 +22,16 @@ def _keyboard(rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
 
 
 def create_profile_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
-    """Create profile view keyboard with Edit and Back buttons."""
+    """Create profile view keyboard with individual field edit buttons."""
 
     t("botapp.ui.profile.create_profile_keyboard")
     tr = get_translator(language)
     return _keyboard(
         [
-            [(tr.t("profile.edit_profile"), "edit_profile")],
+            [(tr.t("profile.edit_name"), "edit_name"), (tr.t("profile.edit_phone"), "edit_phone")],
+            [(tr.t("profile.edit_email"), "edit_email"), (tr.t("profile.edit_language"), "edit_language")],
+            # TODO: Add edit_court_preference handler and callback
+            # [(tr.t("profile.edit_courts"), "edit_court_preference")],
             [(tr.t("nav.back_to_menu"), "back_to_menu")],
         ]
     )
