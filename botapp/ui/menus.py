@@ -145,6 +145,7 @@ def create_month_selection_keyboard(year: int) -> InlineKeyboardMarkup:
         if row:
             keyboard.append(row)
 
+    # TODO: Add translator parameter to this function for proper i18n
     keyboard.append([InlineKeyboardButton("🔙 Back to Year", callback_data='back_to_year_selection')])
     return InlineKeyboardMarkup(keyboard)
 

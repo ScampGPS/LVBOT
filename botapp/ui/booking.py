@@ -168,7 +168,9 @@ def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immed
             selectable_dates,
         )
 
-    keyboard.append([InlineKeyboardButton(f"🔙 Back to Months", callback_data=f'back_to_month_{year}')])
+    # TODO: Add translator parameter to this function for proper i18n
+    # For now using English as default since this needs broader refactoring
+    keyboard.append([InlineKeyboardButton("🔙 Back to Months", callback_data=f'back_to_month_{year}')])
     return InlineKeyboardMarkup(keyboard)
 
 
