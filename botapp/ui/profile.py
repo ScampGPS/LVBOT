@@ -21,17 +21,31 @@ def _keyboard(rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
     )
 
 
-def create_profile_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
-    """Create profile view keyboard with individual field edit buttons."""
+def create_profile_keyboard(language: Optional[str] = None, user_data: Optional[Dict[str, Any]] = None) -> InlineKeyboardMarkup:
+    """Create profile view keyboard with label+value button pairs for editing."""
 
     t("botapp.ui.profile.create_profile_keyboard")
     tr = get_translator(language)
+
+    if not user_data:
+        # Fallback to simple buttons if no user data provided
+        return _keyboard([[(tr.t("nav.back_to_menu"), "back_to_menu")]])
+
+    # Extract values with truncation for button display
+    name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()[:20]
+    phone = user_data.get('phone', tr.t('profile.not_set'))[:15]
+    email = user_data.get('email', tr.t('profile.not_set'))[:25]
+
+    # Language display
+    lang = user_data.get('language', 'es')
+    lang_display = "🇪🇸 ES" if lang == 'es' else "🇺🇸 EN"
+
     return _keyboard(
         [
-            [(tr.t("profile.edit_name"), "edit_name"), (tr.t("profile.edit_phone"), "edit_phone")],
-            [(tr.t("profile.edit_email"), "edit_email"), (tr.t("profile.edit_language"), "edit_language")],
-            # TODO: Add edit_court_preference handler and callback
-            # [(tr.t("profile.edit_courts"), "edit_court_preference")],
+            [(f"👤 {tr.t('profile.name')}", "edit_name"), (name or tr.t('profile.not_set'), "edit_name")],
+            [(f"📱 {tr.t('profile.phone')}", "edit_phone"), (phone, "edit_phone")],
+            [(f"📧 {tr.t('profile.email')}", "edit_email"), (email, "edit_email")],
+            [(f"🌐 {tr.t('profile.language')}", "edit_language"), (lang_display, "edit_language")],
             [(tr.t("nav.back_to_menu"), "back_to_menu")],
         ]
     )
@@ -164,12 +178,12 @@ def create_email_char_keyboard() -> InlineKeyboardMarkup:
 
 
 def format_user_profile_message(
-    user_data: Dict[str, Any], is_hardcoded: bool = False
+    user_data: Dict[str, Any], is_hardcoded: bool = False, compact: bool = False
 ) -> str:
     """Format user profile display."""
 
     t("botapp.ui.profile.format_user_profile_message")
-    return ProfileViewBuilder().build(user_data, is_hardcoded=is_hardcoded)
+    return ProfileViewBuilder().build(user_data, is_hardcoded=is_hardcoded, compact=compact)
 
 
 def format_user_tier_badge(tier_name: str) -> str:
@@ -202,7 +216,7 @@ class ProfileViewBuilder(MarkdownBuilderBase):
         t("botapp.ui.profile.ProfileViewBuilder.__init__")
         super().__init__(builder_factory=builder_factory)
 
-    def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False, translator=None) -> str:
+    def build(self, user_data: Dict[str, Any], *, is_hardcoded: bool = False, translator=None, compact: bool = False) -> str:
         t("botapp.ui.profile.ProfileViewBuilder.build")
 
         # Get translator for user's language
@@ -214,43 +228,70 @@ class ProfileViewBuilder(MarkdownBuilderBase):
         builder = self.create_builder()
         status_emoji = "✅" if user_data.get("is_active", True) else "🔴"
 
-        phone = user_data.get("phone", translator.t("profile.not_set"))
-        if phone and phone != translator.t("profile.not_set"):
-            phone = f"(+502) {phone}"
-
         builder.heading(f"{status_emoji} **{translator.t('profile.title')}**").blank()
-        builder.line(
-            f"👤 {translator.t('profile.name')}: {user_data.get('first_name', '')} {user_data.get('last_name', '')}"
-        )
-        builder.line(f"📱 {translator.t('profile.phone')}: {phone}")
-        builder.line(f"📧 {translator.t('profile.email')}: {user_data.get('email', translator.t('profile.not_set'))}")
 
-        # Language preference
-        language = user_data.get('language', 'es')
-        language_display = "🇪🇸 Español" if language == 'es' else "🇺🇸 English"
-        builder.line(f"🌐 {translator.t('profile.language')}: {language_display}")
+        if compact:
+            # Compact mode: Only show stats and badges (editable fields are in buttons)
+            court_pref = user_data.get("court_preference", []) or []
+            if court_pref:
+                courts_text = ", ".join([translator.t("court.label", number=c) for c in court_pref])
+                builder.line(f"🎾 {translator.t('profile.court_preference')}: {courts_text}")
 
-        court_pref = user_data.get("court_preference", []) or []
-        if court_pref:
-            courts_text = ", ".join([translator.t("court.label", number=c) for c in court_pref])
+            builder.line(f"📊 {translator.t('profile.total_reservations')}: {user_data.get('total_reservations', 0)}")
+
+            if user_data.get("telegram_username"):
+                builder.line(f"💬 {translator.t('profile.telegram')}: @{user_data['telegram_username']}")
+
+            extras = []
+            if is_hardcoded:
+                extras.append(translator.t("profile.premium_user"))
+            if user_data.get("is_vip"):
+                extras.append(translator.t("profile.vip_user"))
+            if user_data.get("is_admin"):
+                extras.append(translator.t("profile.administrator"))
+
+            if extras:
+                builder.blank()
+                for extra in extras:
+                    builder.line(extra)
         else:
-            courts_text = translator.t("profile.not_set")
-        builder.line(f"🎾 {translator.t('profile.court_preference')}: {courts_text}")
-        builder.line(f"📊 {translator.t('profile.total_reservations')}: {user_data.get('total_reservations', 0)}")
+            # Full mode: Show all details
+            phone = user_data.get("phone", translator.t("profile.not_set"))
+            if phone and phone != translator.t("profile.not_set"):
+                phone = f"(+502) {phone}"
 
-        if user_data.get("telegram_username"):
-            builder.line(f"💬 {translator.t('profile.telegram')}: @{user_data['telegram_username']}")
+            builder.line(
+                f"👤 {translator.t('profile.name')}: {user_data.get('first_name', '')} {user_data.get('last_name', '')}"
+            )
+            builder.line(f"📱 {translator.t('profile.phone')}: {phone}")
+            builder.line(f"📧 {translator.t('profile.email')}: {user_data.get('email', translator.t('profile.not_set'))}")
 
-        extras = []
-        if is_hardcoded:
-            extras.append(translator.t("profile.premium_user"))
-        if user_data.get("is_vip"):
-            extras.append(translator.t("profile.vip_user"))
-        if user_data.get("is_admin"):
-            extras.append(translator.t("profile.administrator"))
+            # Language preference
+            language = user_data.get('language', 'es')
+            language_display = "🇪🇸 Español" if language == 'es' else "🇺🇸 English"
+            builder.line(f"🌐 {translator.t('profile.language')}: {language_display}")
 
-        if extras:
-            for extra in extras:
-                builder.blank().line(extra)
+            court_pref = user_data.get("court_preference", []) or []
+            if court_pref:
+                courts_text = ", ".join([translator.t("court.label", number=c) for c in court_pref])
+            else:
+                courts_text = translator.t("profile.not_set")
+            builder.line(f"🎾 {translator.t('profile.court_preference')}: {courts_text}")
+            builder.line(f"📊 {translator.t('profile.total_reservations')}: {user_data.get('total_reservations', 0)}")
+
+            if user_data.get("telegram_username"):
+                builder.line(f"💬 {translator.t('profile.telegram')}: @{user_data['telegram_username']}")
+
+            extras = []
+            if is_hardcoded:
+                extras.append(translator.t("profile.premium_user"))
+            if user_data.get("is_vip"):
+                extras.append(translator.t("profile.vip_user"))
+            if user_data.get("is_admin"):
+                extras.append(translator.t("profile.administrator"))
+
+            if extras:
+                for extra in extras:
+                    builder.blank().line(extra)
 
         return builder.build()

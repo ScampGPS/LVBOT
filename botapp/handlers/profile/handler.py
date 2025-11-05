@@ -38,9 +38,9 @@ class ProfileHandler:
                 )
                 return
 
-            # Use the formatted profile message
-            message = TelegramUI.format_user_profile_message(user_profile)
-            keyboard = TelegramUI.create_profile_keyboard(language=tr.get_language())
+            # Use the formatted profile message with compact mode
+            message = TelegramUI.format_user_profile_message(user_profile, compact=True)
+            keyboard = TelegramUI.create_profile_keyboard(language=tr.get_language(), user_data=user_profile)
 
             await query.edit_message_text(message, reply_markup=keyboard, parse_mode='Markdown')
         except Exception as exc:  # pragma: no cover - defensive guard
