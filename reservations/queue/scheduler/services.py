@@ -29,7 +29,6 @@ class ReservationHydrator:
     """Hydrates reservation batches into executable requests."""
 
     def __init__(
-        t('reservations.queue.scheduler.services.ReservationHydrator.__init__')
         self,
         *,
         logger,
@@ -40,6 +39,7 @@ class ReservationHydrator:
         on_failure: Callable[[str, str], None],
         builder: ReservationRequestBuilder = DEFAULT_BUILDER,
     ) -> None:
+        t('reservations.queue.scheduler.services.ReservationHydrator.__init__')
         self._logger = logger
         self._executor_config = executor_config
         self._queue = queue
@@ -113,7 +113,6 @@ class SchedulerPipeline:
     """Coordinates scheduler stages (health checks, hydration, execution)."""
 
     def __init__(
-        t('reservations.queue.scheduler.services.SchedulerPipeline.__init__')
         self,
         *,
         logger,
@@ -121,6 +120,7 @@ class SchedulerPipeline:
         health_check: Callable[[List[Dict[str, Any]]], Awaitable[bool]],
         executor: Callable[..., Awaitable[None]],
     ) -> None:
+        t('reservations.queue.scheduler.services.SchedulerPipeline.__init__')
         self._logger = logger
         self._hydrator = hydrator
         self._health_check = health_check
@@ -157,7 +157,6 @@ class OutcomeRecorder:
     """Records booking outcomes and notifies users."""
 
     def __init__(
-        t('reservations.queue.scheduler.services.OutcomeRecorder.__init__')
         self,
         *,
         scheduler,
@@ -165,6 +164,7 @@ class OutcomeRecorder:
         failure_builder: Callable[..., BookingResult],
         result_mapper: Callable[[BookingResult], Dict[str, Any]],
     ) -> None:
+        t('reservations.queue.scheduler.services.OutcomeRecorder.__init__')
         self._scheduler = scheduler
         self._logger = scheduler.logger
         self._queue = scheduler.queue

@@ -45,10 +45,10 @@ class QueueRecordSerializer:
     """Serialize and hydrate queue reservation records."""
 
     def __init__(
-        t('reservations.queue.reservation_queue.QueueRecordSerializer.__init__')
         self,
         builder: ReservationRequestBuilder = DEFAULT_BUILDER,
     ) -> None:
+        t('reservations.queue.reservation_queue.QueueRecordSerializer.__init__')
         self._builder = builder
 
     def to_storage(self, reservation: ReservationRequest) -> Dict[str, Any]:

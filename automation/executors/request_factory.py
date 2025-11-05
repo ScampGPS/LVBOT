@@ -202,7 +202,6 @@ def build_retry_request(**kwargs):
 
 
 def build_booking_result_from_execution(
-    t('automation.executors.request_factory.build_booking_result_from_execution')
     request: BookingRequest,
     execution: ExecutionResult,
     *,
@@ -210,6 +209,7 @@ def build_booking_result_from_execution(
     started_at: Optional[datetime] = None,
     completed_at: Optional[datetime] = None,
 ):
+    t('automation.executors.request_factory.build_booking_result_from_execution')
     return ExecutorRequestFactory.build_booking_result(
         request,
         execution,

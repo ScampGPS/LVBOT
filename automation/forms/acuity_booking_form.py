@@ -185,7 +185,6 @@ async def fill_booking_form(
 
 
 async def fill_form(
-    t('automation.forms.acuity_booking_form.fill_form')
     page: Page,
     user_info: Dict[str, str],
     *,
@@ -195,9 +194,8 @@ async def fill_form(
     enable_tracing: bool = True,
 ) -> bool:
     """Fill the form without submission for external callers."""
-
-    _ = wait_for_navigation  # compatibility no-op
     t('automation.forms.acuity_booking_form.fill_form')
+    _ = wait_for_navigation  # compatibility no-op
     return await _invoke_form_method(
         "fill_form",
         page,

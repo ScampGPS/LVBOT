@@ -78,13 +78,13 @@ class NotificationBuilder(MarkdownBuilderBase):
         return "\n".join(lines)
 
     def queue_reservation_added(
-        t('botapp.notifications.NotificationBuilder.queue_reservation_added')
         self,
         booking_summary: Dict[str, object],
         reservation_id: str,
         *,
         test_mode_config: TestModeConfig,
     ) -> str:
+        t('botapp.notifications.NotificationBuilder.queue_reservation_added')
         display_date = datetime.strptime(
             booking_summary["target_date"], "%Y-%m-%d"
         ).strftime("%A, %B %d, %Y")
@@ -227,13 +227,13 @@ def send_failure_notification(user_id: int, result: BookingResult) -> Dict[str, 
 
 
 def format_queue_reservation_added(
-    t('botapp.notifications.format_queue_reservation_added')
     booking_summary: Dict[str, object],
     reservation_id: str,
     *,
     test_mode_config: TestModeConfig,
 ) -> str:
     """Build the confirmation message when a queue reservation is added."""
+    t('botapp.notifications.format_queue_reservation_added')
 
     return _NOTIFICATIONS.queue_reservation_added(
         booking_summary,

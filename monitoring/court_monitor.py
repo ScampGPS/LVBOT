@@ -55,13 +55,13 @@ class CourtMonitor:
         self._started = False
 
     async def monitor_slot(
-        t('monitoring.court_monitor.CourtMonitor.monitor_slot')
         self,
         court_number: int,
         target_datetime: datetime,
         *,
         timeout_seconds: int = 120,
     ) -> Dict[str, object]:
+        t('monitoring.court_monitor.CourtMonitor.monitor_slot')
         """Poll for a specific court/time until timeout or availability."""
 
         await self.start()
@@ -109,13 +109,13 @@ class CourtMonitor:
         return {'status': 'timeout', 'court': court_number, 'date': date_key, 'time': slot_time}
 
     async def monitor_all_day(
-        t('monitoring.court_monitor.CourtMonitor.monitor_all_day')
         self,
         court_numbers: Iterable[int],
         *,
         advance_seconds: int = 30,
     ) -> None:
         """Continuously monitor upcoming slots 48 hours in advance."""
+        t('monitoring.court_monitor.CourtMonitor.monitor_all_day')
 
         await self.start()
         try:

@@ -144,11 +144,11 @@ class QueueSessionStore:
         return data.modifying_reservation_id, data.modifying_option
 
     def set_modification(
-        t('botapp.handlers.queue.session.QueueSessionStore.set_modification')
         self,
         reservation_id: Optional[str],
         option: Optional[str],
     ) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore.set_modification')
         self.update(
             modifying_reservation_id=reservation_id,
             modifying_option=option,
