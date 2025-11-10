@@ -20,6 +20,31 @@ from botapp.ui.text_blocks import (
 from infrastructure.settings import TestModeConfig
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+_WEEKDAY_KEYS = [
+    "day.monday",
+    "day.tuesday",
+    "day.wednesday",
+    "day.thursday",
+    "day.friday",
+    "day.saturday",
+    "day.sunday",
+]
+
+_MONTH_KEYS = [
+    "month.january",
+    "month.february",
+    "month.march",
+    "month.april",
+    "month.may",
+    "month.june",
+    "month.july",
+    "month.august",
+    "month.september",
+    "month.october",
+    "month.november",
+    "month.december",
+]
+
 # Deprecated: Use translator instead
 SUCCESS_HEADER = "✅ *Booking Confirmed!*"
 FAILURE_HEADER = "❌ *Booking Attempt Failed*"
@@ -85,36 +110,53 @@ class NotificationBuilder(MarkdownBuilderBase):
         test_mode_config: TestModeConfig,
     ) -> str:
         t('botapp.notifications.NotificationBuilder.queue_reservation_added')
-        display_date = datetime.strptime(
+        date_obj = datetime.strptime(
             booking_summary["target_date"], "%Y-%m-%d"
-        ).strftime("%A, %B %d, %Y")
+        ).date()
+        weekday_label = self.translator.t(_WEEKDAY_KEYS[date_obj.weekday()])
+        month_label = self.translator.t(_MONTH_KEYS[date_obj.month - 1])
+        display_date = f"{weekday_label}, {month_label} {date_obj.day:02d}, {date_obj.year}"
         courts = booking_summary.get("court_preferences", [])
 
         if isinstance(courts, str) and courts == "all":
-            courts_label = "All Courts"
+            courts_label = self.translator.t("court.all")
         else:
             court_values: Sequence[int] = courts if isinstance(courts, Sequence) else []
             courts_label = (
-                ", ".join(f"Court {court}" for court in sorted(court_values))
-                or "All Courts"
+                ", ".join(
+                    self.translator.t("court.label", number=court)
+                    for court in sorted(court_values)
+                )
+                or self.translator.t("court.all")
             )
 
         lines = [
-            f"✅ {bold_telegram_text('Reservation Added to Queue!', escape_special_chars=True)}",
+            escape_telegram_markdown(
+                self.translator.t("notif.queue_added"),
+                escape_special_chars=True,
+            ),
             "",
-            f"📅 Date: {escape_telegram_markdown(display_date, escape_special_chars=True)}",
-            f"⏱️ Time: {escape_telegram_markdown(booking_summary['target_time'], escape_special_chars=True)}",
-            f"🎾 Courts: {escape_telegram_markdown(courts_label, escape_special_chars=True)}",
+            f"{self.translator.t('notif.date')}: {escape_telegram_markdown(display_date, escape_special_chars=True)}",
+            f"{self.translator.t('notif.time')}: {escape_telegram_markdown(booking_summary['target_time'], escape_special_chars=True)}",
+            f"{self.translator.t('notif.courts')}: {escape_telegram_markdown(courts_label, escape_special_chars=True)}",
             "",
-            f"🤖 {bold_telegram_text('Queue ID:', escape_special_chars=True)} {escape_telegram_markdown(reservation_id[:8] + '...', escape_special_chars=True)}",
+            f"{escape_telegram_markdown(self.translator.t('notif.queue_id'), escape_special_chars=True)} {escape_telegram_markdown(reservation_id[:8] + '...', escape_special_chars=True)}",
             "",
         ]
 
         if test_mode_config.enabled:
-            lines.append(bold_telegram_text("TEST MODE ACTIVE", escape_special_chars=True))
             lines.append(
                 escape_telegram_markdown(
-                    f"This reservation will be executed in {test_mode_config.trigger_delay_minutes} minutes!",
+                    self.translator.t("notif.queue_test_mode"),
+                    escape_special_chars=True,
+                )
+            )
+            lines.append(
+                escape_telegram_markdown(
+                    self.translator.t(
+                        "notif.queue_test_eta",
+                        minutes=test_mode_config.trigger_delay_minutes,
+                    ),
                     escape_special_chars=True,
                 )
             )
@@ -122,14 +164,17 @@ class NotificationBuilder(MarkdownBuilderBase):
         else:
             lines.append(
                 escape_telegram_markdown(
-                    "Your reservation has been successfully added to the queue. The bot will automatically attempt to book this court when the booking window opens.",
+                    self.translator.t("notif.queue_added_description"),
                     escape_special_chars=True,
                 )
             )
             lines.append("")
 
         lines.append(
-            escape_telegram_markdown("You can view your queued reservations anytime using the My Reservations option.", escape_special_chars=True)
+            escape_telegram_markdown(
+                self.translator.t("notif.queue_view_hint"),
+                escape_special_chars=True,
+            )
         )
 
         return "\n".join(lines)

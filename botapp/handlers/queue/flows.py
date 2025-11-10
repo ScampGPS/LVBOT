@@ -13,6 +13,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import ContextTypes
 
 from botapp.error_handler import ErrorHandler
+from botapp.i18n import create_translator
 from botapp.handlers.queue.session import QueueSessionStore
 from reservations.queue.court_utils import normalize_court_sequence
 from botapp.handlers.queue.guards import (
@@ -92,6 +93,20 @@ class QueueFlowBase:
 
         await self._edit_message(query, text, **kwargs)
 
+    def _translator_for_user(self, user_id: int | None):
+        """Return a translator instance and language code for a user."""
+        t('botapp.handlers.queue.flows.QueueFlowBase._translator_for_user')
+
+        language = None
+        user_manager = getattr(self.deps, 'user_manager', None)
+        if user_id and user_manager:
+            try:
+                language = user_manager.get_user_language(user_id)
+            except Exception:
+                language = None
+        translator = create_translator(language)
+        return translator, language
+
 
 class QueueBookingFlow(QueueFlowBase):
     """Encapsulates the queue booking callback flow."""
@@ -143,6 +158,7 @@ class QueueBookingFlow(QueueFlowBase):
             if query and getattr(query, 'from_user', None)
             else (update.effective_user.id if update.effective_user else None)
         )
+        _, language = self._translator_for_user(user_id)
         self.logger.info(
             "QueueBookingFlow.show_menu user=%s current_flow=%s",
             user_id,
@@ -202,7 +218,7 @@ class QueueBookingFlow(QueueFlowBase):
             )
             return
 
-        keyboard = TelegramUI.create_date_selection_keyboard(dates)
+        keyboard = TelegramUI.create_date_selection_keyboard(dates, language=language)
         await self.edit_callback(
             query,
             "⏰ Queue Booking\n\n"
@@ -572,14 +588,14 @@ class QueueBookingFlow(QueueFlowBase):
         )
         self.logger.info("QueueBookingFlow.cancel user=%s", user_id)
 
+        _, language = self._translator_for_user(user_id)
         store.clear()
         context.user_data.pop('current_flow', None)
 
-        reply_markup = TelegramUI.create_back_to_menu_keyboard()
+        reply_markup = TelegramUI.create_back_to_menu_keyboard(language=language)
         await self.edit_callback(
             query,
-            "⏰ Queue Booking\n\n"
-            "The booking process has been cancelled.",
+            "⏰ Queue Booking\n\nThe booking process has been cancelled.",
             reply_markup=reply_markup,
         )
 
@@ -1071,6 +1087,8 @@ class QueueBookingFlow(QueueFlowBase):
         if user_id is None and query and getattr(query, 'from_user', None):
             user_id = query.from_user.id
 
+        _, language = self._translator_for_user(user_id)
+
         user_profile = self.deps.user_manager.get_user(user_id) if user_id is not None else {}
         required_fields = ('first_name', 'last_name', 'email', 'phone')
 
@@ -1113,7 +1131,7 @@ class QueueBookingFlow(QueueFlowBase):
             cleaned_list,
         )
 
-        reply_markup = TelegramUI.create_queue_confirmation_keyboard()
+        reply_markup = TelegramUI.create_queue_confirmation_keyboard(language=language)
         courts_text = format_court_preferences(cleaned_list, self.AVAILABLE_COURTS)
         await self.edit_callback(
             query,
@@ -1502,6 +1520,9 @@ class QueueReservationManager(QueueFlowBase):
         query = update.callback_query
         await self.answer_callback(query)
         data = query.data
+        from_user = getattr(query, 'from_user', None)
+        user_id = from_user.id if from_user else None
+        _, language = self._translator_for_user(user_id)
         store = self._session_store(context)
 
         if data.startswith('modify_date_'):
@@ -1523,7 +1544,7 @@ class QueueReservationManager(QueueFlowBase):
             return
 
         if option == 'date':
-            keyboard = TelegramUI.create_year_selection_keyboard()
+            keyboard = TelegramUI.create_year_selection_keyboard(language=language)
             await self.edit_callback(
                 query,
                 "📅 **Select New Year**\n\nChoose the year for your reservation:",
@@ -1531,7 +1552,10 @@ class QueueReservationManager(QueueFlowBase):
                 reply_markup=keyboard,
             )
         elif option == 'time':
-            keyboard = TelegramUI.create_time_selection_keyboard_simple(reservation.date)
+            keyboard = TelegramUI.create_time_selection_keyboard_simple(
+                reservation.date,
+                language=language,
+            )
             await self.edit_callback(
                 query,
                 "⏰ **Select New Time**\n\nChoose your preferred time:",

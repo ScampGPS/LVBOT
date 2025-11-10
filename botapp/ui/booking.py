@@ -12,8 +12,34 @@ import pytz
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 from botapp.ui.text_blocks import escape_telegram_markdown
+from botapp.i18n import get_translator
 from infrastructure.constants import get_court_hours
 from infrastructure.settings import get_test_mode
+
+_MONTH_KEYS = [
+    "month.january",
+    "month.february",
+    "month.march",
+    "month.april",
+    "month.may",
+    "month.june",
+    "month.july",
+    "month.august",
+    "month.september",
+    "month.october",
+    "month.november",
+    "month.december",
+]
+
+_DAY_HEADER_KEYS = [
+    "day.short.mon",
+    "day.short.tue",
+    "day.short.wed",
+    "day.short.thu",
+    "day.short.fri",
+    "day.short.sat",
+    "day.short.sun",
+]
 
 
 def create_court_selection_keyboard(available_courts: List[int]) -> ReplyKeyboardMarkup:
@@ -54,35 +80,36 @@ def create_queue_court_selection_keyboard(available_courts: List[int], translato
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_queue_confirmation_keyboard() -> InlineKeyboardMarkup:
+def create_queue_confirmation_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create inline confirmation keyboard for queue booking flow."""
 
     t('botapp.ui.booking.create_queue_confirmation_keyboard')
+    tr = get_translator(language)
     keyboard = [
         [
-            InlineKeyboardButton("✅ Confirm", callback_data='queue_confirm'),
-            InlineKeyboardButton("❌ Cancel", callback_data='queue_cancel'),
+            InlineKeyboardButton(f"✅ {tr.t('action.confirm')}", callback_data='queue_confirm'),
+            InlineKeyboardButton(f"❌ {tr.t('nav.cancel')}", callback_data='queue_cancel'),
         ],
-        [InlineKeyboardButton("🔙 Back", callback_data='back_to_queue_courts')],
+        [InlineKeyboardButton(tr.t("nav.back"), callback_data='back_to_queue_courts')],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immediate') -> InlineKeyboardMarkup:
+def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immediate', language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create day selection calendar keyboard for a given year and month."""
 
     t('botapp.ui.booking.create_day_selection_keyboard')
     logger = logging.getLogger('TelegramUI')
+    tr = get_translator(language)
 
     cal = calendar.monthcalendar(year, month)
-    month_name = calendar.month_name[month]
+    month_name = tr.t(_MONTH_KEYS[month - 1])
     today = date.today()
 
     keyboard: List[List[InlineKeyboardButton]] = []
     keyboard.append([InlineKeyboardButton(f"📅 {month_name} {year}", callback_data="noop")])
-    keyboard.append([InlineKeyboardButton(day[:2], callback_data="noop") for day in [
-        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
-    ]])
+    day_headers = [tr.t(key) for key in _DAY_HEADER_KEYS]
+    keyboard.append([InlineKeyboardButton(day, callback_data="noop") for day in day_headers])
 
     selectable_dates: List[str] = []
 
@@ -168,16 +195,15 @@ def create_day_selection_keyboard(year: int, month: int, flow_type: str = 'immed
             selectable_dates,
         )
 
-    # TODO: Add translator parameter to this function for proper i18n
-    # For now using English as default since this needs broader refactoring
-    keyboard.append([InlineKeyboardButton("🔙 Back to Months", callback_data=f'back_to_month_{year}')])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back_to_month"), callback_data=f'back_to_month_{year}')])
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_date_selection_keyboard(dates: List[tuple]) -> InlineKeyboardMarkup:
+def create_date_selection_keyboard(dates: List[tuple], language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create date selection keyboard."""
 
     t('botapp.ui.booking.create_date_selection_keyboard')
+    tr = get_translator(language)
     keyboard = []
     for i in range(0, len(dates), 2):
         row = []
@@ -186,7 +212,7 @@ def create_date_selection_keyboard(dates: List[tuple]) -> InlineKeyboardMarkup:
             row.append(InlineKeyboardButton(label, callback_data=f'date_{date_str}'))
         keyboard.append(row)
 
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='back_to_reserve')])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back"), callback_data='back_to_reserve')])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -194,10 +220,12 @@ def create_time_selection_keyboard(
     available_times: List[str],
     selected_date: str,
     flow_type: str = 'availability',
+    language: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     """Create time selection keyboard with flow-specific callbacks."""
 
     t('botapp.ui.booking.create_time_selection_keyboard')
+    tr = get_translator(language)
     keyboard = []
 
     try:
@@ -232,14 +260,15 @@ def create_time_selection_keyboard(
         keyboard.append(row)
 
     back_callback = 'back_to_queue_dates' if flow_type == 'queue_booking' else 'back_to_dates'
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data=back_callback)])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back"), callback_data=back_callback)])
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_time_selection_keyboard_simple(day: Optional[str] = None) -> InlineKeyboardMarkup:
+def create_time_selection_keyboard_simple(day: Optional[str] = None, language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create time selection keyboard for modify flow (no parameters)."""
 
     t('botapp.ui.booking.create_time_selection_keyboard_simple')
+    tr = get_translator(language)
     available_times = get_court_hours(day)
     keyboard = []
     for i in range(0, len(available_times), 3):
@@ -249,25 +278,29 @@ def create_time_selection_keyboard_simple(day: Optional[str] = None) -> InlineKe
         ]
         keyboard.append(row)
 
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='back_to_modify')])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back"), callback_data='back_to_modify')])
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_modify_court_selection_keyboard() -> InlineKeyboardMarkup:
+def create_modify_court_selection_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create court selection keyboard for modification flows."""
 
     t('botapp.ui.booking.create_modify_court_selection_keyboard')
+    tr = get_translator(language)
     available_courts = [1, 2, 3]
     keyboard = []
     for i in range(0, len(available_courts), 3):
         row = [
-            InlineKeyboardButton(f"Court {court}", callback_data=f'queue_court_{court}')
+            InlineKeyboardButton(
+                tr.t("court.label", number=court),
+                callback_data=f'queue_court_{court}'
+            )
             for court in available_courts[i:i+3]
         ]
         keyboard.append(row)
 
-    keyboard.append([InlineKeyboardButton("All Courts", callback_data='queue_court_all')])
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='back_to_modify')])
+    keyboard.append([InlineKeyboardButton(tr.t("court.all"), callback_data='queue_court_all')])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back"), callback_data='back_to_modify')])
     return InlineKeyboardMarkup(keyboard)
 
 

@@ -23,6 +23,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "nav.back": "🔙 Atrás",
         "nav.back_to_year": "🔙 Volver a Año",
         "nav.back_to_month": "🔙 Volver a Mes",
+        "nav.back_to_booking_type": "🔙 Volver al tipo de reserva",
         "nav.cancel": "Cancelar",
 
         # Booking type selection
@@ -76,6 +77,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "notif.booking_failed": "❌ *Intento de Reserva Fallido*",
         "notif.duplicate_warning": "⚠️ *Reserva Duplicada*",
         "notif.queue_added": "✅ *¡Reserva Agregada a la Cola!*",
+        "notif.queue_added_description": "Tu reserva ha sido agregada exitosamente a la cola. El bot intentará reservar automáticamente cuando se abra la ventana de reservas.",
+        "notif.queue_view_hint": "Puedes ver tus reservas en cola en cualquier momento usando la opción 'Mis Reservas'.",
+        "notif.queue_test_mode": "⚠️ MODO DE PRUEBA ACTIVO",
+        "notif.queue_test_eta": "Esta reserva se ejecutará en {minutes} minutos!",
 
         # Notification fields
         "notif.court": "Cancha",
@@ -177,6 +182,13 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "day.friday": "Viernes",
         "day.saturday": "Sábado",
         "day.sunday": "Domingo",
+        "day.short.mon": "Lu",
+        "day.short.tue": "Ma",
+        "day.short.wed": "Mi",
+        "day.short.thu": "Ju",
+        "day.short.fri": "Vi",
+        "day.short.sat": "Sá",
+        "day.short.sun": "Do",
 
         # Time periods
         "time.am": "AM",
@@ -242,6 +254,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "nav.back": "🔙 Back",
         "nav.back_to_year": "🔙 Back to Year",
         "nav.back_to_month": "🔙 Back to Month",
+        "nav.back_to_booking_type": "🔙 Back to booking type",
         "nav.cancel": "Cancel",
 
         # Booking type selection
@@ -295,6 +308,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "notif.booking_failed": "❌ *Booking Attempt Failed*",
         "notif.duplicate_warning": "⚠️ *Duplicate Reservation*",
         "notif.queue_added": "✅ *Reservation Added to Queue!*",
+        "notif.queue_added_description": "Your reservation has been added to the queue. The bot will automatically attempt to book the court when the window opens.",
+        "notif.queue_view_hint": "You can view your queued reservations anytime from the My Reservations option.",
+        "notif.queue_test_mode": "⚠️ TEST MODE ACTIVE",
+        "notif.queue_test_eta": "This reservation will be executed in {minutes} minutes!",
 
         # Notification fields
         "notif.court": "Court",
@@ -400,6 +417,13 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "day.friday": "Friday",
         "day.saturday": "Saturday",
         "day.sunday": "Sunday",
+        "day.short.mon": "Mon",
+        "day.short.tue": "Tue",
+        "day.short.wed": "Wed",
+        "day.short.thu": "Thu",
+        "day.short.fri": "Fri",
+        "day.short.sat": "Sat",
+        "day.short.sun": "Sun",
 
         # Time periods
         "time.am": "AM",

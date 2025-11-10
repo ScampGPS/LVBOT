@@ -21,6 +21,7 @@ def build_reservation_components(
     *,
     queue=None,
     bot_handler=None,
+    reservation_tracker=None,
 ) -> Tuple[ReservationService, Any, Any]:
     """Create the reservation service along with queue and scheduler handles."""
 
@@ -33,6 +34,7 @@ def build_reservation_components(
         user_manager=user_manager,
         browser_pool=browser_pool,
         bot_handler=bot_handler,
+        reservation_tracker=reservation_tracker,
     )
 
     return service, service.queue, service.scheduler

@@ -368,7 +368,7 @@ class BookingHandler:
         context.user_data['current_flow'] = 'queue_booking'
 
         # Create year selection keyboard
-        keyboard = TelegramUI.create_year_selection_keyboard()
+        keyboard = TelegramUI.create_year_selection_keyboard(language=language)
 
         await query.edit_message_text(
             f"{tr.t('booking.future_title')}\n\n{tr.t('booking.future_prompt')}",
@@ -515,7 +515,7 @@ class BookingHandler:
         context.user_data['selected_year'] = year
 
         # Create month selection keyboard
-        keyboard = TelegramUI.create_month_selection_keyboard(year)
+        keyboard = TelegramUI.create_month_selection_keyboard(year, language=language)
 
         await query.edit_message_text(
             f"{tr.t('booking.future_title')} - {year}\n\n{tr.t('booking.month_prompt')}",
@@ -557,7 +557,12 @@ class BookingHandler:
         # Create day selection calendar keyboard
         # For queue booking flow, pass the flow type to enable filtering
         flow_type = context.user_data.get('current_flow', 'immediate')
-        keyboard = TelegramUI.create_day_selection_keyboard(year, month, flow_type=flow_type)
+        keyboard = TelegramUI.create_day_selection_keyboard(
+            year,
+            month,
+            flow_type=flow_type,
+            language=language,
+        )
 
         await query.edit_message_text(
             f"{tr.t('booking.menu_title')}\n\n{tr.t('booking.date_prompt')}",
@@ -753,9 +758,10 @@ class BookingHandler:
 
             # Show time selection for queue booking
             keyboard = TelegramUI.create_time_selection_keyboard(
-                available_time_slots, 
+                available_time_slots,
                 selected_date.strftime('%Y-%m-%d'),
-                flow_type='queue_booking'
+                flow_type='queue_booking',
+                language=language,
             )
 
             await query.edit_message_text(
@@ -889,7 +895,7 @@ class BookingHandler:
         year = int(callback_data.split('_')[-1])
 
         # Create month selection keyboard
-        keyboard = TelegramUI.create_month_selection_keyboard(year)
+        keyboard = TelegramUI.create_month_selection_keyboard(year, language=language)
 
         await query.edit_message_text(
             f"{tr.t('booking.future_title')} - {year}\n\n{tr.t('booking.month_prompt')}",

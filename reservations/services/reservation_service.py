@@ -9,6 +9,7 @@ from typing import Iterable, List, Optional
 
 from reservations.models import ReservationRequest, UserProfile
 from reservations.queue import ReservationQueue, ReservationScheduler
+from reservations.queue.reservation_tracker import ReservationTracker
 from users.manager import UserManager
 from automation.executors import AsyncExecutorConfig
 
@@ -26,10 +27,12 @@ class ReservationService:
         browser_pool=None,
         executor_config: Optional[AsyncExecutorConfig] = None,
         bot_handler=None,
+        reservation_tracker: Optional[ReservationTracker] = None,
     ) -> None:
         t('reservations.services.reservation_service.ReservationService.__init__')
         self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue or ReservationQueue()
+        self.reservation_tracker = reservation_tracker or ReservationTracker()
         self.user_manager = user_manager
         self.scheduler = scheduler or ReservationScheduler(
             config=config,
@@ -39,6 +42,7 @@ class ReservationService:
             user_manager=user_manager,
             executor_config=executor_config,
             bot_handler=bot_handler,
+            reservation_tracker=self.reservation_tracker,
         )
 
     def enqueue(self, request: ReservationRequest) -> str:

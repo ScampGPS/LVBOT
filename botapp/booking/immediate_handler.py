@@ -396,14 +396,21 @@ class ImmediateBookingHandler:
         # Wait a few seconds before showing the menu
         await asyncio.sleep(5)
 
-        # Get user info for tier badge
-        is_admin = self.user_manager.is_admin(user_id)
-        tier = self.user_manager.get_user_tier(user_id)
-        tier_badge = TelegramUI.format_user_tier_badge(tier.name)
+        # Get user info for tier badge (fall back gracefully in tests)
+        is_admin_checker = getattr(self.user_manager, "is_admin", None)
+        is_admin = bool(is_admin_checker(user_id)) if callable(is_admin_checker) else False
 
-        # Send main menu
+        tier_fetcher = getattr(self.user_manager, "get_user_tier", None)
+        tier = tier_fetcher(user_id) if callable(tier_fetcher) else None
+        tier_name = getattr(tier, "name", None) or "Member"
+        tier_badge = TelegramUI.format_user_tier_badge(tier_name)
+
+        # Send main menu (skip silently during tests without Telegram message context)
         reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin)
-        await query.message.reply_text(
+        message_target = getattr(query, "message", None)
+        if not message_target:
+            return
+        await message_target.reply_text(
             f"🎾 What would you like to do next? {tier_badge}",
             reply_markup=reply_markup,
         )

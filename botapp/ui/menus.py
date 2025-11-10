@@ -11,6 +11,21 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMa
 from botapp.i18n import get_translator
 from infrastructure.settings import get_test_mode
 
+_MONTH_KEYS = [
+    "month.january",
+    "month.february",
+    "month.march",
+    "month.april",
+    "month.may",
+    "month.june",
+    "month.july",
+    "month.august",
+    "month.september",
+    "month.october",
+    "month.november",
+    "month.december",
+]
+
 
 def create_main_menu_keyboard(is_admin: bool = False, pending_count: int = 0, language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create the main menu keyboard.
@@ -90,37 +105,25 @@ def create_48h_booking_type_keyboard(language: Optional[str] = None) -> InlineKe
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_year_selection_keyboard() -> InlineKeyboardMarkup:
+def create_year_selection_keyboard(language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create year selection keyboard for future bookings."""
 
     t('botapp.ui.menus.create_year_selection_keyboard')
+    tr = get_translator(language)
     current_year = datetime.now().year
     keyboard = [
         [InlineKeyboardButton(f"📅 {current_year}", callback_data=f'year_{current_year}')],
         [InlineKeyboardButton(f"📅 {current_year + 1}", callback_data=f'year_{current_year + 1}')],
-        [InlineKeyboardButton("🔙 Back", callback_data='back_to_booking_type')],
+        [InlineKeyboardButton(tr.t("nav.back_to_booking_type"), callback_data='back_to_booking_type')],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def create_month_selection_keyboard(year: int) -> InlineKeyboardMarkup:
+def create_month_selection_keyboard(year: int, language: Optional[str] = None) -> InlineKeyboardMarkup:
     """Create month selection keyboard for a given year."""
 
     t('botapp.ui.menus.create_month_selection_keyboard')
-    months = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ]
+    tr = get_translator(language)
 
     current_date = datetime.now()
     current_year = current_date.year
@@ -135,7 +138,7 @@ def create_month_selection_keyboard(year: int) -> InlineKeyboardMarkup:
             month_num = i + j + 1
             if year == current_year and month_num < current_month:
                 continue
-            month_name = months[i + j]
+            month_name = tr.t(_MONTH_KEYS[month_num - 1])
             row.append(
                 InlineKeyboardButton(
                     f"{month_name[:3]}",
@@ -145,8 +148,7 @@ def create_month_selection_keyboard(year: int) -> InlineKeyboardMarkup:
         if row:
             keyboard.append(row)
 
-    # TODO: Add translator parameter to this function for proper i18n
-    keyboard.append([InlineKeyboardButton("🔙 Back to Year", callback_data='back_to_year_selection')])
+    keyboard.append([InlineKeyboardButton(tr.t("nav.back_to_year"), callback_data='back_to_year_selection')])
     return InlineKeyboardMarkup(keyboard)
 
 

@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Optional
 from automation.availability import AvailabilityChecker
 from automation.browser.async_browser_pool import AsyncBrowserPool
 from automation.browser.manager import BrowserManager
-from reservations.queue import ReservationQueue, ReservationScheduler
+from reservations.queue import ReservationQueue, ReservationScheduler, ReservationTracker
 from reservations.services import ReservationService
 from users.manager import UserManager
 
@@ -98,6 +98,16 @@ class DependencyContainer:
 
         return self._resolve('_browser_bundle', factory)
 
+    @property
+    def reservation_tracker(self) -> ReservationTracker:
+        t('botapp.bootstrap.container.DependencyContainer.reservation_tracker')
+
+        def factory() -> ReservationTracker:
+            t('botapp.bootstrap.container.DependencyContainer.reservation_tracker.factory')
+            return ReservationTracker()
+
+        return self._resolve('reservation_tracker', factory)
+
     # ------------------------------------------------------------------
     # Core dependencies
     browser_pool = _bundle_property(
@@ -159,6 +169,7 @@ class DependencyContainer:
                 self.user_manager,
                 self.browser_pool,
                 queue=self.reservation_queue,
+                reservation_tracker=self.reservation_tracker,
             )
 
             # Cache queue and scheduler so subsequent lookups return the same objects.
@@ -195,6 +206,7 @@ class DependencyContainer:
                 self.reservation_queue,
                 self.user_manager,
                 self.browser_pool,
+                reservation_tracker=self.reservation_tracker,
             )
 
         return self._resolve('callback_handler', factory)

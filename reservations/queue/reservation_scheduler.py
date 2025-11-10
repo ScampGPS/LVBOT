@@ -36,6 +36,7 @@ from reservations.queue.scheduler import (
     pull_ready_reservations,
     SchedulerStats,
 )
+from reservations.queue.scheduler import outcome as outcome_module
 from reservations.queue.scheduler.services import (
     OutcomeRecorder,
     ReservationHydrator,
@@ -44,6 +45,7 @@ from reservations.queue.scheduler.services import (
 from reservations.queue.request_builder import ReservationRequestBuilder
 from reservations.queue.persistence import persist_queue_outcome
 from reservations.queue.court_utils import normalize_court_sequence
+from reservations.queue.reservation_tracker import ReservationTracker
 from botapp.notifications import (
     NotificationBuilder,
     send_failure_notification,
@@ -142,6 +144,7 @@ class ReservationScheduler:
         browser_pool=None,
         executor_config: Optional[AsyncExecutorConfig] = None,
         user_manager: Optional[Any] = None,
+        reservation_tracker: Optional[ReservationTracker] = None,
     ):
         # Support both old and new initialization patterns
         t("reservations.queue.reservation_scheduler.ReservationScheduler.__init__")
@@ -161,6 +164,7 @@ class ReservationScheduler:
 
         self.logger = logging.getLogger("ReservationScheduler")
         self._notifications = NotificationBuilder()
+        self.reservation_tracker = reservation_tracker
 
         # Thread control
         self.running = False
@@ -864,6 +868,8 @@ class ReservationScheduler:
                 )
             )
 
+            self._record_completed_reservation(booking_request, booking_result)
+
             # Remove successful reservation from queue
             removed = self.queue.remove_reservation(reservation_id)
             if removed:
@@ -892,6 +898,41 @@ class ReservationScheduler:
             )
 
         return _booking_result_to_dict(booking_result)
+
+    def _record_completed_reservation(
+        self,
+        booking_request: BookingRequest,
+        booking_result: BookingResult,
+    ) -> None:
+        """Persist completed bookings for later user access."""
+
+        t('reservations.queue.reservation_scheduler.ReservationScheduler._record_completed_reservation')
+        tracker = getattr(self, 'reservation_tracker', None)
+        if not tracker:
+            return
+
+        try:
+            metadata = booking_result.metadata or {}
+            payload = {
+                'court': booking_result.court_reserved
+                or booking_request.court_preference.primary,
+                'date': metadata.get('target_date')
+                or booking_request.target_date.isoformat(),
+                'time': booking_result.time_reserved or booking_request.target_time,
+                'confirmation_id': booking_result.confirmation_code,
+                'confirmation_url': booking_result.confirmation_url,
+                'google_calendar_link': metadata.get('google_calendar_link'),
+                'ics_calendar_link': metadata.get('ics_calendar_link'),
+                'cancel_modify_link': metadata.get('cancel_modify_link'),
+            }
+            tracker.add_completed_booking(booking_request.user.user_id, payload)
+        except Exception as exc:
+            self.logger.error(
+                "Failed to record completed reservation %s: %s",
+                booking_request.request_id,
+                exc,
+                exc_info=True,
+            )
 
     def _update_reservation_success(self, reservation_id: str, result: Dict):
         """Update reservation status to completed"""
@@ -1036,13 +1077,28 @@ class ReservationScheduler:
         else:
             target_date = datetime.fromisoformat(str(raw_date)).date()
 
-        await self._execute_single_booking(
+        result = await self._execute_single_booking(
             assignment,
             reservation,
             index=1,
             total=1,
             target_date=target_date,
         )
+
+        if not isinstance(result, dict):
+            return
+
+        outcome_module.record_outcome(self, reservation_id, result)
+
+        try:
+            await self.outcome_recorder.notify({reservation_id: result})
+        except Exception as notify_exc:  # pragma: no cover - defensive guard
+            self.logger.error(
+                "Fallback notification failed for %s: %s",
+                reservation_id[:8],
+                notify_exc,
+                exc_info=True,
+            )
 
     async def _notify_booking_results(self, results: Dict[str, Any]):
         """Send notifications to users about booking results"""

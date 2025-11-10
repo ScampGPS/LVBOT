@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional
 
 from reservations.queue.reservation_queue import ReservationQueue
+from reservations.queue.reservation_tracker import ReservationTracker
 from users.manager import UserManager
 
 from botapp.handlers.callback_handlers import CallbackHandler
@@ -71,6 +72,7 @@ class BotTestHarness:
             self.reservation_queue,
             self.user_manager,
             browser_pool=None,
+            reservation_tracker=ReservationTracker(),
         )
 
     @property

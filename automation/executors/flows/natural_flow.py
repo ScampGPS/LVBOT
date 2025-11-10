@@ -6,8 +6,8 @@ from tracking import t
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta
-from typing import Dict, Tuple, Optional
+from datetime import date, datetime, timedelta
+from typing import Dict, Tuple, Optional, Union
 
 from playwright.async_api import Page
 
@@ -26,6 +26,7 @@ _MAX_REFRESH_WITHOUT_TARGET = 15
 _POST_SLOT_GRACE_SECONDS = 6
 _TARGET_POLL_INTERVAL = (0.25, 0.45)
 _MAX_POST_TARGET_REFRESHES = 5
+_QUEUE_RELEASE_OFFSET = timedelta(hours=48)
 
 
 class NaturalFlowSteps:
@@ -147,10 +148,12 @@ class NaturalFlowSteps:
 
         self.logger.info("Looking for %s time slot...", time_slot)
         target_datetime = self._resolve_slot_datetime(target_date, time_slot)
+        release_datetime = self._resolve_release_datetime(target_datetime)
         time_button = await self._wait_for_time_slot(
             time_slot,
             court_number,
             target_datetime=target_datetime,
+            release_datetime=release_datetime,
         )
         if not time_button:
             self.logger.error("Time slot %s not found", time_slot)
@@ -222,46 +225,10 @@ class NaturalFlowSteps:
 
         return result
 
-    async def _wait_until_target_release(
-        self,
-        *,
-        target_datetime: datetime,
-        time_slot: str,
-        court_number: int,
-    ) -> None:
-        """Pause until the configured slot release time has passed."""
-
-        t("automation.executors.flows.natural_flow.NaturalFlowSteps._wait_until_target_release")
-        tzinfo = target_datetime.tzinfo
-        now = datetime.now(tzinfo) if tzinfo else datetime.now()
-        if now >= target_datetime:
-            return
-
-        wait_seconds = (target_datetime - now).total_seconds()
-        self.logger.info(
-            "Arrived %.2fs before target %s for Court %s - waiting before slot scan",
-            wait_seconds,
-            target_datetime,
-            court_number,
-        )
-
-        while now < target_datetime:
-            remaining = max((target_datetime - now).total_seconds(), 0)
-            sleep_for = min(
-                _TARGET_POLL_INTERVAL[1],
-                max(_TARGET_POLL_INTERVAL[0], remaining),
-            )
-            await asyncio.sleep(sleep_for)
-            now = datetime.now(tzinfo) if tzinfo else datetime.now()
-
-        self.logger.debug(
-            "Reached target time %s for Court %s; beginning slot refresh loop",
-            target_datetime,
-            court_number,
-        )
-
     def _resolve_slot_datetime(
-        self, target_date: datetime, time_slot: str
+        self,
+        target_date: Union[datetime, date],
+        time_slot: str,
     ) -> Optional[datetime]:
         """Build a datetime for the target slot to know when to stop refreshing."""
 
@@ -271,11 +238,34 @@ class NaturalFlowSteps:
         except ValueError:
             return None
 
-        base_date = target_date.date()
+        tzinfo = target_date.tzinfo if isinstance(target_date, datetime) else None
+        base_date = target_date.date() if isinstance(target_date, datetime) else target_date
+
         resolved = datetime.combine(base_date, slot_time)
-        if target_date.tzinfo is not None:
-            resolved = resolved.replace(tzinfo=target_date.tzinfo)
+        if tzinfo is not None:
+            resolved = resolved.replace(tzinfo=tzinfo)
         return resolved
+
+    def _resolve_release_datetime(
+        self,
+        target_datetime: Optional[datetime],
+    ) -> Optional[datetime]:
+        """Return release datetime (48h before target) when applicable."""
+
+        t("automation.executors.flows.natural_flow.NaturalFlowSteps._resolve_release_datetime")
+        if not target_datetime:
+            return None
+
+        tzinfo = target_datetime.tzinfo
+        now = datetime.now(tzinfo) if tzinfo else datetime.now()
+        delta = target_datetime - now
+
+        if delta >= (_QUEUE_RELEASE_OFFSET - timedelta(minutes=1)):
+            release = target_datetime - _QUEUE_RELEASE_OFFSET
+            if release < now:
+                return None
+            return release
+        return None
 
     async def _wait_for_time_slot(
         self,
@@ -283,6 +273,7 @@ class NaturalFlowSteps:
         court_number: int,
         *,
         target_datetime: Optional[datetime],
+        release_datetime: Optional[datetime],
     ):
         """Refresh the calendar until the desired time slot appears."""
 
@@ -319,12 +310,26 @@ class NaturalFlowSteps:
                 self.logger.info("Time slot %s already visible for Court %s - booking immediately", time_slot, court_number)
             return button
 
-        if target_datetime:
-            await self._wait_until_target_release(
-                target_datetime=target_datetime,
-                time_slot=time_slot,
-                court_number=court_number,
+        wait_point = release_datetime or target_datetime
+        tzinfo = wait_point.tzinfo if isinstance(wait_point, datetime) else None
+        now = datetime.now(tzinfo) if tzinfo else datetime.now()
+        if wait_point and now < wait_point:
+            wait_seconds = (wait_point - now).total_seconds()
+            self.logger.info(
+                "Arrived %.2fs before %s for Court %s - waiting before slot scan",
+                wait_seconds,
+                "release" if release_datetime else "target",
+                court_number,
             )
+
+            while now < wait_point:
+                remaining = max((wait_point - now).total_seconds(), 0)
+                sleep_for = min(
+                    _TARGET_POLL_INTERVAL[1],
+                    max(_TARGET_POLL_INTERVAL[0], remaining),
+                )
+                await asyncio.sleep(sleep_for)
+                now = datetime.now(tzinfo) if tzinfo else datetime.now()
 
         max_refreshes = (
             _MAX_POST_TARGET_REFRESHES

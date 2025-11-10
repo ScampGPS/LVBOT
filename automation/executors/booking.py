@@ -5,7 +5,7 @@ from tracking import t
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from playwright.async_api import Page
@@ -233,17 +233,33 @@ class AsyncBookingExecutor:
         court_number: int,
         time_slot: str,
         user_info: Dict[str, str],
-        target_date: datetime,
+        target_date: datetime | date,
     ) -> ExecutionResult:
         t('automation.executors.booking.AsyncBookingExecutor.execute_booking')
         if not self.browser_pool:
             return ExecutionResult(success=False, error_message="Browser pool not initialized", court_number=court_number)
 
         try:
-            return await self._flow_executor.execute_booking(court_number, target_date, time_slot, user_info)
+            normalized_target = self._normalize_target_datetime(target_date)
+            return await self._flow_executor.execute_booking(
+                court_number,
+                normalized_target,
+                time_slot,
+                user_info,
+            )
         except Exception as exc:  # pragma: no cover - defensive guard
             self.logger.error("Booking failed for court %s: %s", court_number, exc)
             return ExecutionResult(success=False, error_message=str(exc), court_number=court_number)
+
+    @staticmethod
+    def _normalize_target_datetime(target_date: datetime | date) -> datetime:
+        """Ensure downstream flows always receive a datetime instance."""
+
+        if isinstance(target_date, datetime):
+            return target_date
+        if isinstance(target_date, date):
+            return datetime.combine(target_date, datetime.min.time())
+        raise TypeError(f"Unsupported target_date type: {type(target_date)!r}")
 
 
 # ---------------------------------------------------------------------------

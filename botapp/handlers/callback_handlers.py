@@ -25,12 +25,19 @@ from reservations.services.cancellation_service import ReservationCancellationSe
 class CallbackHandler:
     """Main entrypoint invoked by Telegram callback queries."""
 
-    def __init__(self, availability_checker, reservation_queue, user_manager, browser_pool=None) -> None:
+    def __init__(
+        self,
+        availability_checker,
+        reservation_queue,
+        user_manager,
+        browser_pool=None,
+        reservation_tracker: ReservationTracker | None = None,
+    ) -> None:
         t('botapp.handlers.callback_handlers.CallbackHandler.__init__')
         self.logger = logging.getLogger('CallbackHandler')
 
         booking_handler = ImmediateBookingHandler(user_manager, browser_pool)
-        reservation_tracker = ReservationTracker()
+        reservation_tracker = reservation_tracker or ReservationTracker()
 
         self.deps = CallbackDependencies(
             logger=self.logger,
