@@ -294,6 +294,31 @@ class NaturalFlowSteps:
             else None
         )
 
+        button = await self.select_time_button(time_slot)
+        if button:
+            if target_datetime:
+                now = (
+                    datetime.now(target_datetime.tzinfo)
+                    if target_datetime and target_datetime.tzinfo
+                    else datetime.now()
+                )
+                if now < target_datetime:
+                    self.logger.info(
+                        "Time slot %s became visible %.2fs before target for Court %s - booking immediately",
+                        time_slot,
+                        (target_datetime - now).total_seconds(),
+                        court_number,
+                    )
+                else:
+                    self.logger.info(
+                        "Time slot %s already visible at release time for Court %s - booking immediately",
+                        time_slot,
+                        court_number,
+                    )
+            else:
+                self.logger.info("Time slot %s already visible for Court %s - booking immediately", time_slot, court_number)
+            return button
+
         if target_datetime:
             await self._wait_until_target_release(
                 target_datetime=target_datetime,
