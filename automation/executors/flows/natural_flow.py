@@ -39,6 +39,7 @@ class NaturalFlowSteps:
         await self.actions.type_text(element, text or "")
 
     async def _scroll_into_view(self, selector: str) -> Optional[object]:
+        t('automation.executors.flows.natural_flow.NaturalFlowSteps._scroll_into_view')
         try:
             element = await self.page.wait_for_selector(selector, timeout=6000)
             await element.scroll_into_view_if_needed()

@@ -9,11 +9,13 @@ from botapp.ui.text_blocks import escape_telegram_markdown, bold_telegram_text
 
 def _md(value: object) -> str:
     """Escape text for Telegram Markdown with special character escaping."""
+    t('botapp.ui.queue._md')
     return escape_telegram_markdown(value, escape_special_chars=True)
 
 
 def _bold(value: object) -> str:
     """Return bold Markdown text with proper escaping."""
+    t('botapp.ui.queue._bold')
     return bold_telegram_text(value, escape_special_chars=True)
 
 

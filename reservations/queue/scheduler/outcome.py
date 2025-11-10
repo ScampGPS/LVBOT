@@ -1,6 +1,7 @@
 """Helpers for recording queued booking outcomes."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import TYPE_CHECKING, Any, Dict
 
@@ -14,6 +15,7 @@ def record_outcome(
     result: Dict[str, Any],
 ) -> None:
     """Update orchestrator state and queue statistics for a booking result."""
+    t('reservations.queue.scheduler.outcome.record_outcome')
 
     fallback = scheduler.orchestrator.handle_booking_result(
         reservation_id,

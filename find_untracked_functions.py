@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Find all functions missing t() tracking calls."""
+from tracking import t
 
 import ast
 import sys
@@ -8,12 +9,14 @@ from typing import Set, List, Tuple
 
 def get_function_name(node, class_name=None):
     """Get the full qualified name of a function."""
+    t('find_untracked_functions.get_function_name')
     if class_name:
         return f"{class_name}.{node.name}"
     return node.name
 
 def has_tracking_call(node) -> bool:
     """Check if function has a t() call at the start."""
+    t('find_untracked_functions.has_tracking_call')
     if not node.body:
         return False
 
@@ -36,6 +39,7 @@ def has_tracking_call(node) -> bool:
 
 def analyze_file(filepath: Path) -> List[Tuple[str, int]]:
     """Analyze a Python file for functions missing t() calls."""
+    t('find_untracked_functions.analyze_file')
     try:
         content = filepath.read_text(encoding='utf-8')
         tree = ast.parse(content, filename=str(filepath))
@@ -80,6 +84,7 @@ def analyze_file(filepath: Path) -> List[Tuple[str, int]]:
     return missing
 
 def main():
+    t('find_untracked_functions.main')
     root = Path('.')
     python_files = list(root.rglob('*.py'))
 

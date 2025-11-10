@@ -1,6 +1,7 @@
 """Builders for converting bot payloads into booking contracts."""
 
 from __future__ import annotations
+from tracking import t
 
 from datetime import date
 from typing import Any, Dict, Optional
@@ -17,6 +18,7 @@ REQUIRED_USER_FIELDS = {"user_id", "first_name", "last_name", "email", "phone"}
 
 def booking_user_from_profile(user_profile: Dict[str, Any]) -> BookingUser:
     """Translate a user_manager profile dict into a `BookingUser`."""
+    t('botapp.booking.request_builder.booking_user_from_profile')
 
     missing = [field for field in REQUIRED_USER_FIELDS if not user_profile.get(field)]
     if missing:
@@ -42,6 +44,7 @@ def build_immediate_booking_request(
     executor_config: Optional[Dict[str, Any]] = None,
 ) -> BookingRequest:
     """Construct a `BookingRequest` for immediate Telegram-triggered bookings."""
+    t('botapp.booking.request_builder.build_immediate_booking_request')
 
     user = booking_user_from_profile(user_profile)
     base_metadata: Dict[str, Any] = compose_booking_metadata(
@@ -74,6 +77,7 @@ def build_admin_booking_request(
     executor_config: Optional[Dict[str, Any]] = None,
 ) -> BookingRequest:
     """Construct a booking request for admin-triggered overrides."""
+    t('botapp.booking.request_builder.build_admin_booking_request')
 
     user = booking_user_from_profile(user_profile)
     courts_list = list(courts or [])

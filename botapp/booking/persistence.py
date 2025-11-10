@@ -1,6 +1,7 @@
 """Persistence helpers for immediate booking outcomes."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import Dict, Optional
 
@@ -15,6 +16,7 @@ def persist_immediate_success(
     tracker: Optional[ReservationTracker] = None,
 ) -> str:
     """Store a successful immediate booking in the reservation tracker."""
+    t('botapp.booking.persistence.persist_immediate_success')
 
     tracker = tracker or ReservationTracker()
 
@@ -38,6 +40,7 @@ def persist_immediate_failure(
     tracker: Optional[ReservationTracker] = None,
 ) -> str:
     """Record failed immediate bookings for auditing and diagnostics."""
+    t('botapp.booking.persistence.persist_immediate_failure')
 
     tracker = tracker or ReservationTracker()
 

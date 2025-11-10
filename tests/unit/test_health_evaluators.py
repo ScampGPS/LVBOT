@@ -1,3 +1,4 @@
+from tracking import t
 from datetime import datetime
 
 from automation.browser.health.evaluators import (
@@ -11,6 +12,7 @@ from automation.browser.health.types import CourtHealthStatus, HealthStatus
 
 
 def test_evaluate_pool_health_handles_partial_ready():
+    t('tests.unit.test_health_evaluators.test_evaluate_pool_health_handles_partial_ready')
     signals = PoolSignals(
         ready=True,
         browser_connected=True,
@@ -27,6 +29,7 @@ def test_evaluate_pool_health_handles_partial_ready():
 
 
 def test_build_court_health_status_reports_success():
+    t('tests.unit.test_health_evaluators.test_build_court_health_status_reports_success')
     signals = CourtSignals(
         url_accessible=True,
         javascript_works=True,
@@ -50,6 +53,7 @@ def test_build_court_health_status_reports_success():
 
 
 def test_summarise_courts_returns_status_map():
+    t('tests.unit.test_health_evaluators.test_summarise_courts_returns_status_map')
     now = datetime.now()
     statuses = [
         CourtHealthStatus(court_number=1, status=HealthStatus.HEALTHY, last_check=now),

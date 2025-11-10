@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Automatically add t() tracking calls to functions missing them."""
+from tracking import t
 
 import ast
 import sys
@@ -8,6 +9,7 @@ from typing import List, Tuple, Dict
 
 def get_module_path(filepath: Path) -> str:
     """Convert file path to module path for tracking string."""
+    t('add_tracking_calls.get_module_path')
     # Remove .py extension and convert to module path
     parts = filepath.with_suffix('').parts
 
@@ -19,6 +21,7 @@ def get_module_path(filepath: Path) -> str:
 
 def has_tracking_call(node) -> bool:
     """Check if function has a t() call at the start."""
+    t('add_tracking_calls.has_tracking_call')
     if not node.body:
         return False
 
@@ -44,6 +47,7 @@ def analyze_file(filepath: Path) -> List[Tuple[str, int, str]]:
 
     Returns list of (function_name, line_number, tracking_string) tuples.
     """
+    t('add_tracking_calls.analyze_file')
     try:
         content = filepath.read_text(encoding='utf-8')
         tree = ast.parse(content, filename=str(filepath))
@@ -66,6 +70,7 @@ def analyze_file(filepath: Path) -> List[Tuple[str, int, str]]:
 
     def process_function(node, class_name=None):
         """Process a function node and add to missing list if needed."""
+        t('add_tracking_calls.analyze_file.process_function')
         # Skip private functions and special methods (except __init__ and __post_init__)
         if node.name.startswith('_') and node.name not in ['__init__', '__post_init__']:
             return
@@ -96,6 +101,7 @@ def insert_tracking_call(filepath: Path, functions: List[Tuple[str, int, str]]) 
 
     Returns True if file was modified, False otherwise.
     """
+    t('add_tracking_calls.insert_tracking_call')
     try:
         lines = filepath.read_text(encoding='utf-8').splitlines(keepends=True)
     except Exception as e:
@@ -158,6 +164,7 @@ def insert_tracking_call(filepath: Path, functions: List[Tuple[str, int, str]]) 
     return False
 
 def main():
+    t('add_tracking_calls.main')
     print("Scanning for functions missing t() calls...\n")
 
     root = Path('.')

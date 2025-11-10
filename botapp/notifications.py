@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, Union, NamedTuple
 
 from tracking import t
 
@@ -139,8 +139,10 @@ _NOTIFICATIONS = NotificationBuilder()
 
 
 def _format_notification(method_name: str, doc: str):
+    t('botapp.notifications._format_notification')
     def _format(result: BookingResult, language: Optional[str] = None) -> str:
         # Create builder with appropriate translator if language is specified
+        t('botapp.notifications._format_notification._format')
         if language:
             translator = create_translator(language)
             builder = NotificationBuilder(translator=translator)
@@ -173,6 +175,7 @@ def _send_notification(
     language: Optional[str] = None,
 ) -> Dict[str, object]:
     # Build inline keyboard with calendar links and cancel button
+    t('botapp.notifications._send_notification')
     keyboard = []
 
     # Create translator for button text
@@ -219,11 +222,15 @@ def send_success_notification(user_id: int, result: BookingResult, language: Opt
     return _send_notification(format_success_message, user_id, result, language=language)
 
 
-def send_failure_notification(user_id: int, result: BookingResult) -> Dict[str, object]:
+def send_failure_notification(
+    user_id: int,
+    result: BookingResult,
+    language: Optional[str] = None,
+) -> Dict[str, object]:
     """Prepare payload for delivering a failure notification to Telegram."""
     t('botapp.notifications.send_failure_notification')
 
-    return _send_notification(format_failure_message, user_id, result)
+    return _send_notification(format_failure_message, user_id, result, language=language)
 
 
 def format_queue_reservation_added(
@@ -249,11 +256,35 @@ def format_duplicate_reservation_message(error_message: str) -> str:
     return _NOTIFICATIONS.duplicate_warning(error_message)
 
 
+class _NotificationPayload(NamedTuple):
+    text: str
+    parse_mode: str
+    reply_markup: Any
+    preview: str
+
+
+def _normalize_notification_payload(message: Union[str, Dict[str, Any]]) -> _NotificationPayload:
+    """Normalize notification payloads so delivery always receives text + markup."""
+    t('botapp.notifications._normalize_notification_payload')
+
+    if isinstance(message, dict):
+        text = message.get("message") or message.get("text") or ""
+        parse_mode = message.get("parse_mode") or "Markdown"
+        reply_markup = message.get("reply_markup")
+    else:
+        text = message or ""
+        parse_mode = "Markdown"
+        reply_markup = None
+
+    preview = text[:50] if text else ""
+    return _NotificationPayload(text=text, parse_mode=parse_mode, reply_markup=reply_markup, preview=preview)
+
+
 async def deliver_notification_with_menu(
     application,
     user_manager,
     user_id: int,
-    message: str,
+    message: Union[str, Dict[str, Any]],
     *,
     logger,
     follow_up_delay_seconds: int = 7,
@@ -266,12 +297,21 @@ async def deliver_notification_with_menu(
         logger.warning("No application context for notification to %s", user_id)
         return
 
+    payload = _normalize_notification_payload(message)
+    if not payload.text:
+        logger.warning("Skipping notification to %s - empty message payload", user_id)
+        return
+
     await application.bot.send_message(
-        chat_id=user_id, text=message, parse_mode="Markdown"
+        chat_id=user_id,
+        text=payload.text,
+        parse_mode=payload.parse_mode,
+        reply_markup=payload.reply_markup,
     )
-    logger.info("Sent notification to %s: %s", user_id, message[:50])
+    logger.info("Sent notification to %s: %s", user_id, payload.preview)
 
     def _looks_like_booking_result(text: str) -> bool:
+        t('botapp.notifications.deliver_notification_with_menu._looks_like_booking_result')
         lower_text = text.lower()
         return (
             ("✅" in text and ("reservation" in lower_text or "booked" in lower_text))
@@ -279,7 +319,7 @@ async def deliver_notification_with_menu(
             or ("⚠️" in text and "booking" in lower_text)
         )
 
-    if not _looks_like_booking_result(message):
+    if not _looks_like_booking_result(payload.text):
         return
 
     await asyncio.sleep(max(0, follow_up_delay_seconds))

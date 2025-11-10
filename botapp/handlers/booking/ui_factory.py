@@ -1,6 +1,7 @@
 """UI factories for booking handler messages and keyboards."""
 
 from __future__ import annotations
+from tracking import t
 
 from dataclasses import dataclass
 from typing import Callable
@@ -22,6 +23,7 @@ class BookingUIFactory:
 
     def __init__(self, telegram_ui: TelegramUI | None = None) -> None:
         # Allow dependency injection in tests
+        t('botapp.handlers.booking.ui_factory.BookingUIFactory.__init__')
         self._ui = telegram_ui or TelegramUI
 
     def booking_type_selection(
@@ -30,6 +32,7 @@ class BookingUIFactory:
         translator: Translator | None = None,
     ) -> BookingMenuView:
         """Return the view for the top-level reserve menu."""
+        t('botapp.handlers.booking.ui_factory.BookingUIFactory.booking_type_selection')
 
         language = translator.get_language() if translator else None
         keyboard = self._ui.create_48h_booking_type_keyboard(language=language)
@@ -48,6 +51,7 @@ class BookingUIFactory:
         translator: Translator | None = None,
     ) -> BookingMenuView:
         """Return the view shown when a user has no reservations."""
+        t('botapp.handlers.booking.ui_factory.BookingUIFactory.empty_reservations_view')
 
         language = translator.get_language() if translator else None
         if translator:
@@ -74,6 +78,7 @@ class BookingUIFactory:
         button_factory: Callable[[], InlineKeyboardMarkup] | None = None,
     ) -> BookingMenuView:
         """Return the admin reservation management menu."""
+        t('botapp.handlers.booking.ui_factory.BookingUIFactory.admin_reservations_menu')
 
         language = translator.get_language() if translator else None
         if button_factory:

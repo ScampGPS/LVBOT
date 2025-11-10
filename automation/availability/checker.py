@@ -140,6 +140,7 @@ class AvailabilityChecker:
             raise
 
     async def _capture_screenshot(self, page: Page, court_num: int) -> None:
+        t('automation.availability.checker.AvailabilityChecker._capture_screenshot')
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         try:
             self._screenshot_dir.mkdir(parents=True, exist_ok=True)

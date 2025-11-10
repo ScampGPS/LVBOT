@@ -323,6 +323,7 @@ def format_reservations_list(reservations: List[Dict[str, Any]]) -> str:
     failed = [r for r in reservations if r.get('status') == 'failed']
 
     def _append_section(title: str, items: List[Dict[str, Any]], formatter) -> None:
+        t('botapp.ui.booking.format_reservations_list._append_section')
         nonlocal message
         if items:
             message += f"{title}\n"
@@ -330,6 +331,7 @@ def format_reservations_list(reservations: List[Dict[str, Any]]) -> str:
                 message += formatter(res)
 
     def _format_entry(res: Dict[str, Any], extra: str = "") -> str:
+        t('botapp.ui.booking.format_reservations_list._format_entry')
         courts_text = ', '.join([f"Court {c}" for c in res.get('courts', [])])
         base = (
             f"• {res.get('date')} at {res.get('time')}\n"

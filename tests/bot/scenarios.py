@@ -1,6 +1,7 @@
 """High-level scenarios executed via the bot testing harness."""
 
 from __future__ import annotations
+from tracking import t
 
 from datetime import date
 from typing import Iterable, Optional
@@ -16,6 +17,7 @@ def queue_booking_flow(
     queue_path: Optional[str] = None,
 ) -> Iterable[dict]:
     """Drive the queue booking conversation and return recorded outputs."""
+    t('tests.bot.scenarios.queue_booking_flow')
 
     harness = BotTestHarness(queue_path=queue_path)
     try:

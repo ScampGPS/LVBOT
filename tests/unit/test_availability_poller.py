@@ -1,3 +1,4 @@
+from tracking import t
 import asyncio
 from datetime import datetime
 
@@ -9,10 +10,12 @@ import logging
 
 class StubFetcher:
     def __init__(self, snapshots):
+        t('tests.unit.test_availability_poller.StubFetcher.__init__')
         self.snapshots = snapshots
         self.index = 0
 
     async def fetch(self):
+        t('tests.unit.test_availability_poller.StubFetcher.fetch')
         snapshot = self.snapshots[min(self.index, len(self.snapshots) - 1)]
         self.index += 1
         await asyncio.sleep(0)
@@ -21,6 +24,7 @@ class StubFetcher:
 
 @pytest.mark.asyncio
 async def test_availability_poller_detects_added_and_removed_slots():
+    t('tests.unit.test_availability_poller.test_availability_poller_detects_added_and_removed_slots')
     fetcher = StubFetcher([
         {1: {'2025-01-01': ['09:00']}},
         {1: {'2025-01-01': ['09:00', '10:00']}},
@@ -39,6 +43,7 @@ async def test_availability_poller_detects_added_and_removed_slots():
 
 @pytest.mark.asyncio
 async def test_availability_poller_handles_errors():
+    t('tests.unit.test_availability_poller.test_availability_poller_handles_errors')
     fetcher = StubFetcher([
         {1: {'error': 'failed'}},
         {1: {'2025-01-01': ['09:00']}},

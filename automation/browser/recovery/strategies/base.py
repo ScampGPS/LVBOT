@@ -44,4 +44,5 @@ class RecoveryStrategyExecutor(ABC):
         t('automation.browser.recovery.strategies.base.RecoveryStrategyExecutor.execute')
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
+        t('automation.browser.recovery.strategies.base.RecoveryStrategyExecutor.__repr__')
         return f"{self.__class__.__name__}(strategy={self.strategy.value})"

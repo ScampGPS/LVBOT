@@ -13,6 +13,7 @@ Run on Windows CMD:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import json
@@ -36,6 +37,7 @@ TEST_USER = {
 @pytest.fixture
 def submission_test_dir():
     """Create directory for submission test artifacts."""
+    t('tests.bot.test_booking_submission_complete.submission_test_dir')
     artifacts_dir = Path("logs/latest_log/submission_test")
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return artifacts_dir
@@ -45,6 +47,7 @@ def submission_test_dir():
 @pytest.mark.booking_test
 async def test_booking_submission_complete(submission_test_dir):
     """Attempt complete booking submission and verify it works."""
+    t('tests.bot.test_booking_submission_complete.test_booking_submission_complete')
 
     import os
     flag = os.getenv("LV_BOOKING_TEST", "").strip()
@@ -84,6 +87,7 @@ async def test_booking_submission_complete(submission_test_dir):
         # Monitor POST requests
         async def capture_request(route, request):
             """Capture POST requests."""
+            t('tests.bot.test_booking_submission_complete.test_booking_submission_complete.capture_request')
             if request.method == "POST":
                 # Handle binary data safely
                 try:
@@ -111,6 +115,7 @@ async def test_booking_submission_complete(submission_test_dir):
         # Monitor responses
         async def capture_response(response):
             """Capture booking responses."""
+            t('tests.bot.test_booking_submission_complete.test_booking_submission_complete.capture_response')
             url = response.url.lower()
             if any(kw in url for kw in ['booking', 'appointment', 'schedule', 'checkout', 'create']):
                 res_info = {

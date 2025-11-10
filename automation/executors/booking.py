@@ -105,6 +105,7 @@ class BookingFlowExecutor:
         time_slot: str,
         user_info: Dict[str, str],
     ) -> ExecutionResult:
+        t('automation.executors.booking.BookingFlowExecutor._execute_natural')
         delay_min, delay_max = self.initial_delay_range
         return await execute_natural_flow(
             page,
@@ -124,6 +125,7 @@ class BookingFlowExecutor:
         time_slot: str,
         user_info: Dict[str, str],
     ) -> ExecutionResult:
+        t('automation.executors.booking.BookingFlowExecutor._execute_fast')
         return await execute_fast_flow(
             page,
             court_number,

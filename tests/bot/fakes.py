@@ -1,15 +1,18 @@
 """Lightweight stand-ins for Telegram objects used by the bot harness."""
 
 from __future__ import annotations
+from tracking import t
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 class _Recorder:
     def __init__(self, records: List[Dict[str, Any]]) -> None:
+        t('tests.bot.fakes._Recorder.__init__')
         self._records = records
 
     def _record(self, action: str, **payload: Any) -> None:
+        t('tests.bot.fakes._Recorder._record')
         entry = {"action": action}
         entry.update(payload)
         self._records.append(entry)
@@ -29,10 +32,12 @@ class FakeMessage(_Recorder):
     """Collect replies emitted during a scenario."""
 
     def __init__(self, chat_id: int, records: List[Dict[str, Any]]) -> None:
+        t('tests.bot.fakes.FakeMessage.__init__')
         super().__init__(records)
         self.chat_id = chat_id
 
     async def reply_text(self, text: str, **kwargs: Any) -> None:
+        t('tests.bot.fakes.FakeMessage.reply_text')
         self._record(
             "reply_text",
             chat_id=self.chat_id,
@@ -51,15 +56,18 @@ class FakeCallbackQuery(_Recorder):
         user: FakeUser,
         records: List[Dict[str, Any]],
     ) -> None:
+        t('tests.bot.fakes.FakeCallbackQuery.__init__')
         super().__init__(records)
         self.data = data
         self.from_user = user
         self.message = FakeMessage(chat_id=user.id, records=records)
 
     async def answer(self, **kwargs: Any) -> None:
+        t('tests.bot.fakes.FakeCallbackQuery.answer')
         self._record("answer", data=self.data, kwargs=kwargs)
 
     async def edit_message_text(self, text: str, **kwargs: Any) -> None:
+        t('tests.bot.fakes.FakeCallbackQuery.edit_message_text')
         self._record(
             "edit_message_text",
             data=self.data,
@@ -68,6 +76,7 @@ class FakeCallbackQuery(_Recorder):
         )
 
     async def edit_message_reply_markup(self, reply_markup: Any = None) -> None:
+        t('tests.bot.fakes.FakeCallbackQuery.edit_message_reply_markup')
         self._record(
             "edit_message_reply_markup",
             data=self.data,
@@ -85,12 +94,14 @@ class FakeUpdate:
         message: Optional[FakeMessage] = None,
         callback_query: Optional[FakeCallbackQuery] = None,
     ) -> None:
+        t('tests.bot.fakes.FakeUpdate.__init__')
         self._effective_user = user
         self.message = message
         self.callback_query = callback_query
 
     @property
     def effective_user(self) -> FakeUser:
+        t('tests.bot.fakes.FakeUpdate.effective_user')
         return self._effective_user
 
 
@@ -98,6 +109,7 @@ class FakeContext:
     """Plain object mirroring the telegram.ext callback context."""
 
     def __init__(self) -> None:
+        t('tests.bot.fakes.FakeContext.__init__')
         self.user_data: Dict[str, Any] = {}
         self.chat_data: Dict[str, Any] = {}
         self.bot_data: Dict[str, Any] = {}

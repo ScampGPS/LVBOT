@@ -38,6 +38,7 @@ class BookingHandler:
         self.ui_factory = BookingUIFactory()
 
     def _get_translator(self, user_id: int):
+        t('botapp.handlers.booking.handler.BookingHandler._get_translator')
         return get_user_translator(self.deps.user_manager, user_id)
 
     async def handle_reserve_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -774,6 +775,7 @@ class BookingHandler:
     @staticmethod
     def _slot_is_beyond_window(selected_date: date, time_str: str, tz, now: datetime) -> bool:
         """Return True when the slot is at least 48 hours ahead."""
+        t('botapp.handlers.booking.handler.BookingHandler._slot_is_beyond_window')
 
         try:
             hour, minute = map(int, time_str.split(':'))
@@ -789,6 +791,7 @@ class BookingHandler:
 
     @staticmethod
     def _is_within_48_hours(target_date: date, tz, now: datetime) -> bool:
+        t('botapp.handlers.booking.handler.BookingHandler._is_within_48_hours')
         start_of_day = tz.localize(datetime.combine(target_date, datetime.min.time()))
         return start_of_day < now + timedelta(hours=48)
 

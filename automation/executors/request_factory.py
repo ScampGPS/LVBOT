@@ -173,6 +173,7 @@ class ExecutorRequestFactory:
 
     @classmethod
     def _normalise_user(cls, user_info: Dict[str, Any]) -> BookingUser:
+        t('automation.executors.request_factory.ExecutorRequestFactory._normalise_user')
         missing = [field for field in cls.REQUIRED_FIELDS if not user_info.get(field)]
         if missing:
             raise ValueError(f"Executor user info missing fields: {', '.join(missing)}")

@@ -1,3 +1,4 @@
+from tracking import t
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -10,48 +11,59 @@ from reservations.queue.reservation_scheduler import ReservationScheduler
 
 class DummyQueue:
     def __init__(self, reservations):
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.__init__')
         self.reservations = {r["id"]: r for r in reservations}
         self.status_updates = []
         self.removed = []
 
     def update_reservation_status(self, reservation_id, new_status, **kwargs):
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.update_reservation_status')
         self.status_updates.append((reservation_id, new_status, kwargs))
         entry = self.reservations.get(reservation_id, {})
         entry.update({"status": new_status, **kwargs})
         return True
 
     def remove_reservation(self, reservation_id):
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.remove_reservation')
         self.removed.append(reservation_id)
         self.reservations.pop(reservation_id, None)
         return True
 
     def get_reservation(self, reservation_id):
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.get_reservation')
         return self.reservations.get(reservation_id)
 
     # Compatibility helpers used elsewhere
     def add_to_waitlist(self, reservation_id, position):  # pragma: no cover - not exercised
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.add_to_waitlist')
         self.reservations.setdefault(reservation_id, {})["waitlist_position"] = position
 
     def get_waitlist_for_slot(self, target_date, target_time):  # pragma: no cover
+        t('tests.unit.test_queue_scheduler_flow.DummyQueue.get_waitlist_for_slot')
         return []
 
 
 class DummyUserDB:
     def __init__(self, profiles):
+        t('tests.unit.test_queue_scheduler_flow.DummyUserDB.__init__')
         self._profiles = profiles
 
     def get_user(self, user_id):
+        t('tests.unit.test_queue_scheduler_flow.DummyUserDB.get_user')
         return self._profiles.get(user_id)
 
     def is_admin(self, user_id):  # pragma: no cover - not used in these tests
+        t('tests.unit.test_queue_scheduler_flow.DummyUserDB.is_admin')
         return False
 
     def is_vip(self, user_id):  # pragma: no cover - not used in these tests
+        t('tests.unit.test_queue_scheduler_flow.DummyUserDB.is_vip')
         return False
 
 
 class SuccessImmediateHandler:
     async def _execute_booking(self, booking_request):
+        t('tests.unit.test_queue_scheduler_flow.SuccessImmediateHandler._execute_booking')
         return BookingResult.success_result(
             user=booking_request.user,
             request_id=booking_request.request_id,
@@ -64,6 +76,7 @@ class SuccessImmediateHandler:
 
 class FailingImmediateHandler:
     async def _execute_booking(self, booking_request):
+        t('tests.unit.test_queue_scheduler_flow.FailingImmediateHandler._execute_booking')
         return BookingResult.failure_result(
             user=booking_request.user,
             request_id=booking_request.request_id,
@@ -74,6 +87,7 @@ class FailingImmediateHandler:
 
 @pytest.fixture
 def reservation_record():
+    t('tests.unit.test_queue_scheduler_flow.reservation_record')
     return {
         "id": "resv-123",
         "user_id": 88,
@@ -90,6 +104,7 @@ def reservation_record():
 
 @pytest.fixture
 def user_db(reservation_record):
+    t('tests.unit.test_queue_scheduler_flow.user_db')
     profile = {
         "user_id": reservation_record["user_id"],
         "first_name": reservation_record["first_name"],
@@ -103,11 +118,13 @@ def user_db(reservation_record):
 
 @pytest.fixture
 def queue(reservation_record):
+    t('tests.unit.test_queue_scheduler_flow.queue')
     return DummyQueue([reservation_record.copy()])
 
 
 @pytest.fixture
 def scheduler(monkeypatch, queue, user_db):
+    t('tests.unit.test_queue_scheduler_flow.scheduler')
     monkeypatch.setattr(scheduler_module, "BrowserManager", lambda pool: SimpleNamespace(pool=pool))
     sched = ReservationScheduler(
         config=None,
@@ -123,6 +140,7 @@ def scheduler(monkeypatch, queue, user_db):
 
 @pytest.mark.asyncio
 async def test_execute_single_booking_success_flow(scheduler, queue, reservation_record, user_db):
+    t('tests.unit.test_queue_scheduler_flow.test_execute_single_booking_success_flow')
     scheduler.immediate_booking_handler = SuccessImmediateHandler()
 
     attempt = SimpleNamespace(reservation_id=reservation_record["id"], target_court=reservation_record["court_preferences"][0], attempt_number=1)
@@ -145,6 +163,7 @@ async def test_execute_single_booking_success_flow(scheduler, queue, reservation
 
 @pytest.mark.asyncio
 async def test_execute_single_booking_failure_flow(scheduler, queue, reservation_record, user_db):
+    t('tests.unit.test_queue_scheduler_flow.test_execute_single_booking_failure_flow')
     scheduler.immediate_booking_handler = FailingImmediateHandler()
 
     attempt = SimpleNamespace(reservation_id=reservation_record["id"], target_court=reservation_record["court_preferences"][0], attempt_number=2)

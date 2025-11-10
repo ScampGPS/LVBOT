@@ -53,6 +53,7 @@ class CallbackHandler:
 
     def _register_routes(self) -> None:
         """Register exact and dynamic routes with the router."""
+        t('botapp.handlers.callback_handlers.CallbackHandler._register_routes')
 
         add = self.router.add_exact
         add('menu_reserve', self.booking.handle_reserve_menu)
@@ -146,6 +147,7 @@ class CallbackHandler:
 
     async def _handle_date_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Delegate date callbacks based on current flow."""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_date_callback')
 
         session = get_session_state(context)
         if session.flow == 'queue_booking' or context.user_data.get('current_flow') == 'queue_booking':
@@ -155,6 +157,7 @@ class CallbackHandler:
 
     async def _handle_queue_time_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Route queue time callbacks depending on modifier flag."""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_queue_time_callback')
 
         data = update.callback_query.data or ''
         if data.startswith('queue_time_modify_'):
@@ -163,16 +166,20 @@ class CallbackHandler:
             await self.queue.handle_queue_booking_time_selection(update, context)
 
     async def _handle_immediate_booking_request(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_immediate_booking_request')
         await self.deps.booking_handler.handle_booking_request(update, context)
 
     async def _handle_immediate_booking_confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_immediate_booking_confirm')
         await self.deps.booking_handler.handle_booking_confirmation(update, context)
 
     async def _handle_immediate_booking_cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_immediate_booking_cancel')
         await self.deps.booking_handler.handle_booking_cancellation(update, context)
 
     async def _handle_cancel_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle interactive cancellation of a reservation."""
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_cancel_reservation')
         query = update.callback_query
         data = query.data or ''
 
@@ -246,6 +253,7 @@ class CallbackHandler:
             )
 
     async def _handle_admin_view_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        t('botapp.handlers.callback_handlers.CallbackHandler._handle_admin_view_user')
         data = update.callback_query.data or ''
         try:
             user_id = int(data.replace('admin_view_user_', ''))

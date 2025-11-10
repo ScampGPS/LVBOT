@@ -1,3 +1,4 @@
+from tracking import t
 from pathlib import Path
 
 from reservations.queue.reservation_repository import ReservationRepository
@@ -5,6 +6,7 @@ from tests.helpers import DummyLogger
 
 
 def test_repository_round_trip(tmp_path):
+    t('tests.unit.test_reservation_repository.test_repository_round_trip')
     logger = DummyLogger()
     repo_path = tmp_path / "queue.json"
     repository = ReservationRepository(str(repo_path), logger=logger)

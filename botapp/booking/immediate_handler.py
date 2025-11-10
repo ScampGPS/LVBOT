@@ -239,6 +239,7 @@ class ImmediateBookingHandler:
 
     async def _execute_booking(self, booking_request: BookingRequest) -> BookingResult:
         """Legacy entrypoint used by older scheduler paths and tests."""
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._execute_booking')
         return await self._run_booking_attempts(booking_request)
 
     async def _run_booking_attempts(self, booking_request: BookingRequest) -> BookingResult:
@@ -308,6 +309,7 @@ class ImmediateBookingHandler:
         notifier: Callable[[int, BookingResult], Dict[str, Any]],
         persist_error: str,
     ) -> None:
+        t('botapp.booking.immediate_handler.ImmediateBookingHandler._handle_booking_outcome')
         try:
             persist(booking_request, booking_result)
         except Exception as exc:  # pragma: no cover - persistence guard

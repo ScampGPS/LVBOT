@@ -1,6 +1,7 @@
 """Helpers for dispatching queued booking assignments to executors."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import logging
@@ -36,6 +37,7 @@ async def dispatch_to_executors(
     timeout_seconds: float = 60.0,
 ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, str]]:
     """Execute queued booking jobs concurrently and return results/timeouts."""
+    t('reservations.queue.scheduler.dispatch.dispatch_to_executors')
 
     if not jobs:
         return {}, {}

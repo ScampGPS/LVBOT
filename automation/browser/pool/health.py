@@ -118,6 +118,7 @@ async def get_page(pool, court_num: int):
 
 
 async def _close_page_and_context(pool, court_num: int) -> None:
+    t('automation.browser.pool.health._close_page_and_context')
     page = pool.pages.pop(court_num, None)
     if page:
         try:

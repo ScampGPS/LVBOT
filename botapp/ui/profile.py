@@ -13,6 +13,7 @@ from .text_blocks import MarkdownBlockBuilder, MarkdownBuilderBase
 
 
 def _keyboard(rows: list[list[tuple[str, str]]]) -> InlineKeyboardMarkup:
+    t('botapp.ui.profile._keyboard')
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton(text, callback_data=callback) for text, callback in row]

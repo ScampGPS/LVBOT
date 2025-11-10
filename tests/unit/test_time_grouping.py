@@ -1,7 +1,9 @@
+from tracking import t
 from automation.availability.time_grouping import group_times_by_order_logic
 
 
 def test_group_times_respects_order_wrap():
+    t('tests.unit.test_time_grouping.test_group_times_respects_order_wrap')
     buttons = [
         {"time": "08:00", "order": 0},
         {"time": "09:00", "order": 1},
@@ -13,4 +15,5 @@ def test_group_times_respects_order_wrap():
 
 
 def test_group_times_handles_missing_data():
+    t('tests.unit.test_time_grouping.test_group_times_handles_missing_data')
     assert group_times_by_order_logic([], ["hoy"]) == {}

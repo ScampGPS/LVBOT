@@ -46,8 +46,8 @@ from reservations.queue.persistence import persist_queue_outcome
 from reservations.queue.court_utils import normalize_court_sequence
 from botapp.notifications import (
     NotificationBuilder,
-    format_failure_message,
-    format_success_message,
+    send_failure_notification,
+    send_success_notification,
 )
 from infrastructure.settings import get_test_mode
 
@@ -57,6 +57,7 @@ PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "false").lower() == "true"
 
 def _booking_result_to_dict(result: BookingResult) -> Dict[str, Any]:
     """Normalize a `BookingResult` into the legacy dict structure used by the scheduler."""
+    t('reservations.queue.reservation_scheduler._booking_result_to_dict')
 
     error_message = None
     if not result.success:
@@ -81,6 +82,7 @@ def _failure_result_from_reservation(
     reservation: Dict[str, Any], message: str, *, errors: Optional[List[str]] = None
 ) -> BookingResult:
     """Build a failure result when execution cannot proceed."""
+    t('reservations.queue.reservation_scheduler._failure_result_from_reservation')
 
     fallback_user_id = reservation.get("user_id") or 0
     user_profile = {
@@ -1072,10 +1074,19 @@ class ReservationScheduler:
             )
 
             if isinstance(booking_result, BookingResult):
+                language = user.get('language', 'es') if isinstance(user, dict) else 'es'
                 if booking_result.success:
-                    message = format_success_message(booking_result)
+                    message = send_success_notification(
+                        user_id,
+                        booking_result,
+                        language=language,
+                    )
                 else:
-                    message = format_failure_message(booking_result)
+                    message = send_failure_notification(
+                        user_id,
+                        booking_result,
+                        language=language,
+                    )
             else:
                 if result.get("success"):
                     court = result.get("court", "Unknown")
@@ -1098,7 +1109,8 @@ class ReservationScheduler:
 
             # Send notification (async)
             self.logger.info(f"📨 Sending notification to user {user_id}")
-            self.logger.info(f"Message preview: {message[:100]}...")
+            preview = message.get('message') if isinstance(message, dict) else message
+            self.logger.info(f"Message preview: {preview[:100] if preview else ''}...")
             try:
                 await self.bot.send_notification(user_id, message)
                 self.logger.info(f"✅ Notification sent successfully to user {user_id}")

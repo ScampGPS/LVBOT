@@ -21,6 +21,7 @@ def ensure_unique_slot(
     t('reservations.queue.reservation_validation.ensure_unique_slot')
     
     def _normalise_courts(raw_value: Any) -> set:
+        t('reservations.queue.reservation_validation.ensure_unique_slot._normalise_courts')
         if raw_value is None:
             return set()
         if isinstance(raw_value, (list, tuple, set)):

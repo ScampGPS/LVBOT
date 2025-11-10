@@ -1,6 +1,7 @@
 """Typed conversation state helpers for Telegram callback flows."""
 
 from __future__ import annotations
+from tracking import t
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -50,6 +51,7 @@ SESSION_KEY = "callback_state"
 
 def get_session_state(context: ContextTypes.DEFAULT_TYPE) -> CallbackSessionState:
     """Retrieve (or create) the callback session state for the current user."""
+    t('botapp.handlers.state.get_session_state')
 
     state = context.user_data.get(SESSION_KEY)
     if isinstance(state, CallbackSessionState):
@@ -62,6 +64,7 @@ def get_session_state(context: ContextTypes.DEFAULT_TYPE) -> CallbackSessionStat
 
 def reset_flow(context: ContextTypes.DEFAULT_TYPE, flow: str) -> CallbackSessionState:
     """Set the active flow identifier while returning the updated state."""
+    t('botapp.handlers.state.reset_flow')
 
     state = get_session_state(context)
     state.flow = flow
@@ -70,6 +73,7 @@ def reset_flow(context: ContextTypes.DEFAULT_TYPE, flow: str) -> CallbackSession
 
 def clear_session_state(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove all callback session state for the current user."""
+    t('botapp.handlers.state.clear_session_state')
 
     context.user_data.pop(SESSION_KEY, None)
 

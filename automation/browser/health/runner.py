@@ -1,6 +1,7 @@
 """Shared runner that orchestrates browser health checks."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 from datetime import datetime
@@ -15,6 +16,7 @@ class HealthCheckRunner:
     """Execute pool and per-court health checks using provided strategies."""
 
     def __init__(self, *, logger, summary_builder: Callable = summarise_courts) -> None:
+        t('automation.browser.health.runner.HealthCheckRunner.__init__')
         self._logger = logger
         self._summarise = summary_builder
 
@@ -23,6 +25,7 @@ class HealthCheckRunner:
         pool_check: Callable[[], Awaitable[HealthCheckResult]],
         court_checks: Mapping[int, Callable[[], Awaitable[CourtHealthStatus]]],
     ) -> HealthCheckResult:
+        t('automation.browser.health.runner.HealthCheckRunner.run')
         start_time = datetime.now()
 
         pool_result = await pool_check()
@@ -106,5 +109,6 @@ class HealthCheckRunner:
         runner: Callable[[int], Awaitable[CourtHealthStatus]],
     ) -> Dict[int, Callable[[], Awaitable[CourtHealthStatus]]]:
         """Helper to bind court numbers to their async runners."""
+        t('automation.browser.health.runner.HealthCheckRunner.build_court_checks')
 
         return {court: partial(runner, court) for court in available_courts}

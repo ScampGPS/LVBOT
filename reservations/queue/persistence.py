@@ -1,6 +1,7 @@
 """Persistence helpers for queue-driven booking outcomes."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import Dict, Optional
 
@@ -15,6 +16,7 @@ def persist_queue_outcome(
     queue: Optional[ReservationQueue] = None,
 ) -> bool:
     """Update queue records according to a booking result."""
+    t('reservations.queue.persistence.persist_queue_outcome')
 
     queue = queue or ReservationQueue()
 
@@ -44,6 +46,7 @@ def persist_queue_cancellation(
     metadata: Optional[Dict[str, object]] = None,
 ) -> bool:
     """Mark a queued reservation as cancelled with optional metadata."""
+    t('reservations.queue.persistence.persist_queue_cancellation')
 
     queue = queue or ReservationQueue()
     updates = metadata or {}

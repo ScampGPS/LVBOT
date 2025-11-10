@@ -30,6 +30,8 @@ class ProfileHandler:
 
         try:
             user_profile = self.deps.user_manager.get_user(user_id)
+            if not user_profile:
+                user_profile, _ = self.deps.user_manager.ensure_user_profile(query.from_user)
             tr = get_user_translator(self.deps.user_manager, user_id)
 
             if not user_profile:
@@ -191,6 +193,7 @@ class ProfileHandler:
         icon: str,
         label: str,
     ) -> None:
+        t('botapp.handlers.profile.handler.ProfileHandler._start_name_edit')
         query = update.callback_query
         user_id = query.from_user.id
         tr = get_user_translator(self.deps.user_manager, user_id)
@@ -233,6 +236,7 @@ class ProfileHandler:
         message_builder: Callable[[str], str],
         keyboard_factory: Callable[[], Any],
     ) -> None:
+        t('botapp.handlers.profile.handler.ProfileHandler._start_contact_edit')
         query = update.callback_query
         user_id = query.from_user.id
 

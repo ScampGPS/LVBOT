@@ -1,6 +1,7 @@
 """Shared helpers for live availability lookups in queue/test mode flows."""
 
 from __future__ import annotations
+from tracking import t
 
 import logging
 from datetime import date, datetime
@@ -31,6 +32,7 @@ async def fetch_live_time_slots(
     empty list so callers can distinguish "no availability" from "not yet
     fetched".
     """
+    t('botapp.handlers.queue.live_availability.fetch_live_time_slots')
 
     checker = getattr(deps, 'availability_checker', None)
     if checker is None:
@@ -119,6 +121,7 @@ async def fetch_live_availability_matrix(
     log_prefix: str = "Queue",
 ) -> Optional[Dict[str, Dict[int, List[str]]]]:
     """Return live availability matrix across courts and dates."""
+    t('botapp.handlers.queue.live_availability.fetch_live_availability_matrix')
 
     checker = getattr(deps, 'availability_checker', None)
     if checker is None:
@@ -148,6 +151,7 @@ async def _fetch_live_matrix(
     logger: logging.Logger,
     log_prefix: str,
 ) -> Optional[Dict[str, Dict[int, List[str]]]]:
+    t('botapp.handlers.queue.live_availability._fetch_live_matrix')
     try:
         availability_results = await checker.check_availability(current_time=now)
     except Exception as exc:  # pragma: no cover - defensive guard
@@ -189,6 +193,7 @@ def _filter_matrix(
     tz,
     now: datetime,
 ) -> Dict[str, Dict[int, List[str]]]:
+    t('botapp.handlers.queue.live_availability._filter_matrix')
     filtered: Dict[str, Dict[int, List[str]]] = {}
 
     for date_key, courts in matrix.items():

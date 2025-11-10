@@ -1,3 +1,4 @@
+from tracking import t
 import types
 import pytest
 
@@ -10,22 +11,27 @@ from reservations.models import ReservationRequest
 
 class DummyReservationQueue:
     def __init__(self, duplicate=False):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.__init__')
         self.duplicate = duplicate
         self.added_requests = []
 
     def add_reservation_request(self, request):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.add_reservation_request')
         self.added_requests.append(request)
         if self.duplicate:
             raise ValueError("duplicate")
         return "new-res-id"
 
     def get_user_reservations(self, user_id):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.get_user_reservations')
         return []
 
     def get_pending_reservations(self):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.get_pending_reservations')
         return []
 
     def get_reservation(self, reservation_id):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.get_reservation')
         return {
             "id": reservation_id,
             "target_date": "2025-10-23",
@@ -36,54 +42,66 @@ class DummyReservationQueue:
         }
 
     def remove_reservation(self, reservation_id):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.remove_reservation')
         return True
 
     def update_reservation(self, reservation_id, reservation):
+        t('tests.unit.test_queue_handler_callbacks.DummyReservationQueue.update_reservation')
         return reservation
 
 
 class DummyBookingHandler:
     async def handle_booking_request(self, *args, **kwargs):
+        t('tests.unit.test_queue_handler_callbacks.DummyBookingHandler.handle_booking_request')
         raise NotImplementedError
 
     async def handle_booking_confirmation(self, *args, **kwargs):
+        t('tests.unit.test_queue_handler_callbacks.DummyBookingHandler.handle_booking_confirmation')
         raise NotImplementedError
 
     async def handle_booking_cancellation(self, *args, **kwargs):
+        t('tests.unit.test_queue_handler_callbacks.DummyBookingHandler.handle_booking_cancellation')
         raise NotImplementedError
 
 
 class DummyTracker:
     def get_user_active_reservations(self, user_id):
+        t('tests.unit.test_queue_handler_callbacks.DummyTracker.get_user_active_reservations')
         return []
 
 
 class DummyQuery:
     def __init__(self, data, user_id=1):
+        t('tests.unit.test_queue_handler_callbacks.DummyQuery.__init__')
         self.data = data
         self.from_user = types.SimpleNamespace(id=user_id)
         self.edits = []
         self.answered = None
 
     async def answer(self, text=None):
+        t('tests.unit.test_queue_handler_callbacks.DummyQuery.answer')
         self.answered = text
 
     async def edit_message_text(self, text, **kwargs):
+        t('tests.unit.test_queue_handler_callbacks.DummyQuery.edit_message_text')
         self.edits.append((text, kwargs))
 
 
 class DummyContext:
     def __init__(self):
+        t('tests.unit.test_queue_handler_callbacks.DummyContext.__init__')
         self.user_data = {}
 
 
 class DummyUpdate:
     def __init__(self, data, user_id=1):
+        t('tests.unit.test_queue_handler_callbacks.DummyUpdate.__init__')
         self.callback_query = DummyQuery(data, user_id)
 
 
 @pytest.fixture
 def deps(monkeypatch):
+    t('tests.unit.test_queue_handler_callbacks.deps')
     deps = CallbackDependencies(
         logger=types.SimpleNamespace(warning=lambda *a, **k: None, error=lambda *a, **k: None, info=lambda *a, **k: None),
         availability_checker=object(),
@@ -102,6 +120,7 @@ def deps(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_queue_confirm_success_clears_state(deps):
+    t('tests.unit.test_queue_handler_callbacks.test_queue_confirm_success_clears_state')
     handler = QueueHandler(deps)
     context = DummyContext()
     # prepopulate state as booking flow would
@@ -137,6 +156,7 @@ async def test_queue_confirm_success_clears_state(deps):
 
 @pytest.mark.asyncio
 async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
+    t('tests.unit.test_queue_handler_callbacks.test_queue_confirm_duplicate_clears_state')
     deps.reservation_queue = DummyReservationQueue(duplicate=True)
     handler = QueueHandler(deps)
     context = DummyContext()
@@ -164,6 +184,7 @@ async def test_queue_confirm_duplicate_clears_state(monkeypatch, deps):
 
 @pytest.mark.asyncio
 async def test_blocked_date_allows_selection_in_test_mode(monkeypatch, deps):
+    t('tests.unit.test_queue_handler_callbacks.test_blocked_date_allows_selection_in_test_mode')
     handler = QueueHandler(deps)
 
     class Config:
@@ -175,6 +196,7 @@ async def test_blocked_date_allows_selection_in_test_mode(monkeypatch, deps):
     captured = []
 
     async def fake_show(update, context, selected_date):
+        t('tests.unit.test_queue_handler_callbacks.test_blocked_date_allows_selection_in_test_mode.fake_show')
         captured.append(selected_date)
 
     monkeypatch.setattr(handler, '_show_queue_time_selection', fake_show)
@@ -191,6 +213,7 @@ async def test_blocked_date_allows_selection_in_test_mode(monkeypatch, deps):
 
 @pytest.mark.asyncio
 async def test_blocked_date_rejected_when_not_allowed(monkeypatch, deps):
+    t('tests.unit.test_queue_handler_callbacks.test_blocked_date_rejected_when_not_allowed')
     handler = QueueHandler(deps)
 
     class Config:
@@ -202,6 +225,7 @@ async def test_blocked_date_rejected_when_not_allowed(monkeypatch, deps):
     messages = []
 
     async def fake_edit(query, text, **kwargs):
+        t('tests.unit.test_queue_handler_callbacks.test_blocked_date_rejected_when_not_allowed.fake_edit')
         messages.append(text)
 
     monkeypatch.setattr(handler, '_edit_callback_message', fake_edit)

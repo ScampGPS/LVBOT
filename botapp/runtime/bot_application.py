@@ -5,7 +5,7 @@ from tracking import t
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 
 from telegram import Update
 from telegram.constants import ParseMode
@@ -19,6 +19,14 @@ from botapp.i18n import get_user_translator
 from botapp.notifications import deliver_notification_with_menu
 from botapp.runtime.lifecycle import LifecycleManager
 from botapp.ui.telegram_ui import TelegramUI
+
+
+PROFILE_FIELD_LABELS = {
+    'first_name': 'profile.first_name',
+    'last_name': 'profile.last_name',
+    'email': 'profile.email',
+    'phone': 'profile.phone',
+}
 
 
 class BotApplication:
@@ -55,7 +63,9 @@ class BotApplication:
         """Handle /start command."""
         t('botapp.runtime.bot_application.BotApplication.start_command')
 
-        user_id = update.effective_user.id
+        telegram_user = update.effective_user
+        profile, _ = self.user_manager.ensure_user_profile(telegram_user)
+        user_id = telegram_user.id
         is_admin = self.user_manager.is_admin(user_id)
         tier = self.user_manager.get_user_tier(user_id)
         tier_badge = TelegramUI.format_user_tier_badge(tier.name)
@@ -64,10 +74,14 @@ class BotApplication:
         tr = get_user_translator(self.user_manager, user_id)
         reply_markup = TelegramUI.create_main_menu_keyboard(is_admin=is_admin, language=tr.get_language())
 
-        await update.message.reply_text(
+        await self._send_message(
+            update,
+            context,
             f"{tr.t('welcome.title')} {tier_badge}\n\n{tr.t('welcome.message')}",
             reply_markup=reply_markup,
         )
+
+        await self._maybe_prompt_profile_setup(update, context, profile, tr)
 
     async def stop_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /stop command for graceful shutdown (admin only)."""
@@ -100,7 +114,7 @@ class BotApplication:
         t('botapp.runtime.bot_application.BotApplication._graceful_shutdown')
         await self.lifecycle.graceful_shutdown()
 
-    async def send_notification(self, user_id: int, message: str) -> None:
+    async def send_notification(self, user_id: int, message: Union[str, Dict[str, Any]]) -> None:
         """Send a Telegram notification with the standard menu follow-up."""
         t('botapp.runtime.bot_application.BotApplication.send_notification')
         try:
@@ -180,6 +194,55 @@ class BotApplication:
         t('botapp.runtime.bot_application.BotApplication._post_stop')
         await self.lifecycle.post_stop(application)
         self.application = None
+
+    async def _send_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, **kwargs) -> None:
+        """Reply to the current chat, falling back to context.bot when needed."""
+        t('botapp.runtime.bot_application.BotApplication._send_message')
+
+        if update.message:
+            await update.message.reply_text(text, **kwargs)
+            return
+
+        chat = update.effective_chat
+        if not chat:
+            self.logger.warning("No chat available to deliver message")
+            return
+
+        await context.bot.send_message(chat_id=chat.id, text=text, **kwargs)
+
+    async def _maybe_prompt_profile_setup(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        profile: Dict[str, Any],
+        translator,
+    ) -> None:
+        """Send a profile setup reminder if required fields are missing."""
+        t('botapp.runtime.bot_application.BotApplication._maybe_prompt_profile_setup')
+
+        missing_fields = self.user_manager.get_missing_profile_fields(profile)
+        if not missing_fields:
+            return
+
+        language = translator.get_language()
+        label_lookup = PROFILE_FIELD_LABELS
+        missing_labels = [translator.t(label_lookup.get(field, field)) for field in missing_fields]
+        bullet_list = '\n'.join(f"• {label}" for label in missing_labels)
+        message = (
+            f"{translator.t('profile.setup_title')}\n\n"
+            f"{translator.t('profile.setup_description')}\n\n"
+            f"{translator.t('profile.setup_missing')}\n{bullet_list}\n\n"
+            f"{translator.t('profile.setup_cta')}"
+        )
+
+        keyboard = TelegramUI.create_profile_keyboard(language=language, user_data=profile)
+        await self._send_message(
+            update,
+            context,
+            message,
+            parse_mode='Markdown',
+            reply_markup=keyboard,
+        )
 
 
 __all__ = ['BotApplication']

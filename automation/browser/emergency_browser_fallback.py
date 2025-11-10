@@ -129,6 +129,7 @@ class EmergencyFormInteractor(EmergencyLoggerMixin):
             return False
 
     async def _check_form_visible(self, page: Page) -> bool:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor._check_form_visible')
         try:
             field = await page.query_selector('input[name="client.firstName"]')
             return field is not None
@@ -136,6 +137,7 @@ class EmergencyFormInteractor(EmergencyLoggerMixin):
             return False
 
     async def _try_click_continue(self, page: Page) -> None:
+        t('automation.browser.emergency_browser_fallback.EmergencyFormInteractor._try_click_continue')
         try:
             continue_btn = await page.query_selector('button:has-text("Continuar")')
             if continue_btn:
@@ -196,6 +198,7 @@ class EmergencyConfirmationChecker(EmergencyLoggerMixin):
         return await self._check_for_errors(page)
 
     async def _extract_user_name(self, page: Page) -> Optional[str]:
+        t('automation.browser.emergency_browser_fallback.EmergencyConfirmationChecker._extract_user_name')
         try:
             name_element = await page.query_selector("h1, h2, h3")
             if not name_element:
@@ -208,6 +211,7 @@ class EmergencyConfirmationChecker(EmergencyLoggerMixin):
         return None
 
     async def _check_for_errors(self, page: Page) -> Optional[str]:
+        t('automation.browser.emergency_browser_fallback.EmergencyConfirmationChecker._check_for_errors')
         selectors = [
             ".alert-danger",
             ".error-message",
@@ -403,6 +407,7 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
 
     async def _check_form_visible(self, page: Page) -> bool:
         """Check if booking form is visible"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_form_visible')
         return await self._delegate_call(
             "_form",
             "check_form_visible",
@@ -419,6 +424,7 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
 
     async def _fill_booking_form(self, page: Page, user_info: Dict[str, Any]) -> bool:
         """Fill the booking form with user information"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._fill_booking_form')
         return await self._delegate_call(
             "_form",
             "fill_form",
@@ -429,6 +435,7 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
 
     async def _submit_booking(self, page: Page) -> Dict[str, Any]:
         """Submit the booking and check for confirmation"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._submit_booking')
         return await self._delegate_call(
             "_confirmation",
             "submit",
@@ -438,6 +445,7 @@ class EmergencyBrowserFallback(EmergencyLoggerMixin):
 
     async def _check_for_errors(self, page: Page) -> Optional[str]:
         """Check page for error messages"""
+        t('automation.browser.emergency_browser_fallback.EmergencyBrowserFallback._check_for_errors')
         return await self._delegate_call(
             "_confirmation",
             "check_for_errors",

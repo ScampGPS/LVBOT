@@ -1,3 +1,4 @@
+from tracking import t
 import logging
 
 import pytest
@@ -6,6 +7,7 @@ from reservations.queue.reservation_validation import ensure_unique_slot
 
 
 def test_ensure_unique_slot_allows_unique():
+    t('tests.unit.test_reservation_validation.test_ensure_unique_slot_allows_unique')
     reservations = [
         {
             "id": "abc",
@@ -28,6 +30,7 @@ def test_ensure_unique_slot_allows_unique():
 
 
 def test_ensure_unique_slot_raises_for_conflict():
+    t('tests.unit.test_reservation_validation.test_ensure_unique_slot_raises_for_conflict')
     reservations = [
         {
             "id": "abc",
@@ -51,6 +54,7 @@ def test_ensure_unique_slot_raises_for_conflict():
 
 
 def test_ensure_unique_slot_allows_different_courts():
+    t('tests.unit.test_reservation_validation.test_ensure_unique_slot_allows_different_courts')
     reservations = [
         {
             "id": "abc",
@@ -73,6 +77,7 @@ def test_ensure_unique_slot_allows_different_courts():
 
 
 def test_ensure_unique_slot_conflict_when_existing_any_court():
+    t('tests.unit.test_reservation_validation.test_ensure_unique_slot_conflict_when_existing_any_court')
     reservations = [
         {
             "id": "abc",

@@ -130,6 +130,7 @@ class RealtimeAvailabilityMonitor:
     # Snapshot logging & change handling
     # ------------------------------------------------------------------
     async def _log_snapshot(self, snapshot: PollSnapshot) -> None:
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor._log_snapshot')
         for court in sorted(snapshot.results.keys()):
             data = snapshot.results[court]
             if isinstance(data, dict) and "error" in data:
@@ -167,6 +168,7 @@ class RealtimeAvailabilityMonitor:
                     logger.warning("⚠️  Court %s has HIGH availability (%s slots)!", court, slot_count)
 
     async def _record_change(self, court: int, change: AvailabilityChange, snapshot: PollSnapshot) -> None:
+        t('monitoring.realtime_availability_monitor.RealtimeAvailabilityMonitor._record_change')
         screenshot_path = await self.take_court_screenshot(court)
         previous = snapshot.previous.get(court, {})
         current = snapshot.results.get(court, {})

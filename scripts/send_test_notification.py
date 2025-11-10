@@ -2,6 +2,7 @@
 """Manual smoke test for Telegram notifications."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import logging
@@ -15,6 +16,7 @@ LOGGER = logging.getLogger("NotificationTest")
 
 
 async def main(user_id: int) -> None:
+    t('scripts.send_test_notification.main')
     app = BotApplication()
     message = (
         "✅ **Test Notification**\n\n"

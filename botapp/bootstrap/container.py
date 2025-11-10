@@ -26,6 +26,7 @@ def _bundle_property(
     tracking_id: str,
     doc: str,
 ) -> property:
+    t('botapp.bootstrap.container._bundle_property')
     def getter(self):
         t(tracking_id)
         component = self._browser_bundle()[index]
@@ -83,12 +84,15 @@ class DependencyContainer:
     # ------------------------------------------------------------------
     # Internal helpers
     def _resolve(self, key: str, factory: Callable[[], Any]) -> Any:
+        t('botapp.bootstrap.container.DependencyContainer._resolve')
         if key not in self._cache:
             self._cache[key] = factory()
         return self._cache[key]
 
     def _browser_bundle(self) -> tuple[AsyncBrowserPool, BrowserManager, AvailabilityChecker]:
+        t('botapp.bootstrap.container.DependencyContainer._browser_bundle')
         def factory() -> tuple[AsyncBrowserPool, BrowserManager, AvailabilityChecker]:
+            t('botapp.bootstrap.container.DependencyContainer._browser_bundle.factory')
             pool, manager, checker = build_browser_resources(self.config)
             return pool, manager, checker
 
@@ -122,6 +126,7 @@ class DependencyContainer:
         t('botapp.bootstrap.container.DependencyContainer.user_manager')
 
         def factory() -> UserManager:
+            t('botapp.bootstrap.container.DependencyContainer.user_manager.factory')
             return UserManager(self.config.paths.users_file)
 
         return self._resolve('user_manager', factory)
@@ -131,6 +136,7 @@ class DependencyContainer:
         t('botapp.bootstrap.container.DependencyContainer.reservation_queue')
 
         def factory() -> ReservationQueue:
+            t('botapp.bootstrap.container.DependencyContainer.reservation_queue.factory')
             return ReservationQueue(self.config.paths.queue_file)
 
         return self._resolve('reservation_queue', factory)
@@ -146,6 +152,7 @@ class DependencyContainer:
         t('botapp.bootstrap.container.DependencyContainer.build_reservation_service')
 
         def factory() -> ReservationService:
+            t('botapp.bootstrap.container.DependencyContainer.build_reservation_service.factory')
             service, queue, scheduler = build_reservation_components(
                 self.config,
                 notification_callback,
@@ -182,6 +189,7 @@ class DependencyContainer:
         t('botapp.bootstrap.container.DependencyContainer.callback_handler')
 
         def factory() -> CallbackHandler:
+            t('botapp.bootstrap.container.DependencyContainer.callback_handler.factory')
             return CallbackHandler(
                 self.availability_checker,
                 self.reservation_queue,

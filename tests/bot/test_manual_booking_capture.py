@@ -14,6 +14,7 @@ Run on Windows CMD:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import json
@@ -32,6 +33,7 @@ CAPTURE_DURATION = 60  # seconds
 @pytest.fixture
 def manual_capture_dir():
     """Create directory for manual capture artifacts."""
+    t('tests.bot.test_manual_booking_capture.manual_capture_dir')
     artifacts_dir = Path("logs/latest_log/manual_capture")
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return artifacts_dir
@@ -41,6 +43,7 @@ def manual_capture_dir():
 @pytest.mark.manual
 async def test_manual_booking_capture(manual_capture_dir):
     """Open browser and let user manually book while capturing everything."""
+    t('tests.bot.test_manual_booking_capture.test_manual_booking_capture')
 
     import os
     flag = os.getenv("LV_MANUAL_CAPTURE", "").strip()
@@ -75,6 +78,7 @@ async def test_manual_booking_capture(manual_capture_dir):
         # Set up comprehensive request interception
         async def capture_request(route, request):
             """Capture all request details."""
+            t('tests.bot.test_manual_booking_capture.test_manual_booking_capture.capture_request')
             req_data = {
                 "timestamp": datetime.now().isoformat(),
                 "url": request.url,
@@ -98,6 +102,7 @@ async def test_manual_booking_capture(manual_capture_dir):
 
         async def capture_response(response):
             """Capture all response details including body."""
+            t('tests.bot.test_manual_booking_capture.test_manual_booking_capture.capture_response')
             res_data = {
                 "timestamp": datetime.now().isoformat(),
                 "url": response.url,

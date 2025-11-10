@@ -15,6 +15,7 @@ Run on Windows CMD:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import json
@@ -47,6 +48,7 @@ USER_INFO = {
 @pytest.fixture
 def debug_artifacts_dir():
     """Create directory for debug artifacts."""
+    t('tests.bot.test_debug_booking_submission.debug_artifacts_dir')
     artifacts_dir = Path("logs/latest_log/debug_booking")
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return artifacts_dir
@@ -54,6 +56,7 @@ def debug_artifacts_dir():
 
 async def capture_page_state(page, step_name: str, artifacts_dir: Path):
     """Capture comprehensive page state for debugging."""
+    t('tests.bot.test_debug_booking_submission.capture_page_state')
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     prefix = f"{step_name}_{timestamp}"
@@ -125,6 +128,7 @@ async def capture_page_state(page, step_name: str, artifacts_dir: Path):
 
 async def inspect_submit_button(page, artifacts_dir: Path):
     """Inspect submit button state and attributes."""
+    t('tests.bot.test_debug_booking_submission.inspect_submit_button')
 
     print(f"\n{'='*60}")
     print("[DEBUG] Inspecting Submit Button")
@@ -203,6 +207,7 @@ async def inspect_submit_button(page, artifacts_dir: Path):
 @pytest.mark.debug
 async def test_debug_booking_submission(debug_artifacts_dir):
     """Debug booking submission with comprehensive state inspection."""
+    t('tests.bot.test_debug_booking_submission.test_debug_booking_submission')
 
     flag = os.getenv("LV_DEBUG_BOOKING_ENABLE", "").strip()
     if flag != "1":

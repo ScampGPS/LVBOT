@@ -1,24 +1,30 @@
+from tracking import t
 from automation.browser.pools.specialized import SpecializedBrowserPool
 
 
 class RecordingLogger:
     def __init__(self):
+        t('tests.unit.test_specialized_browser_pool.RecordingLogger.__init__')
         self.records = []
 
     def info(self, message, *args):
+        t('tests.unit.test_specialized_browser_pool.RecordingLogger.info')
         self.records.append(("info", message % args if args else message))
 
     def warning(self, message, *args):
+        t('tests.unit.test_specialized_browser_pool.RecordingLogger.warning')
         self.records.append(("warning", message % args if args else message))
 
 
 def _make_pool_with_logger():
+    t('tests.unit.test_specialized_browser_pool._make_pool_with_logger')
     pool = object.__new__(SpecializedBrowserPool)
     pool.logger = RecordingLogger()
     return pool
 
 
 def test_finalize_form_result_success_logs_and_returns():
+    t('tests.unit.test_specialized_browser_pool.test_finalize_form_result_success_logs_and_returns')
     pool = _make_pool_with_logger()
     success, message = pool._finalise_form_result(1, "10:00", True, "Reserva confirmada")
 
@@ -28,6 +34,7 @@ def test_finalize_form_result_success_logs_and_returns():
 
 
 def test_finalize_form_result_pending_confirmation():
+    t('tests.unit.test_specialized_browser_pool.test_finalize_form_result_pending_confirmation')
     pool = _make_pool_with_logger()
     success, message = pool._finalise_form_result(2, "11:00", False, "No confirmation detected")
 
@@ -37,6 +44,7 @@ def test_finalize_form_result_pending_confirmation():
 
 
 def test_finalize_form_result_failure_logs_warning():
+    t('tests.unit.test_specialized_browser_pool.test_finalize_form_result_failure_logs_warning')
     pool = _make_pool_with_logger()
     success, message = pool._finalise_form_result(3, "12:00", False, "Validation error")
 

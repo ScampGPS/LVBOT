@@ -1,6 +1,7 @@
 """Reservation cancellation service using disposable browsers."""
 
 from __future__ import annotations
+from tracking import t
 
 import logging
 from typing import Optional
@@ -12,6 +13,7 @@ class ReservationCancellationService:
     """Service to cancel reservations using temporary, disposable browsers."""
 
     def __init__(self):
+        t('reservations.services.cancellation_service.ReservationCancellationService.__init__')
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def cancel_reservation(self, cancel_url: str) -> dict[str, any]:
@@ -24,6 +26,7 @@ class ReservationCancellationService:
         Returns:
             dict with 'success' (bool), 'message' (str), and optionally 'error' (str)
         """
+        t('reservations.services.cancellation_service.ReservationCancellationService.cancel_reservation')
         self.logger.info("Starting reservation cancellation for URL: %s", cancel_url[:80])
 
         try:

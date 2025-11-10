@@ -1,6 +1,7 @@
 """Reusable polling helper for court availability."""
 
 from __future__ import annotations
+from tracking import t
 
 import copy
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ class AvailabilityChange:
     error: Optional[str] = None
 
     def has_changes(self) -> bool:
+        t('monitoring.availability_poller.AvailabilityChange.has_changes')
         return bool(self.added or self.removed or self.error)
 
 
@@ -43,15 +45,18 @@ class AvailabilityPoller:
         *,
         logger,
     ) -> None:
+        t('monitoring.availability_poller.AvailabilityPoller.__init__')
         self._fetcher = fetcher
         self._logger = logger or logging.getLogger('AvailabilityPoller')
         self._previous: AvailabilityData = {}
 
     @property
     def previous(self) -> AvailabilityData:
+        t('monitoring.availability_poller.AvailabilityPoller.previous')
         return copy.deepcopy(self._previous)
 
     async def poll(self) -> PollSnapshot:
+        t('monitoring.availability_poller.AvailabilityPoller.poll')
         raw_results = await self._fetcher()
         is_initial = not self._previous
         normalised_results = self._normalise_snapshot(raw_results)
@@ -85,6 +90,7 @@ class AvailabilityPoller:
     # Internal helpers
     # ------------------------------------------------------------------
     def _normalise_snapshot(self, snapshot: AvailabilityData) -> AvailabilityData:
+        t('monitoring.availability_poller.AvailabilityPoller._normalise_snapshot')
         if not snapshot:
             return {}
 
@@ -94,6 +100,7 @@ class AvailabilityPoller:
         return normalised
 
     def _normalise_court_data(self, data: Any) -> Any:
+        t('monitoring.availability_poller.AvailabilityPoller._normalise_court_data')
         if not isinstance(data, dict) or "error" in data:
             return data
 
@@ -103,6 +110,7 @@ class AvailabilityPoller:
         return normalised
 
     def _detect_change(self, old: Any, new: Any) -> Optional[AvailabilityChange]:
+        t('monitoring.availability_poller.AvailabilityPoller._detect_change')
         change = AvailabilityChange()
 
         if new is None:

@@ -1,3 +1,4 @@
+from tracking import t
 import asyncio
 
 import pytest
@@ -9,7 +10,9 @@ from tests.helpers import DummyLogger
 
 @pytest.fixture(autouse=True)
 def fast_sleep(monkeypatch):
+    t('tests.unit.test_form_actions.fast_sleep')
     async def _no_sleep(_duration):
+        t('tests.unit.test_form_actions.fast_sleep._no_sleep')
         return None
 
     monkeypatch.setattr(asyncio, "sleep", _no_sleep)
@@ -40,11 +43,13 @@ def fast_sleep(monkeypatch):
     ],
 )
 def test_map_user_info(info, expected):
+    t('tests.unit.test_form_actions.test_map_user_info')
     service = AcuityFormService(enable_tracing=False)
     assert service.map_user_info(info) == expected
 
 
 def test_validate_required_fields_returns_missing():
+    t('tests.unit.test_form_actions.test_validate_required_fields_returns_missing')
     service = AcuityFormService(enable_tracing=False)
     missing = service.validate({'client.firstName': 'Ana'})
     assert 'client.lastName' in missing
@@ -54,19 +59,23 @@ def test_validate_required_fields_returns_missing():
 
 class DummyTracing:
     async def start(self, *args, **kwargs):  # pragma: no cover - not invoked when tracing disabled
+        t('tests.unit.test_form_actions.DummyTracing.start')
         return None
 
     async def stop(self, *args, **kwargs):  # pragma: no cover - not invoked when tracing disabled
+        t('tests.unit.test_form_actions.DummyTracing.stop')
         return None
 
 
 class DummyContext:
     def __init__(self):
+        t('tests.unit.test_form_actions.DummyContext.__init__')
         self.tracing = DummyTracing()
 
 
 class DummyPage:
     def __init__(self, result):
+        t('tests.unit.test_form_actions.DummyPage.__init__')
         if isinstance(result, list):
             self._results = list(result)
             self._single_result = None
@@ -77,6 +86,7 @@ class DummyPage:
         self.context = DummyContext()
 
     async def evaluate(self, script, *args):  # pragma: no cover - simple stub
+        t('tests.unit.test_form_actions.DummyPage.evaluate')
         self.evaluate_calls.append((script, args))
         if self._results is not None:
             if not self._results:
@@ -87,6 +97,7 @@ class DummyPage:
 
 @pytest.mark.asyncio
 async def test_check_booking_success_handles_success():
+    t('tests.unit.test_form_actions.test_check_booking_success_handles_success')
     page = DummyPage({
         'success': True,
         'message': 'Reserva confirmada',
@@ -100,6 +111,7 @@ async def test_check_booking_success_handles_success():
 
 @pytest.mark.asyncio
 async def test_check_booking_success_handles_failure():
+    t('tests.unit.test_form_actions.test_check_booking_success_handles_failure')
     page = DummyPage({
         'success': False,
         'error': 'validation_error',
@@ -114,6 +126,7 @@ async def test_check_booking_success_handles_failure():
 
 @pytest.mark.asyncio
 async def test_fill_and_submit_success_path():
+    t('tests.unit.test_form_actions.test_fill_and_submit_success_path')
     page = DummyPage([
         {'filled': 4, 'messages': ('ok',)},
         {'hasErrors': False, 'errors': ()},
@@ -140,6 +153,7 @@ async def test_fill_and_submit_success_path():
 
 @pytest.mark.asyncio
 async def test_fill_and_submit_validation_failure():
+    t('tests.unit.test_form_actions.test_fill_and_submit_validation_failure')
     page = DummyPage([
         {'filled': 4, 'messages': ()},
         {'hasErrors': True, 'errors': ('Email required',)},
@@ -163,6 +177,7 @@ async def test_fill_and_submit_validation_failure():
 
 @pytest.mark.asyncio
 async def test_fill_and_submit_missing_required_fields_short_circuit():
+    t('tests.unit.test_form_actions.test_fill_and_submit_missing_required_fields_short_circuit')
     page = DummyPage([])
     service = AcuityFormService(logger=DummyLogger(), enable_tracing=False)
 
@@ -183,6 +198,7 @@ async def test_fill_and_submit_missing_required_fields_short_circuit():
 
 @pytest.mark.asyncio
 async def test_fill_and_submit_submit_failure():
+    t('tests.unit.test_form_actions.test_fill_and_submit_submit_failure')
     page = DummyPage([
         {'filled': 4, 'messages': ()},
         {'hasErrors': False, 'errors': ()},
@@ -207,6 +223,7 @@ async def test_fill_and_submit_submit_failure():
 
 @pytest.mark.asyncio
 async def test_fill_and_submit_accepts_booking_user():
+    t('tests.unit.test_form_actions.test_fill_and_submit_accepts_booking_user')
     booking_user = BookingUser(
         user_id=1,
         first_name='Ana',
@@ -232,8 +249,10 @@ async def test_fill_and_submit_accepts_booking_user():
 
 @pytest.mark.asyncio
 async def test_check_validation_handles_exception():
+    t('tests.unit.test_form_actions.test_check_validation_handles_exception')
     class RaisingPage(DummyPage):
         async def evaluate(self, script, *args):
+            t('tests.unit.test_form_actions.test_check_validation_handles_exception.RaisingPage.evaluate')
             raise RuntimeError('boom')
 
     page = RaisingPage({})
@@ -247,9 +266,11 @@ async def test_check_validation_handles_exception():
 
 @pytest.mark.asyncio
 async def test_fill_form_uses_playwright_strategy(monkeypatch):
+    t('tests.unit.test_form_actions.test_fill_form_uses_playwright_strategy')
     service = AcuityFormService(logger=DummyLogger(), use_javascript=False, enable_tracing=False)
 
     async def fake_playwright(page, payload):
+        t('tests.unit.test_form_actions.test_fill_form_uses_playwright_strategy.fake_playwright')
         return 3
 
     monkeypatch.setattr(service, '_fill_via_playwright', fake_playwright)

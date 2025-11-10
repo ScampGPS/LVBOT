@@ -1,6 +1,7 @@
 """Reusable helpers that mimic human input patterns for Playwright flows."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import random
@@ -13,6 +14,7 @@ class HumanLikeActions:
     """Encapsulate typing and mouse patterns that resemble a real user."""
 
     def __init__(self, page: Page, *, speed_multiplier: float = 2.5) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.__init__')
         self.page = page
         self.speed_multiplier = speed_multiplier
         self._last_mouse_pos: Optional[Tuple[float, float]] = None
@@ -21,9 +23,11 @@ class HumanLikeActions:
     # Timing helpers
     # ------------------------------------------------------------------
     def _apply_speed(self, value: float) -> float:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions._apply_speed')
         return max(0.05, value / self.speed_multiplier)
 
     async def pause(self, minimum: float, maximum: float) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.pause')
         await asyncio.sleep(self._apply_speed(random.uniform(minimum, maximum)))
 
     # ------------------------------------------------------------------
@@ -37,6 +41,7 @@ class HumanLikeActions:
         mistake_prob: float = 0.12,
         base_delay_range: Tuple[int, int] = (90, 220),
     ) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.type_text')
         if text is None:
             text = ""
 
@@ -66,6 +71,7 @@ class HumanLikeActions:
         *,
         exclude: Optional[str] = None,
     ) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions._type_and_correct')
         alphabet = "abcdefghijklmnopqrstuvwxyz"
         wrong_characters = [c for c in alphabet if c != exclude]
         if not wrong_characters:
@@ -82,6 +88,7 @@ class HumanLikeActions:
     # Mouse helpers
     # ------------------------------------------------------------------
     async def move_mouse_random(self) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.move_mouse_random')
         width, height = await self._viewport_dimensions()
         target_x = random.uniform(width * 0.15, width * 0.85)
         target_y = random.uniform(height * 0.15, height * 0.85)
@@ -102,6 +109,7 @@ class HumanLikeActions:
         *,
         bias: Tuple[float, float] = (0.5, 0.6),
     ) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.move_mouse_to_element')
         try:
             box = await element.bounding_box()
         except Exception:
@@ -115,6 +123,7 @@ class HumanLikeActions:
         await self.pause(0.4, 1.0)
 
     async def _mouse_curve_to(self, target_x: float, target_y: float) -> None:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions._mouse_curve_to')
         start_x, start_y = await self._current_mouse_position()
 
         control_x1 = start_x + random.uniform(-80, 120)
@@ -151,6 +160,7 @@ class HumanLikeActions:
         self._last_mouse_pos = (target_x, target_y)
 
     async def _current_mouse_position(self) -> Tuple[float, float]:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions._current_mouse_position')
         if self._last_mouse_pos is not None:
             return self._last_mouse_pos
 
@@ -164,6 +174,7 @@ class HumanLikeActions:
         return initial
 
     async def _viewport_dimensions(self) -> Tuple[float, float]:
+        t('automation.executors.flows.human_behaviors.HumanLikeActions._viewport_dimensions')
         size = self.page.viewport_size
         if size:
             return float(size.get("width", 1280)), float(size.get("height", 720))
@@ -190,6 +201,7 @@ class HumanLikeActions:
             scroll_amount_range: Min/max pixels to scroll per action
             scroll_back_prob: Probability of scrolling back up (like re-reading)
         """
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.scroll_naturally')
         scroll_count = random.randint(*scroll_count_range)
 
         for _ in range(scroll_count):
@@ -226,6 +238,7 @@ class HumanLikeActions:
             hesitation_prob: Probability of showing hesitation (0.0-1.0)
             correction_count_range: Range for number of small aim corrections
         """
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.click_with_hesitation')
         try:
             box = await element.bounding_box()
         except Exception:
@@ -277,6 +290,7 @@ class HumanLikeActions:
         Args:
             duration_range: Min/max seconds to pause
         """
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.reading_pause')
         await self.pause(*duration_range)
 
     async def natural_page_interaction(
@@ -294,6 +308,7 @@ class HumanLikeActions:
             scroll: Whether to perform scrolling
             reading_pause: Whether to add reading pauses
         """
+        t('automation.executors.flows.human_behaviors.HumanLikeActions.natural_page_interaction')
         if scroll:
             await self.scroll_naturally()
 

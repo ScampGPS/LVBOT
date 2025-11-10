@@ -1,6 +1,7 @@
 """Session guard helpers for queue handlers."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import Iterable, Mapping, Sequence
 
@@ -21,6 +22,7 @@ class IncompleteProfileError(QueueSessionError):
     """Raised when the user profile is missing required fields."""
 
     def __init__(self, missing_fields: Sequence[str]) -> None:
+        t('botapp.handlers.queue.guards.IncompleteProfileError.__init__')
         missing = tuple(missing_fields)
         super().__init__(", ".join(missing))
         self.missing_fields = missing
@@ -32,6 +34,7 @@ class MissingModificationContextError(QueueSessionError):
 
 def ensure_summary(context: ContextTypes.DEFAULT_TYPE) -> Mapping[str, object]:
     """Return the queue booking summary or raise if missing."""
+    t('botapp.handlers.queue.guards.ensure_summary')
 
     summary = QueueSessionStore(context).summary
     if not summary:
@@ -41,6 +44,7 @@ def ensure_summary(context: ContextTypes.DEFAULT_TYPE) -> Mapping[str, object]:
 
 def ensure_modification(context: ContextTypes.DEFAULT_TYPE) -> tuple[str | None, str | None]:
     """Return the reservation modification tuple or raise if missing."""
+    t('botapp.handlers.queue.guards.ensure_modification')
 
     modifying_id, option = QueueSessionStore(context).modification
     if not modifying_id:
@@ -53,6 +57,7 @@ def ensure_profile_fields(
     required_fields: Iterable[str],
 ) -> None:
     """Validate required profile fields for queue booking flows."""
+    t('botapp.handlers.queue.guards.ensure_profile_fields')
 
     required = list(required_fields)
     if not profile:

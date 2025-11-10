@@ -1,3 +1,4 @@
+from tracking import t
 import pytest
 
 from botapp.handlers.queue.messages import QueueMessageFactory
@@ -14,10 +15,12 @@ from botapp.handlers.queue.session import QueueSessionStore
 
 class DummyContext:
     def __init__(self):
+        t('tests.unit.test_queue_messages_guards.DummyContext.__init__')
         self.user_data = {}
 
 
 def test_queue_message_factory_all_methods():
+    t('tests.unit.test_queue_messages_guards.test_queue_message_factory_all_methods')
     factory = QueueMessageFactory()
     assert factory.session_expired() == factory.SESSION_EXPIRED
     assert factory.session_expired_retry() == factory.SESSION_EXPIRED_RETRY
@@ -42,6 +45,7 @@ def test_queue_message_factory_all_methods():
 
 
 def test_ensure_summary_success_and_failure():
+    t('tests.unit.test_queue_messages_guards.test_ensure_summary_success_and_failure')
     context = DummyContext()
     QueueSessionStore(context).summary = {"value": 1}
     assert ensure_summary(context)["value"] == 1
@@ -52,6 +56,7 @@ def test_ensure_summary_success_and_failure():
 
 
 def test_ensure_modification_success_and_failure():
+    t('tests.unit.test_queue_messages_guards.test_ensure_modification_success_and_failure')
     context = DummyContext()
     QueueSessionStore(context).set_modification("res-1", "time")
     modifying_id, option = ensure_modification(context)
@@ -64,6 +69,7 @@ def test_ensure_modification_success_and_failure():
 
 
 def test_ensure_profile_fields():
+    t('tests.unit.test_queue_messages_guards.test_ensure_profile_fields')
     ensure_profile_fields({"email": "a@b", "phone": "123"}, ["email", "phone"])
 
     with pytest.raises(IncompleteProfileError) as exc:

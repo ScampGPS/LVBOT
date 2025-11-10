@@ -1,8 +1,10 @@
+from tracking import t
 from botapp.handlers.booking.ui_factory import BookingUIFactory
 from botapp.ui.telegram_ui import TelegramUI
 
 
 def test_booking_type_selection_view_contains_expected_text():
+    t('tests.unit.test_booking_ui_factory.test_booking_type_selection_view_contains_expected_text')
     factory = BookingUIFactory()
     view = factory.booking_type_selection()
 
@@ -11,6 +13,7 @@ def test_booking_type_selection_view_contains_expected_text():
 
 
 def test_performance_menu_returns_back_keyboard(monkeypatch):
+    t('tests.unit.test_booking_ui_factory.test_performance_menu_returns_back_keyboard')
     monkeypatch.setattr(TelegramUI, "create_back_to_menu_keyboard", lambda: "keyboard")
     factory = BookingUIFactory()
 
@@ -21,6 +24,7 @@ def test_performance_menu_returns_back_keyboard(monkeypatch):
 
 
 def test_admin_reservations_menu_builds_default_keyboard():
+    t('tests.unit.test_booking_ui_factory.test_admin_reservations_menu_builds_default_keyboard')
     factory = BookingUIFactory()
 
     view = factory.admin_reservations_menu()

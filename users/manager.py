@@ -6,7 +6,8 @@ from tracking import t
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from datetime import datetime
+from typing import Dict, Any, List, Optional, Sequence, Tuple
 from pathlib import Path
 from enum import Enum
 from infrastructure.constants import HARDCODED_VIP_USERS, HARDCODED_ADMIN_USERS
@@ -17,6 +18,14 @@ class UserTier(Enum):
     ADMIN = 0     # Highest priority
     VIP = 1       # VIP users
     REGULAR = 2   # Regular users
+
+
+REQUIRED_PROFILE_FIELDS: Tuple[str, ...] = (
+    'first_name',
+    'last_name',
+    'email',
+    'phone',
+)
 
 
 class UserManager:
@@ -82,6 +91,12 @@ class UserManager:
         
         user_id = user_profile['user_id']
         
+        # Stamp audit fields
+        now_iso = datetime.utcnow().isoformat()
+        if 'created_at' not in user_profile:
+            user_profile['created_at'] = now_iso
+        user_profile['updated_at'] = now_iso
+
         # Update or create user profile
         self.users[user_id] = user_profile.copy()
         
@@ -102,6 +117,7 @@ class UserManager:
         return self.users.copy()
 
     def _has_role(self, user_id: int, hardcoded: set[int], profile_flag: str) -> bool:
+        t('users.manager.UserManager._has_role')
         if user_id in hardcoded:
             return True
 
@@ -230,6 +246,81 @@ class UserManager:
         self.save_user(user_profile)
         self.logger.info(f"Set user {user_id} language to {language}")
         return True
+
+    def ensure_user_profile(self, telegram_user) -> Tuple[Dict[str, Any], bool]:
+        """Ensure a Telegram user has a persisted profile, creating one if needed."""
+
+        t('users.manager.UserManager.ensure_user_profile')
+        if telegram_user is None:
+            raise ValueError('telegram_user is required')
+
+        user_id = getattr(telegram_user, 'id', None)
+        if user_id is None:
+            raise ValueError('telegram_user must include an id')
+
+        profile = self.get_user(user_id)
+        if profile:
+            return profile, False
+
+        first_name = (getattr(telegram_user, 'first_name', '') or '').strip()
+        last_name = (getattr(telegram_user, 'last_name', '') or '').strip()
+        username = getattr(telegram_user, 'username', None)
+        language_code = getattr(telegram_user, 'language_code', None)
+
+        language = self._normalize_language(language_code)
+        tier = UserTier.ADMIN if user_id in HARDCODED_ADMIN_USERS else (
+            UserTier.VIP if user_id in HARDCODED_VIP_USERS else UserTier.REGULAR
+        )
+
+        timestamp = datetime.utcnow().isoformat()
+
+        profile = {
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'username': username,
+            'language': language,
+            'phone': '',
+            'email': '',
+            'court_preference': [],
+            'tier': tier.value,
+            'tier_name': tier.name,
+            'is_admin': tier == UserTier.ADMIN,
+            'is_vip': tier in {UserTier.ADMIN, UserTier.VIP},
+            'created_at': timestamp,
+            'updated_at': timestamp,
+        }
+
+        self.save_user(profile)
+        return self.users[user_id], True
+
+    def get_missing_profile_fields(
+        self,
+        user_profile: Optional[Dict[str, Any]],
+        required_fields: Optional[Sequence[str]] = None,
+    ) -> List[str]:
+        """Return a list of required profile fields that are empty or missing."""
+
+        t('users.manager.UserManager.get_missing_profile_fields')
+        required = list(required_fields) if required_fields else list(REQUIRED_PROFILE_FIELDS)
+        if not user_profile:
+            return required
+
+        return [field for field in required if not user_profile.get(field)]
+
+    def _normalize_language(self, language_code: Optional[str]) -> str:
+        """Map Telegram language codes into supported bot locales."""
+        t('users.manager.UserManager._normalize_language')
+
+        if not language_code:
+            return 'es'
+
+        lang = language_code.lower()
+        if lang.startswith('en'):
+            return 'en'
+        if lang.startswith('es'):
+            return 'es'
+        return 'es'
     
     def _save_users(self) -> None:
         """

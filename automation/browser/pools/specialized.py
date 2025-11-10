@@ -650,6 +650,7 @@ class SpecializedBrowserPool:
         message: str,
     ) -> Tuple[bool, str]:
         """Format and log the outcome returned by the form service."""
+        t('automation.browser.pools.specialized.SpecializedBrowserPool._finalise_form_result')
 
         result_lower = message.lower()
 

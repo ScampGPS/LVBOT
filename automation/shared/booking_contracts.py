@@ -1,6 +1,7 @@
 """Shared booking request/result contracts for bot, scheduler, and executors."""
 
 from __future__ import annotations
+from tracking import t
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -26,6 +27,7 @@ def compose_booking_metadata(
     extras: Optional[Dict[str, object]] = None,
 ) -> Dict[str, object]:
     """Build a consistent metadata dictionary for booking requests."""
+    t('automation.shared.booking_contracts.compose_booking_metadata')
 
     if isinstance(target_date, datetime):
         normalized_date = target_date.date().isoformat()
@@ -54,12 +56,14 @@ class CourtPreference:
 
     @classmethod
     def from_sequence(cls, courts: Sequence[int]) -> "CourtPreference":
+        t('automation.shared.booking_contracts.CourtPreference.from_sequence')
         if not courts:
             raise ValueError("At least one court must be provided")
         primary, *rest = courts
         return cls(primary=primary, fallbacks=tuple(rest))
 
     def as_list(self) -> List[int]:
+        t('automation.shared.booking_contracts.CourtPreference.as_list')
         return [self.primary, *self.fallbacks]
 
 
@@ -81,6 +85,7 @@ class BookingUser:
         include_tier_when_none: bool = False,
     ) -> Dict[str, object]:
         """Return the canonical payload consumed by executors and forms."""
+        t('automation.shared.booking_contracts.BookingUser.as_executor_payload')
 
         payload: Dict[str, object] = {
             'first_name': self.first_name,
@@ -110,6 +115,7 @@ class BookingRequest:
 
     def preferred_courts(self) -> List[int]:
         """Return courts in priority order."""
+        t('automation.shared.booking_contracts.BookingRequest.preferred_courts')
 
         return self.court_preference.as_list()
 
@@ -125,6 +131,7 @@ class BookingRequest:
         executor_config: Optional[Dict[str, object]] = None,
     ) -> "BookingRequest":
         """Build a request for immediate bookings triggered by the bot."""
+        t('automation.shared.booking_contracts.BookingRequest.from_immediate_payload')
 
         return cls(
             request_id=None,
@@ -151,6 +158,7 @@ class BookingRequest:
         executor_config: Optional[Dict[str, object]] = None,
     ) -> "BookingRequest":
         """Create a request based on a queued reservation record."""
+        t('automation.shared.booking_contracts.BookingRequest.from_reservation_record')
 
         preference = CourtPreference.from_sequence(list(courts))
         return cls(
@@ -192,6 +200,7 @@ class BookingResult:
 
     @property
     def success(self) -> bool:
+        t('automation.shared.booking_contracts.BookingResult.success')
         return self.status == BookingStatus.SUCCESS
 
     @classmethod
@@ -209,6 +218,7 @@ class BookingResult:
         started_at: Optional[datetime] = None,
         completed_at: Optional[datetime] = None,
     ) -> "BookingResult":
+        t('automation.shared.booking_contracts.BookingResult.success_result')
         return cls(
             status=BookingStatus.SUCCESS,
             user=user,
@@ -235,6 +245,7 @@ class BookingResult:
         started_at: Optional[datetime] = None,
         completed_at: Optional[datetime] = None,
     ) -> "BookingResult":
+        t('automation.shared.booking_contracts.BookingResult.failure_result')
         return cls(
             status=BookingStatus.FAILURE,
             user=user,
@@ -252,6 +263,7 @@ class BookingResult:
 
     def merge_metadata(self, extra: Dict[str, object]) -> "BookingResult":
         """Return a new result with metadata merged in."""
+        t('automation.shared.booking_contracts.BookingResult.merge_metadata')
 
         merged = {**self.metadata, **extra}
         return BookingResult(

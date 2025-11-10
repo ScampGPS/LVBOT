@@ -317,6 +317,7 @@ class AcuityFormService:
 
     @asynccontextmanager
     async def _trace_capture(self, page: Page):
+        t('automation.forms.actions.AcuityFormService._trace_capture')
         if not self.enable_tracing:
             yield None
             return

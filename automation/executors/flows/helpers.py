@@ -248,6 +248,7 @@ async def _capture_failure_artifacts(
     logger: Optional[logging.Logger] = None,
 ) -> None:
     """Persist a screenshot and HTML snapshot when confirmation detection fails."""
+    t('automation.executors.flows.helpers._capture_failure_artifacts')
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     slot_label = time_slot.replace(":", "-") or "unspecified"

@@ -5,6 +5,7 @@ Enable with environment variable:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import json
 import os
@@ -19,6 +20,7 @@ class ComprehensiveLogger:
     """Comprehensive logging for debugging booking flows."""
 
     def __init__(self, enabled: Optional[bool] = None):
+        t('automation.debug.comprehensive_logger.ComprehensiveLogger.__init__')
         if enabled is None:
             enabled = os.getenv("LV_COMPREHENSIVE_DEBUG", "").strip() == "1"
 
@@ -35,6 +37,7 @@ class ComprehensiveLogger:
 
     def attach_listeners(self, page: Page) -> None:
         """Attach all debug listeners to a page."""
+        t('automation.debug.comprehensive_logger.ComprehensiveLogger.attach_listeners')
         if not self.enabled or self._listeners_attached:
             return
 
@@ -89,6 +92,7 @@ class ComprehensiveLogger:
 
     async def capture_state(self, page: Page, step_name: str) -> None:
         """Capture comprehensive page state."""
+        t('automation.debug.comprehensive_logger.ComprehensiveLogger.capture_state')
         if not self.enabled:
             return
 
@@ -188,6 +192,7 @@ class ComprehensiveLogger:
 
     def save_logs(self) -> None:
         """Save collected logs to disk."""
+        t('automation.debug.comprehensive_logger.ComprehensiveLogger.save_logs')
         if not self.enabled:
             return
 
@@ -203,6 +208,7 @@ class ComprehensiveLogger:
 
     def print_summary(self) -> None:
         """Print summary of captured data."""
+        t('automation.debug.comprehensive_logger.ComprehensiveLogger.print_summary')
         if not self.enabled:
             return
 
@@ -235,6 +241,7 @@ _logger: Optional[ComprehensiveLogger] = None
 
 def get_logger() -> ComprehensiveLogger:
     """Get or create the comprehensive logger singleton."""
+    t('automation.debug.comprehensive_logger.get_logger')
     global _logger
     if _logger is None:
         _logger = ComprehensiveLogger()

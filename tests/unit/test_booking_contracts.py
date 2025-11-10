@@ -1,9 +1,11 @@
+from tracking import t
 from datetime import date, datetime
 
 from automation.shared.booking_contracts import BookingSource, BookingUser, compose_booking_metadata
 
 
 def test_as_executor_payload_defaults():
+    t('tests.unit.test_booking_contracts.test_as_executor_payload_defaults')
     user = BookingUser(
         user_id=123,
         first_name="Jane",
@@ -24,6 +26,7 @@ def test_as_executor_payload_defaults():
 
 
 def test_as_executor_payload_options():
+    t('tests.unit.test_booking_contracts.test_as_executor_payload_options')
     user = BookingUser(
         user_id=456,
         first_name="John",
@@ -51,6 +54,7 @@ def test_as_executor_payload_options():
 
 
 def test_compose_booking_metadata_basic():
+    t('tests.unit.test_booking_contracts.test_compose_booking_metadata_basic')
     metadata = compose_booking_metadata(
         BookingSource.IMMEDIATE,
         date(2025, 5, 1),
@@ -65,6 +69,7 @@ def test_compose_booking_metadata_basic():
 
 
 def test_compose_booking_metadata_with_extras_and_datetime():
+    t('tests.unit.test_booking_contracts.test_compose_booking_metadata_with_extras_and_datetime')
     metadata = compose_booking_metadata(
         BookingSource.QUEUED,
         datetime(2025, 5, 2, 10, 0),

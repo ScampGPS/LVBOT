@@ -190,6 +190,7 @@ def hydrate_reservation_batch(
 
 
 def _build_batches(groups: Dict[str, List[Dict[str, Any]]]) -> List[ReservationBatch]:
+    t('reservations.queue.scheduler.pipeline._build_batches')
     batches: List[ReservationBatch] = []
     for key, reservations in groups.items():
         if not reservations:
@@ -208,11 +209,13 @@ def _build_batches(groups: Dict[str, List[Dict[str, Any]]]) -> List[ReservationB
 
 
 def _reservation_id_prefix(reservation: Dict[str, Any]) -> str:
+    t('reservations.queue.scheduler.pipeline._reservation_id_prefix')
     identifier = str(reservation.get("id", "unknown"))
     return f"{identifier[:8]}..." if identifier else "unknown"
 
 
 def _stringified_date(value: Any) -> str:
+    t('reservations.queue.scheduler.pipeline._stringified_date')
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, datetime):
@@ -221,6 +224,7 @@ def _stringified_date(value: Any) -> str:
 
 
 def _coerce_scheduled_datetime(value: Any) -> Optional[datetime]:
+    t('reservations.queue.scheduler.pipeline._coerce_scheduled_datetime')
     if isinstance(value, datetime):
         return value
     if isinstance(value, str):

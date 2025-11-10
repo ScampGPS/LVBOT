@@ -26,6 +26,7 @@ class AdminHandler(CallbackResponseMixin):
 
     def _get_user_name(self, user_id: int) -> str:
         """Get user's display name from user_id."""
+        t('botapp.handlers.admin.handler.AdminHandler._get_user_name')
         user_data = self.deps.user_manager.get_user(user_id)
         if user_data:
             first_name = user_data.get('first_name', '')

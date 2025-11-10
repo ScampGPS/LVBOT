@@ -3,6 +3,7 @@
 All strings are organized by category for easy maintenance.
 Keys use dot notation for organization (e.g., 'menu.reserve_court').
 """
+from tracking import t
 
 from typing import Dict
 
@@ -95,6 +96,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.phone": "Teléfono",
         "profile.email": "Correo",
         "profile.language": "Idioma",
+        "profile.setup_title": "🧾 Configura tu perfil",
+        "profile.setup_description": "Necesitamos algunos datos antes de poder reservar por ti.",
+        "profile.setup_missing": "Completa estos campos:",
+        "profile.setup_cta": "Usa los botones para actualizar tu perfil y regresa al menú cuando termines.",
         "profile.edit_profile": "✏️ Editar Perfil",
         "profile.view_profile": "👤 Ver Perfil",
         "profile.title": "Perfil de Usuario",
@@ -310,6 +315,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "profile.phone": "Phone",
         "profile.email": "Email",
         "profile.language": "Language",
+        "profile.setup_title": "🧾 Set Up Your Profile",
+        "profile.setup_description": "We need a few details before we can book courts for you.",
+        "profile.setup_missing": "Please complete these fields:",
+        "profile.setup_cta": "Use the buttons below to update your profile, then return to the main menu when you're ready.",
         "profile.edit_profile": "✏️ Edit Profile",
         "profile.view_profile": "👤 View Profile",
         "profile.title": "User Profile",
@@ -446,6 +455,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
 
 def get_all_keys() -> set:
     """Get all translation keys across all languages for validation."""
+    t('botapp.i18n.strings.get_all_keys')
     all_keys = set()
     for lang_strings in STRINGS.values():
         all_keys.update(lang_strings.keys())
@@ -454,6 +464,7 @@ def get_all_keys() -> set:
 
 def validate_translations() -> None:
     """Validate that all languages have the same keys."""
+    t('botapp.i18n.strings.validate_translations')
     all_keys = get_all_keys()
     for lang, lang_strings in STRINGS.items():
         missing = all_keys - set(lang_strings.keys())

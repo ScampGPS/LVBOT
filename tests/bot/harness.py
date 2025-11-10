@@ -1,6 +1,7 @@
 """Utilities for driving callback flows without hitting the Telegram API."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 from datetime import date, timedelta
@@ -20,9 +21,11 @@ class _FakeAvailabilityChecker:
     """Stub implementation that satisfies the handler constructor."""
 
     async def check_availability(self, *args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
+        t('tests.bot.harness._FakeAvailabilityChecker.check_availability')
         return []
 
     async def check_single_court(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        t('tests.bot.harness._FakeAvailabilityChecker.check_single_court')
         return {}
 
 
@@ -30,6 +33,7 @@ class BotTestHarness:
     """Headless driver for exercising callback flows end-to-end."""
 
     def __init__(self, *, user_id: Optional[int] = None, queue_path: Optional[str] = None) -> None:
+        t('tests.bot.harness.BotTestHarness.__init__')
         self._records: List[Dict[str, Any]] = []
         self._tempdir: Optional[TemporaryDirectory] = None
 
@@ -72,14 +76,17 @@ class BotTestHarness:
     @property
     def records(self) -> List[Dict[str, Any]]:
         """Expose accumulated interaction records."""
+        t('tests.bot.harness.BotTestHarness.records')
 
         return self._records
 
     def clear_records(self) -> None:
+        t('tests.bot.harness.BotTestHarness.clear_records')
         self._records.clear()
 
     async def dispatch_callback(self, data: str) -> None:
         """Send a callback payload through the handler routing."""
+        t('tests.bot.harness.BotTestHarness.dispatch_callback')
 
         query = FakeCallbackQuery(data=data, user=self.user, records=self._records)
         update = FakeUpdate(user=self.user, callback_query=query)
@@ -93,6 +100,7 @@ class BotTestHarness:
         court_callback: str = "queue_court_all",
     ) -> None:
         """Convenience helper that walks through the queue booking happy path."""
+        t('tests.bot.harness.BotTestHarness.run_queue_booking_flow')
 
         self.clear_records()
         booking_date = target_date or (date.today() + timedelta(days=3))
@@ -106,12 +114,14 @@ class BotTestHarness:
         await self.dispatch_callback('queue_confirm')
 
     def close(self) -> None:
+        t('tests.bot.harness.BotTestHarness.close')
         if self._tempdir is not None:
             self._tempdir.cleanup()
 
 
 def run_async(coro) -> Any:
     """Run an async coroutine, creating a loop if necessary."""
+    t('tests.bot.harness.run_async')
 
     try:
         loop = asyncio.get_running_loop()

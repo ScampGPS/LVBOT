@@ -1,6 +1,7 @@
 """Builders for transforming queue reservations into booking requests."""
 
 from __future__ import annotations
+from tracking import t
 
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
@@ -34,6 +35,7 @@ class ReservationRequestBuilder:
         *,
         booking_user_factory: Optional[Any] = None,
     ) -> None:
+        t('reservations.queue.request_builder.ReservationRequestBuilder.__init__')
         self._booking_user_factory = booking_user_factory or _default_booking_user_factory
 
     # ------------------------------------------------------------------
@@ -41,6 +43,7 @@ class ReservationRequestBuilder:
     # ------------------------------------------------------------------
     def from_summary(self, summary: Mapping[str, Any]) -> ReservationRecord:
         """Convert a queue booking summary dict into a `ReservationRequest`."""
+        t('reservations.queue.request_builder.ReservationRequestBuilder.from_summary')
 
         self._ensure_fields(summary, SUMMARY_REQUIRED_FIELDS, "Queue booking summary")
 
@@ -74,6 +77,7 @@ class ReservationRequestBuilder:
         executor_config: Optional[Dict[str, Any]] = None,
     ) -> BookingRequest:
         """Convert a raw reservation mapping into a `BookingRequest`."""
+        t('reservations.queue.request_builder.ReservationRequestBuilder.from_dict')
 
         self._ensure_fields(reservation, REQUIRED_RESERVATION_FIELDS, "Reservation")
 
@@ -108,6 +112,7 @@ class ReservationRequestBuilder:
         executor_config: Optional[Dict[str, Any]] = None,
     ) -> BookingRequest:
         """Adapter to build a `BookingRequest` from a dataclass reservation."""
+        t('reservations.queue.request_builder.ReservationRequestBuilder.from_record')
 
         payload = self.to_payload(reservation)
         return self.from_dict(
@@ -118,6 +123,7 @@ class ReservationRequestBuilder:
 
     def to_payload(self, reservation: ReservationRecord) -> Dict[str, Any]:
         """Serialize a `ReservationRequest` into the legacy queue payload structure."""
+        t('reservations.queue.request_builder.ReservationRequestBuilder.to_payload')
 
         payload = {
             "id": reservation.request_id,
@@ -139,6 +145,7 @@ class ReservationRequestBuilder:
 
     def record_from_payload(self, payload: Mapping[str, Any]) -> ReservationRecord:
         """Convert a stored queue payload back into a `ReservationRequest`."""
+        t('reservations.queue.request_builder.ReservationRequestBuilder.record_from_payload')
 
         target_date = self._parse_date(payload["target_date"])
         target_time = str(payload["target_time"])
@@ -168,6 +175,7 @@ class ReservationRequestBuilder:
     # Internal helpers
     # ------------------------------------------------------------------
     def _build_user_profile(self, source: Mapping[str, Any]) -> UserProfile:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._build_user_profile')
         profile_payload = self._profile_payload(source)
         booking_user = self._booking_user_factory(profile_payload)
         return UserProfile(
@@ -184,6 +192,7 @@ class ReservationRequestBuilder:
         reservation: Mapping[str, Any],
         provided: Optional[Mapping[str, Any]],
     ) -> BookingUser:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._resolve_user')
         if provided:
             profile_payload = self._profile_payload(provided)
             return self._booking_user_factory(profile_payload)  # type: ignore[arg-type]
@@ -192,6 +201,7 @@ class ReservationRequestBuilder:
         return self._booking_user_factory(profile_payload)
 
     def _profile_payload(self, source: Mapping[str, Any]) -> Dict[str, Any]:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._profile_payload')
         user_id = source.get("user_id") or -1
         first_name = source.get("first_name") or "Queue"
         last_name = source.get("last_name") or "User"
@@ -209,6 +219,7 @@ class ReservationRequestBuilder:
 
     @staticmethod
     def _parse_date(value: Any) -> date:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._parse_date')
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
         if isinstance(value, datetime):
@@ -222,6 +233,7 @@ class ReservationRequestBuilder:
         courts: Optional[Sequence[int]],
         fallback: Optional[int],
     ) -> Iterable[int]:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._normalise_courts')
         if courts:
             return [int(c) for c in courts if c]
         if fallback is not None:
@@ -230,6 +242,7 @@ class ReservationRequestBuilder:
 
     @staticmethod
     def _resolve_created_at(value: Any) -> datetime:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._resolve_created_at')
         if isinstance(value, datetime):
             return value
         if isinstance(value, str) and value:
@@ -243,6 +256,7 @@ class ReservationRequestBuilder:
         target_time: str,
         metadata: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._compose_metadata')
         extras: Dict[str, Any] = {
             "reservation_id": reservation.get("id"),
             "queue_status": reservation.get("status"),
@@ -268,12 +282,14 @@ class ReservationRequestBuilder:
         required: Iterable[str],
         label: str,
     ) -> None:
+        t('reservations.queue.request_builder.ReservationRequestBuilder._ensure_fields')
         missing = [field for field in required if field not in source]
         if missing:
             raise ValueError(f"{label} missing required fields: {', '.join(sorted(missing))}")
 
 
 def _default_booking_user_factory(profile: Mapping[str, Any]) -> BookingUser:
+    t('reservations.queue.request_builder._default_booking_user_factory')
     from botapp.booking.request_builder import booking_user_from_profile
 
     return booking_user_from_profile(profile)

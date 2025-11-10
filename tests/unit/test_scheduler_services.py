@@ -1,3 +1,4 @@
+from tracking import t
 from types import SimpleNamespace
 
 import pytest
@@ -14,13 +15,16 @@ from reservations.queue.scheduler.services import (
 
 @pytest.mark.asyncio
 async def test_scheduler_pipeline_runs_health_and_execution(monkeypatch):
+    t('tests.unit.test_scheduler_services.test_scheduler_pipeline_runs_health_and_execution')
     calls = []
 
     async def health_check(reservations):
+        t('tests.unit.test_scheduler_services.test_scheduler_pipeline_runs_health_and_execution.health_check')
         calls.append(("health", len(reservations)))
         return True
 
     async def executor(reservations, **kwargs):
+        t('tests.unit.test_scheduler_services.test_scheduler_pipeline_runs_health_and_execution.executor')
         calls.append(("execute", len(reservations), kwargs.get("prepared_requests")))
 
     hydrator = SimpleNamespace(
@@ -46,6 +50,7 @@ async def test_scheduler_pipeline_runs_health_and_execution(monkeypatch):
 
 
 def test_reservation_hydrator_filters_failures(monkeypatch):
+    t('tests.unit.test_scheduler_services.test_reservation_hydrator_filters_failures')
     recorded = {
         "persist": [],
         "failed": [],
@@ -57,6 +62,7 @@ def test_reservation_hydrator_filters_failures(monkeypatch):
         pass
 
     def fake_hydrate(batch, **kwargs):
+        t('tests.unit.test_scheduler_services.test_reservation_hydrator_filters_failures.fake_hydrate')
         failure = SimpleNamespace(reservation=batch.reservations[0], error=DummyFailure("boom"))
         missing_id_failure = SimpleNamespace(reservation={"name": "anon"}, error=DummyFailure("no id"))
         return SimpleNamespace(requests=[booking_request], failures=[failure, missing_id_failure])
@@ -67,9 +73,11 @@ def test_reservation_hydrator_filters_failures(monkeypatch):
     )
 
     def persist_outcome(reservation_id, result, queue):
+        t('tests.unit.test_scheduler_services.test_reservation_hydrator_filters_failures.persist_outcome')
         recorded["persist"].append((reservation_id, result))
 
     def on_failure(reservation_id, error):
+        t('tests.unit.test_scheduler_services.test_reservation_hydrator_filters_failures.on_failure')
         recorded["failed"].append((reservation_id, error))
 
     hydrator = ReservationHydrator(
@@ -102,6 +110,7 @@ def test_reservation_hydrator_filters_failures(monkeypatch):
 
 
 def test_reservation_hydrator_no_failures(monkeypatch):
+    t('tests.unit.test_scheduler_services.test_reservation_hydrator_no_failures')
     booking_request = SimpleNamespace(request_id="5")
 
     monkeypatch.setattr(
@@ -132,13 +141,16 @@ def test_reservation_hydrator_no_failures(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_outcome_recorder_handles_timeouts_and_notifications(monkeypatch):
+    t('tests.unit.test_scheduler_services.test_outcome_recorder_handles_timeouts_and_notifications')
     recorded_outcomes = []
     notifications = []
 
     async def send_notification(user_id, message):
+        t('tests.unit.test_scheduler_services.test_outcome_recorder_handles_timeouts_and_notifications.send_notification')
         notifications.append((user_id, message))
 
     async def set_critical_operation(_flag):
+        t('tests.unit.test_scheduler_services.test_outcome_recorder_handles_timeouts_and_notifications.set_critical_operation')
         return None
 
     scheduler = SimpleNamespace(
@@ -190,6 +202,7 @@ async def test_outcome_recorder_handles_timeouts_and_notifications(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_outcome_recorder_notify_handles_missing_dependencies():
+    t('tests.unit.test_scheduler_services.test_outcome_recorder_notify_handles_missing_dependencies')
     scheduler = SimpleNamespace(
         bot=None,
         user_db=None,
@@ -207,6 +220,7 @@ async def test_outcome_recorder_notify_handles_missing_dependencies():
 
 
 def test_outcome_recorder_failure_message_format():
+    t('tests.unit.test_scheduler_services.test_outcome_recorder_failure_message_format')
     scheduler = SimpleNamespace(
         logger=SimpleNamespace(info=lambda *a, **k: None, error=lambda *a, **k: None),
         _get_reservation_field=lambda reservation, field, default=None: reservation.get(field, default),
@@ -227,6 +241,7 @@ def test_outcome_recorder_failure_message_format():
 
 
 def test_outcome_recorder_format_success_booking_result():
+    t('tests.unit.test_scheduler_services.test_outcome_recorder_format_success_booking_result')
     scheduler = SimpleNamespace(
         logger=SimpleNamespace(info=lambda *a, **k: None, error=lambda *a, **k: None),
         _get_reservation_field=lambda reservation, field, default=None: reservation.get(field, default),
@@ -255,9 +270,11 @@ def test_outcome_recorder_format_success_booking_result():
 
 @pytest.mark.asyncio
 async def test_outcome_recorder_notify_skips_missing_entities():
+    t('tests.unit.test_scheduler_services.test_outcome_recorder_notify_skips_missing_entities')
     notifications = []
 
     async def send_notification(user_id, message):
+        t('tests.unit.test_scheduler_services.test_outcome_recorder_notify_skips_missing_entities.send_notification')
         notifications.append((user_id, message))
 
     scheduler = SimpleNamespace(

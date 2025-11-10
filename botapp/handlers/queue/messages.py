@@ -1,6 +1,7 @@
 """Shared Markdown message builders for queue flows."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import Iterable
 
@@ -39,12 +40,14 @@ class QueueMessageFactory:
     MODIFY_UNAVAILABLE = _STATIC_MESSAGES["modification_unavailable"]
 
     def __getattr__(self, name: str):
+        t('botapp.handlers.queue.messages.QueueMessageFactory.__getattr__')
         if name in self._STATIC_MESSAGES:
             return lambda: self._STATIC_MESSAGES[name]
         raise AttributeError(name)
 
     def profile_incomplete(self, missing_fields: Iterable[str]) -> str:
         """Return profile warning text including missing field names."""
+        t('botapp.handlers.queue.messages.QueueMessageFactory.profile_incomplete')
 
         missing = ", ".join(missing_fields)
         return (
@@ -55,6 +58,7 @@ class QueueMessageFactory:
 
     def time_updated(self, new_time: str) -> str:
         """Return success text for reservation time updates."""
+        t('botapp.handlers.queue.messages.QueueMessageFactory.time_updated')
 
         return (
             "✅ **Time Updated!**\n\n"
@@ -63,6 +67,7 @@ class QueueMessageFactory:
 
     def courts_updated(self, courts_label: str | None = None) -> str:
         """Return success text for reservation court updates."""
+        t('botapp.handlers.queue.messages.QueueMessageFactory.courts_updated')
 
         suffix = (
             f"Your court preferences have been updated to {courts_label}."

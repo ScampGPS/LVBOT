@@ -1,6 +1,7 @@
 """Queue flow classes extracted from the queue handler."""
 
 from __future__ import annotations
+from tracking import t
 
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -42,6 +43,7 @@ def format_court_preferences(
     all_courts: Sequence[int] | None = None,
 ) -> str:
     """Create a readable label for court selections."""
+    t('botapp.handlers.queue.flows.format_court_preferences')
 
     courts = list(selected_courts)
     if not courts:
@@ -66,6 +68,7 @@ class QueueFlowBase:
         *,
         request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
+        t('botapp.handlers.queue.flows.QueueFlowBase.__init__')
         self.deps = deps
         self.logger = deps.logger
         self.messages = messages
@@ -75,6 +78,7 @@ class QueueFlowBase:
 
     async def answer_callback(self, query, text: str | None = None) -> None:
         """Safely answer callback queries using the provided helper."""
+        t('botapp.handlers.queue.flows.QueueFlowBase.answer_callback')
 
         try:
             await self._safe_answer(query, text)
@@ -84,6 +88,7 @@ class QueueFlowBase:
 
     async def edit_callback(self, query, text: str, **kwargs) -> None:
         """Edit callback messages through the shared helper."""
+        t('botapp.handlers.queue.flows.QueueFlowBase.edit_callback')
 
         await self._edit_message(query, text, **kwargs)
 
@@ -108,6 +113,7 @@ class QueueBookingFlow(QueueFlowBase):
         *,
         request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
+        t('botapp.handlers.queue.flows.QueueBookingFlow.__init__')
         super().__init__(
             deps,
             messages,
@@ -122,10 +128,12 @@ class QueueBookingFlow(QueueFlowBase):
 
     @staticmethod
     def _session_store(context: ContextTypes.DEFAULT_TYPE) -> QueueSessionStore:
+        t('botapp.handlers.queue.flows.QueueBookingFlow._session_store')
         return QueueSessionStore(context)
 
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Display the queue booking menu with date options."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.show_menu')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -205,6 +213,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def select_date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle queue booking date selection."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.select_date')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -250,6 +259,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def select_time(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle queue booking time selection."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.select_time')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -336,6 +346,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def select_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle court selection for queue booking."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.select_courts')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -384,6 +395,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Confirm queue booking and add reservation to queue."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.confirm')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -466,6 +478,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def handle_matrix_time_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle time selection from the matrix keyboard."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.handle_matrix_time_selection')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -520,6 +533,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def handle_matrix_day_cycle(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Cycle to the next available date within the live matrix."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.handle_matrix_day_cycle')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -546,6 +560,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Cancel queue booking and clean up state."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.cancel')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -570,6 +585,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def handle_blocked_date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Allow selecting within-48h dates when test mode permits."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.handle_blocked_date')
 
         query = update.callback_query
         config = self._get_test_mode()
@@ -630,6 +646,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def back_to_time(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Return the user to the time selection step."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.back_to_time')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -658,6 +675,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     async def back_to_courts(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Return the user to the court selection step."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.back_to_courts')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -709,6 +727,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     def clear_state(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove queue-booking state from the user context."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow.clear_state')
 
         self.logger.info("QueueBookingFlow.clear_state")
         self._session_store(context).clear()
@@ -721,6 +740,7 @@ class QueueBookingFlow(QueueFlowBase):
         selected_date: date,
     ) -> None:
         """Display available time slots for the selected date."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow._show_time_selection')
 
         query = update.callback_query
 
@@ -778,6 +798,7 @@ class QueueBookingFlow(QueueFlowBase):
         selected_date: date,
     ) -> list[str]:
         """Return available queue time slots respecting test mode rules."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow._available_time_slots')
 
         config = self._get_test_mode()
         tz = self._MEXICO_TZ
@@ -835,6 +856,7 @@ class QueueBookingFlow(QueueFlowBase):
         now: datetime,
     ) -> list[str]:
         """Return slots that are more than 48 hours away."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow._filter_slots_beyond_48_hours')
 
         filtered: list[str] = []
         for slot_str in all_slots:
@@ -852,6 +874,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     def _date_has_available_slots(self, check_date: date, config, tz, now: datetime) -> bool:
         """Return True if the date has slots respecting the queue rules."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow._date_has_available_slots')
 
         if config.enabled and config.allow_within_48h:
             return True
@@ -871,6 +894,7 @@ class QueueBookingFlow(QueueFlowBase):
 
     @staticmethod
     def _format_date_label(candidate: date, today: date) -> str:
+        t('botapp.handlers.queue.flows.QueueBookingFlow._format_date_label')
         if candidate == today:
             return f"Today ({candidate.strftime('%b %d')})"
         if candidate == today + timedelta(days=1):
@@ -878,6 +902,7 @@ class QueueBookingFlow(QueueFlowBase):
         return candidate.strftime("%a, %b %d")
 
     def _should_use_matrix(self, selected_date: date, config, tz, now: datetime) -> bool:
+        t('botapp.handlers.queue.flows.QueueBookingFlow._should_use_matrix')
         if not (config.enabled and config.allow_within_48h):
             return False
         start_of_day = tz.localize(datetime.combine(selected_date, datetime.min.time()))
@@ -892,6 +917,7 @@ class QueueBookingFlow(QueueFlowBase):
         now: datetime,
     ) -> bool:
         """Render the matrix availability keyboard; return True if handled."""
+        t('botapp.handlers.queue.flows.QueueBookingFlow._show_matrix_time_selection')
 
         query = update.callback_query
 
@@ -961,6 +987,7 @@ class QueueBookingFlow(QueueFlowBase):
         selected_time: str,
     ) -> None:
         # Get user language for translated buttons
+        t('botapp.handlers.queue.flows.QueueBookingFlow._present_court_selection')
         user_id = (
             query.from_user.id
             if query and getattr(query, 'from_user', None)
@@ -990,6 +1017,7 @@ class QueueBookingFlow(QueueFlowBase):
         *,
         user_id: int | None = None,
     ) -> None:
+        t('botapp.handlers.queue.flows.QueueBookingFlow._complete_court_selection')
         store = self._session_store(context)
         if user_id is None:
             user_id = (
@@ -1112,6 +1140,7 @@ class QueueReservationManager(QueueFlowBase):
         *,
         request_builder: ReservationRequestBuilder | None = None,
     ) -> None:
+        t('botapp.handlers.queue.flows.QueueReservationManager.__init__')
         super().__init__(
             deps,
             messages,
@@ -1123,6 +1152,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def show_user_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Display the queued reservations menu for the current user."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.show_user_menu')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1223,6 +1253,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def manage_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Show a combined reservation view with actions for the user."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.manage_reservation')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1266,6 +1297,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def manage_queue_reservation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Show details for a queued reservation with modification options."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.manage_queue_reservation')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1295,6 +1327,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def handle_action(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Dispatch reservation actions (cancel, modify, share)."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.handle_action')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1326,6 +1359,7 @@ class QueueReservationManager(QueueFlowBase):
         reservation_id: str,
     ) -> None:
         """Cancel a reservation owned by the current user."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.cancel_reservation')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1367,6 +1401,7 @@ class QueueReservationManager(QueueFlowBase):
         reservation_id: str,
     ) -> None:
         """Initiate modification flow for a queued reservation."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.modify_reservation')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1421,6 +1456,7 @@ class QueueReservationManager(QueueFlowBase):
         reservation_id: str,
     ) -> None:
         """Send a shareable reservation message to the user."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.share_reservation')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1461,6 +1497,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def modify_option(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle the intermediate modification option selection."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.modify_option')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1512,6 +1549,7 @@ class QueueReservationManager(QueueFlowBase):
 
     async def time_modification(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Apply a time change for the queued reservation under modification."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.time_modification')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1542,6 +1580,7 @@ class QueueReservationManager(QueueFlowBase):
         )
 
     def _get_queue_reservation(self, reservation_id: str, user_id: int) -> dict[str, Any] | None:
+        t('botapp.handlers.queue.flows.QueueReservationManager._get_queue_reservation')
         reservation = self.deps.reservation_queue.get_reservation(reservation_id)
         if reservation and reservation.get('user_id') == user_id:
             reservation = dict(reservation)
@@ -1550,6 +1589,7 @@ class QueueReservationManager(QueueFlowBase):
         return None
 
     def _get_tracker_reservation(self, reservation_id: str, user_id: int) -> dict[str, Any] | None:
+        t('botapp.handlers.queue.flows.QueueReservationManager._get_tracker_reservation')
         tracker = getattr(self.deps, 'reservation_tracker', None)
         if not tracker:
             return None
@@ -1565,6 +1605,7 @@ class QueueReservationManager(QueueFlowBase):
         reservation: Mapping[str, Any],
         reservation_id: str,
     ) -> tuple[str, list[list[InlineKeyboardButton]]]:
+        t('botapp.handlers.queue.flows.QueueReservationManager._reservation_detail_view')
         date_str = reservation.get('target_date', reservation.get('date', 'Unknown'))
         formatted_date = self._format_date_with_suffix(date_str)
         time_str = reservation.get('target_time', reservation.get('time', 'Unknown'))
@@ -1598,6 +1639,7 @@ class QueueReservationManager(QueueFlowBase):
         reservation: Mapping[str, Any],
         reservation_id: str,
     ) -> tuple[str, list[list[InlineKeyboardButton]]]:
+        t('botapp.handlers.queue.flows.QueueReservationManager._queued_reservation_view')
         target_date = datetime.strptime(reservation['target_date'], '%Y-%m-%d')
         formatted_date = self._format_date_object(target_date)
         time_str = reservation['target_time']
@@ -1633,6 +1675,7 @@ class QueueReservationManager(QueueFlowBase):
 
     @staticmethod
     def _format_court_string(courts: Any) -> str:
+        t('botapp.handlers.queue.flows.QueueReservationManager._format_court_string')
         if isinstance(courts, list):
             if len(courts) == 3:
                 return "Courts 1, 2, 3"
@@ -1643,6 +1686,7 @@ class QueueReservationManager(QueueFlowBase):
 
     @staticmethod
     def _format_date_with_suffix(date_str: str) -> str:
+        t('botapp.handlers.queue.flows.QueueReservationManager._format_date_with_suffix')
         try:
             date_obj = datetime.strptime(date_str, '%Y-%m-%d')
         except Exception:
@@ -1651,6 +1695,7 @@ class QueueReservationManager(QueueFlowBase):
 
     @staticmethod
     def _format_date_object(date_obj: datetime) -> str:
+        t('botapp.handlers.queue.flows.QueueReservationManager._format_date_object')
         day = date_obj.day
         if 10 <= day % 100 <= 20:
             suffix = 'th'
@@ -1665,6 +1710,7 @@ class QueueReservationManager(QueueFlowBase):
         target_user_id: int,
     ) -> None:
         """Display reservations for a specific user (admin helper)."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.display_user_reservations')
 
         query = update.callback_query
         await self.answer_callback(query)
@@ -1761,6 +1807,7 @@ class QueueReservationManager(QueueFlowBase):
         all_reservations: list[dict[str, Any]],
     ) -> None:
         """Render all reservations grouped by date."""
+        t('botapp.handlers.queue.flows.QueueReservationManager.display_all_reservations')
 
         message_lines = ["📊 **All Reservations**\n\n"]
         reservations_by_date: dict[str, list[dict[str, Any]]] = {}
@@ -1802,6 +1849,7 @@ class QueueReservationManager(QueueFlowBase):
         )
 
     def _get_user_name(self, user_id: int) -> str:
+        t('botapp.handlers.queue.flows.QueueReservationManager._get_user_name')
         user = self.deps.user_manager.get_user(user_id)
         if not user:
             return f"User {user_id}"

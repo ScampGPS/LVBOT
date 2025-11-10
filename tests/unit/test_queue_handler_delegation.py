@@ -1,3 +1,4 @@
+from tracking import t
 import types
 import pytest
 
@@ -7,45 +8,56 @@ from botapp.handlers.queue.handler import QueueHandler
 
 class DummyContext:
     def __init__(self):
+        t('tests.unit.test_queue_handler_delegation.DummyContext.__init__')
         self.user_data = {}
 
 
 class DummyQuery:
     def __init__(self, data="noop", user_id=1):
+        t('tests.unit.test_queue_handler_delegation.DummyQuery.__init__')
         self.data = data
         self.from_user = types.SimpleNamespace(id=user_id)
 
     async def answer(self, text=None):
+        t('tests.unit.test_queue_handler_delegation.DummyQuery.answer')
         return text
 
 
 class DummyUpdate:
     def __init__(self, data="noop", user_id=1):
+        t('tests.unit.test_queue_handler_delegation.DummyUpdate.__init__')
         self.callback_query = DummyQuery(data, user_id)
 
 
 class FailingQuery(DummyQuery):
     async def answer(self, text=None):
+        t('tests.unit.test_queue_handler_delegation.FailingQuery.answer')
         raise RuntimeError("boom")
 
 
 class CallRecorder:
     def __init__(self):
+        t('tests.unit.test_queue_handler_delegation.CallRecorder.__init__')
         self.calls = []
 
     def record_async(self, name):
+        t('tests.unit.test_queue_handler_delegation.CallRecorder.record_async')
         async def _call(*args, **kwargs):
+            t('tests.unit.test_queue_handler_delegation.CallRecorder.record_async._call')
             self.calls.append((name, args, kwargs))
         return _call
 
     def record_sync(self, name):
+        t('tests.unit.test_queue_handler_delegation.CallRecorder.record_sync')
         def _call(*args, **kwargs):
+            t('tests.unit.test_queue_handler_delegation.CallRecorder.record_sync._call')
             self.calls.append((name, args, kwargs))
         return _call
 
 
 @pytest.fixture
 def handler_with_spies(monkeypatch):
+    t('tests.unit.test_queue_handler_delegation.handler_with_spies')
     deps = CallbackDependencies(
         logger=types.SimpleNamespace(warning=lambda *a, **k: None, error=lambda *a, **k: None, info=lambda *a, **k: None),
         availability_checker=None,
@@ -93,6 +105,7 @@ def handler_with_spies(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_booking_handler_delegation(handler_with_spies):
+    t('tests.unit.test_queue_handler_delegation.test_booking_handler_delegation')
     handler, booking_recorder, _ = handler_with_spies
     update = DummyUpdate()
     context = DummyContext()
@@ -126,6 +139,7 @@ async def test_booking_handler_delegation(handler_with_spies):
 
 @pytest.mark.asyncio
 async def test_reservation_manager_delegation(handler_with_spies):
+    t('tests.unit.test_queue_handler_delegation.test_reservation_manager_delegation')
     handler, _, reservation_recorder = handler_with_spies
     update = DummyUpdate()
     context = DummyContext()
@@ -161,6 +175,7 @@ async def test_reservation_manager_delegation(handler_with_spies):
 
 @pytest.mark.asyncio
 async def test_safe_answer_callback_branches(handler_with_spies):
+    t('tests.unit.test_queue_handler_delegation.test_safe_answer_callback_branches')
     handler, _, _ = handler_with_spies
 
     query = DummyQuery()

@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional
 
 from automation.shared.booking_contracts import BookingRequest, BookingResult
-from botapp.notifications import format_failure_message, format_success_message
+from botapp.notifications import (
+    send_failure_notification,
+    send_success_notification,
+)
 from reservations.queue.scheduler.pipeline import (
     HydrationFailure,
     ReservationBatch,
@@ -68,6 +71,7 @@ class ReservationHydrator:
         batch: ReservationBatch,
         failures: Iterable[HydrationFailure],
     ) -> List[Dict[str, Any]]:
+        t('reservations.queue.scheduler.services.ReservationHydrator._filter_failures')
         if not failures:
             return list(batch.reservations)
 
@@ -95,6 +99,7 @@ class ReservationHydrator:
         reservations: Iterable[Dict[str, Any]],
         requests: Iterable[BookingRequest],
     ) -> Dict[str, BookingRequest]:
+        t('reservations.queue.scheduler.services.ReservationHydrator._map_prepared_requests')
         reservation_ids = {
             str(reservation.get('id'))
             for reservation in reservations
@@ -134,6 +139,7 @@ class SchedulerPipeline:
         await self._execute_batches(evaluation.ready_for_execution)
 
     async def _run_health_checks(self, batches: Iterable[ReservationBatch]) -> None:
+        t('reservations.queue.scheduler.services.SchedulerPipeline._run_health_checks')
         for batch in batches:
             reservations = list(getattr(batch, 'reservations', []) or [])
             if not reservations:
@@ -141,6 +147,7 @@ class SchedulerPipeline:
             await self._health_check(reservations)
 
     async def _execute_batches(self, batches: Iterable[ReservationBatch]) -> None:
+        t('reservations.queue.scheduler.services.SchedulerPipeline._execute_batches')
         for batch in batches:
             reservations = getattr(batch, 'reservations', None)
             if not reservations:
@@ -214,14 +221,19 @@ class OutcomeRecorder:
         t('reservations.queue.scheduler.services.OutcomeRecorder.notify')
         self._logger.info("🔔 Starting notification process for %d result(s)", len(results))
 
+        warn = getattr(self._logger, 'warning', None)
+        if not warn:
+            warn = self._logger.info
+        debug = getattr(self._logger, 'debug', None)
+
         bot = getattr(self._scheduler, 'bot', None)
         user_db = getattr(self._scheduler, 'user_db', None)
 
         if not bot:
-            self._logger.warning("⚠️  No bot instance available - skipping notifications")
+            warn("⚠️  No bot instance available - skipping notifications")
             return
         if not user_db:
-            self._logger.warning("⚠️  No user_db instance available - skipping notifications")
+            warn("⚠️  No user_db instance available - skipping notifications")
             return
 
         self._logger.info("✓ Bot and user_db available, processing notifications...")
@@ -243,7 +255,7 @@ class OutcomeRecorder:
                 user_id = self._scheduler._get_reservation_field(reservation, 'user_id')
             elif isinstance(booking_result, BookingResult):
                 user_id = booking_result.user.user_id
-                self._logger.warning(
+                warn(
                     "⚠️  Reservation %s missing from queue; using booking result metadata",
                     reservation_id,
                 )
@@ -254,7 +266,7 @@ class OutcomeRecorder:
                     'user_id': user_id,
                 }
             else:
-                self._logger.warning(
+                warn(
                     "⚠️  Reservation %s not found and no booking result available",
                     reservation_id,
                 )
@@ -264,20 +276,27 @@ class OutcomeRecorder:
 
             user = user_db.get_user(user_id) if user_db else None
             if not user:
-                self._logger.warning("⚠️  User %s not found in database", user_id)
+                warn("⚠️  User %s not found in database", user_id)
                 continue
 
             self._logger.info("📤 Formatting message for user %s...", user_id)
+            language = user.get('language', 'es') if isinstance(user, dict) else 'es'
+
             try:
-                message = self._format_message(reservation, result)
-                self._logger.debug("📄 Message content (first 200 chars): %s", message[:200] if message else "None")
+                notification = self._build_notification(user_id, reservation, result, language)
+                if debug:
+                    preview_text = notification.get('message') if isinstance(notification, dict) else notification
+                    debug(
+                        "📄 Message content (first 200 chars): %s",
+                        preview_text[:200] if preview_text else "None",
+                    )
             except Exception as fmt_exc:
                 self._logger.error("❌ Failed to format message for user %s: %s", user_id, fmt_exc, exc_info=True)
                 continue
 
             try:
                 self._logger.info("📨 Sending notification to user %s...", user_id)
-                await bot.send_notification(user_id, message)
+                await bot.send_notification(user_id, notification)
                 self._logger.info("✅ Notification sent successfully to user %s", user_id)
             except Exception as exc:  # pragma: no cover - notification safety
                 self._logger.error(
@@ -289,15 +308,22 @@ class OutcomeRecorder:
 
         self._logger.info("✅ Notification process completed")
 
-    def _format_message(self, reservation: Dict[str, Any], result: Dict[str, Any]) -> str:
+    def _build_notification(
+        self,
+        user_id: int,
+        reservation: Dict[str, Any],
+        result: Dict[str, Any],
+        language: str = 'es',
+    ) -> Any:
+        t('reservations.queue.scheduler.services.OutcomeRecorder._build_notification')
         booking_result = result.get('booking_result')
         target_date = self._scheduler._get_reservation_field(reservation, 'target_date')
         target_time = self._scheduler._get_reservation_field(reservation, 'target_time')
 
         if isinstance(booking_result, BookingResult):
             if booking_result.success:
-                return format_success_message(booking_result)
-            return format_failure_message(booking_result)
+                return send_success_notification(user_id, booking_result, language=language)
+            return send_failure_notification(user_id, booking_result, language=language)
 
         if result.get('success'):
             court = result.get('court', 'Unknown')
@@ -317,3 +343,11 @@ class OutcomeRecorder:
             "Your reservation has been removed from the queue.\n"
             "Please try booking manually or create a new reservation."
         )
+
+    # Backwards-compatibility shim for tests expecting plain message formatting
+    def _format_message(self, reservation: Dict[str, Any], result: Dict[str, Any]) -> str:
+        t('reservations.queue.scheduler.services.OutcomeRecorder._format_message')
+        notification = self._build_notification(0, reservation, result)
+        if isinstance(notification, dict):
+            return notification.get('message') or notification.get('text') or ''
+        return notification

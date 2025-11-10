@@ -5,6 +5,7 @@ message with the calendar links extracted from the latest booking logs.
 
 This uses the production notification code to ensure consistency.
 """
+from tracking import t
 
 import asyncio
 import json
@@ -35,6 +36,7 @@ BOOKING_INFO = {
 
 def create_booking_result_from_log_data(booking_info: dict) -> BookingResult:
     """Create a BookingResult object from log data to use production notification code."""
+    t('tests.bot.test_send_confirmation_message.create_booking_result_from_log_data')
 
     user = BookingUser(
         user_id=USER_ID,
@@ -74,6 +76,7 @@ async def send_confirmation_to_user(language: str = "es"):
     Args:
         language: Language code ('es' for Spanish, 'en' for English)
     """
+    t('tests.bot.test_send_confirmation_message.send_confirmation_to_user')
 
     # Get bot token from settings
     settings = get_settings()
@@ -125,6 +128,7 @@ async def send_confirmation_to_user(language: str = "es"):
 @pytest.mark.asyncio
 async def test_send_confirmation_message_spanish():
     """Test sending confirmation message with booking links to user in Spanish."""
+    t('tests.bot.test_send_confirmation_message.test_send_confirmation_message_spanish')
 
     result = await send_confirmation_to_user(language="es")
 
@@ -152,6 +156,7 @@ async def test_send_confirmation_message_spanish():
 @pytest.mark.asyncio
 async def test_send_confirmation_message_english():
     """Test sending confirmation message with booking links to user in English."""
+    t('tests.bot.test_send_confirmation_message.test_send_confirmation_message_english')
 
     result = await send_confirmation_to_user(language="en")
 
@@ -181,6 +186,7 @@ def extract_links_from_logs(log_file_path: Path) -> dict:
 
     This function can be used to dynamically parse logs instead of hardcoding.
     """
+    t('tests.bot.test_send_confirmation_message.extract_links_from_logs')
 
     if not log_file_path.exists():
         return {}

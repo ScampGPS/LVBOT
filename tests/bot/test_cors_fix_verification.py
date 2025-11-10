@@ -9,6 +9,7 @@ Run on Windows CMD:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import json
@@ -27,6 +28,7 @@ COURT = 3
 @pytest.fixture
 def cors_test_dir():
     """Create directory for CORS test artifacts."""
+    t('tests.bot.test_cors_fix_verification.cors_test_dir')
     artifacts_dir = Path("logs/latest_log/cors_verification")
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return artifacts_dir
@@ -36,6 +38,7 @@ def cors_test_dir():
 @pytest.mark.manual
 async def test_cors_fix_verification(cors_test_dir):
     """Verify CORS fix by checking console for errors and testing form submission."""
+    t('tests.bot.test_cors_fix_verification.test_cors_fix_verification')
 
     import os
     flag = os.getenv("LV_MANUAL_CAPTURE", "").strip()
@@ -66,6 +69,7 @@ async def test_cors_fix_verification(cors_test_dir):
 
         # Capture console logs
         def log_handler(msg):
+            t('tests.bot.test_cors_fix_verification.test_cors_fix_verification.log_handler')
             log_entry = {
                 "timestamp": datetime.now().isoformat(),
                 "type": msg.type,
@@ -90,6 +94,7 @@ async def test_cors_fix_verification(cors_test_dir):
 
         # Monitor network for third-party resources
         def response_handler(response):
+            t('tests.bot.test_cors_fix_verification.test_cors_fix_verification.response_handler')
             nonlocal recaptcha_loaded, stripe_loaded
 
             url = response.url.lower()

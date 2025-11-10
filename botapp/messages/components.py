@@ -1,6 +1,7 @@
 """Reusable message handling components for bot workflows."""
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import logging
@@ -16,9 +17,11 @@ class MessageResponder:
     """Low-level helpers for replying/editing Telegram messages."""
 
     def __init__(self, *, logger: Optional[logging.Logger] = None) -> None:
+        t('botapp.messages.components.MessageResponder.__init__')
         self._logger = logger or logging.getLogger('MessageHandlers')
 
     async def edit_or_reply(self, update: Update, text: str, **kwargs: Any) -> None:
+        t('botapp.messages.components.MessageResponder.edit_or_reply')
         if 'parse_mode' not in kwargs:
             kwargs['parse_mode'] = ParseMode.MARKDOWN
 
@@ -48,6 +51,7 @@ class MessageResponder:
         logger: Optional[logging.Logger] = None,
         **kwargs: Any,
     ) -> None:
+        t('botapp.messages.components.MessageResponder.edit_callback_message')
         attempts = 0
         wait_time = 0.0
         target_logger = logger or self._logger
@@ -73,6 +77,7 @@ class MessageResponder:
                 raise
 
     async def safe_answer(self, callback_query, text: Optional[str] = None, *, show_alert: bool = False) -> None:
+        t('botapp.messages.components.MessageResponder.safe_answer')
         try:
             await callback_query.answer(text, show_alert=show_alert)
         except Exception as exc:
@@ -83,9 +88,11 @@ class MessageSender:
     """High-level helpers for sending notifications and confirmations."""
 
     def __init__(self, responder: MessageResponder) -> None:
+        t('botapp.messages.components.MessageSender.__init__')
         self._responder = responder
 
     async def handle_unauthorized_user(self, update: Update) -> None:
+        t('botapp.messages.components.MessageSender.handle_unauthorized_user')
         message = (
             "🔐 You are not authorized to use this bot.\n"
             "Please send /start to request access."
@@ -107,6 +114,7 @@ class MessageSender:
         *,
         help_text: Optional[str] = None,
     ) -> None:
+        t('botapp.messages.components.MessageSender.handle_invalid_command')
         msg = f"❌ {error_msg}"
         if help_text:
             msg += f"\n\n💡 {help_text}"
@@ -117,6 +125,7 @@ class MessageSender:
             await self._responder.safe_answer(update.callback_query, error_msg, show_alert=True)
 
     async def send_loading(self, update: Update, text: str = "Processing...") -> Optional[Message]:
+        t('botapp.messages.components.MessageSender.send_loading')
         loading_text = f"⏳ {text}"
 
         if update.message:
@@ -127,6 +136,7 @@ class MessageSender:
         return None
 
     async def send_error(self, update: Update, error: Exception, *, user_friendly: bool = True) -> None:
+        t('botapp.messages.components.MessageSender.send_error')
         if user_friendly:
             message = (
                 "❌ An error occurred while processing your request.\n"
@@ -144,6 +154,7 @@ class MessageSender:
         callback_yes: str,
         callback_no: str,
     ) -> None:
+        t('botapp.messages.components.MessageSender.confirm_action')
         keyboard = InlineKeyboardMarkup(
             [[
                 InlineKeyboardButton("✅ Yes", callback_data=callback_yes),
@@ -157,9 +168,11 @@ class ChunkedMessageSender:
     """Utility for sending chunked messages within Telegram limits."""
 
     def __init__(self, *, parse_mode: str = ParseMode.MARKDOWN) -> None:
+        t('botapp.messages.components.ChunkedMessageSender.__init__')
         self._parse_mode = parse_mode
 
     async def send(self, update: Update, text: str, *, chunk_size: int = 4000) -> List[Message]:
+        t('botapp.messages.components.ChunkedMessageSender.send')
         messages: List[Message] = []
         chunks = split_message(text, chunk_size)
 
@@ -186,6 +199,7 @@ class ChunkedMessageSender:
 
 
 def split_message(text: str, max_length: int = 4000) -> List[str]:
+    t('botapp.messages.components.split_message')
     if len(text) <= max_length:
         return [text]
 
@@ -223,6 +237,7 @@ def split_message(text: str, max_length: int = 4000) -> List[str]:
 
 
 async def delete_message_safe(message: Message) -> bool:
+    t('botapp.messages.components.delete_message_safe')
     try:
         await message.delete()
         return True
@@ -232,6 +247,7 @@ async def delete_message_safe(message: Message) -> bool:
 
 
 def format_command_list(commands: Dict[str, str], *, is_admin: bool = False) -> str:
+    t('botapp.messages.components.format_command_list')
     message = "📋 **Available Commands**\n\n"
     for cmd, desc in commands.items():
         if not cmd.startswith('admin_') or is_admin:
@@ -240,6 +256,7 @@ def format_command_list(commands: Dict[str, str], *, is_admin: bool = False) -> 
 
 
 def get_user_info(update: Update) -> Dict[str, Any]:
+    t('botapp.messages.components.get_user_info')
     user = update.effective_user
     return {
         'user_id': user.id,
@@ -258,6 +275,7 @@ def rate_limit_check(
     limit_seconds: int = 5,
     storage: Optional[Dict[str, float]] = None,
 ) -> bool:
+    t('botapp.messages.components.rate_limit_check')
     if storage is None:
         return True
 

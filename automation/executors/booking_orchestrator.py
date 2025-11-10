@@ -249,6 +249,7 @@ class DynamicBookingOrchestrator:
 
     def _create_assignment(self, attempt: BookingAttempt, position: int = 0) -> Dict[str, Any]:
         """Build a browser assignment for the provided attempt."""
+        t('automation.executors.booking_orchestrator.DynamicBookingOrchestrator._create_assignment')
 
         browser = self.browser_strategies[position % len(self.browser_strategies)]
         attempt.browser_id = browser.get("id")

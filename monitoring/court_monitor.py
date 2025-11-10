@@ -163,6 +163,7 @@ class CourtMonitor:
         play_date: datetime,
         advance_seconds: int,
     ) -> Optional[tuple[str, datetime, datetime]]:
+        t('monitoring.court_monitor.CourtMonitor._next_slot')
         now = datetime.now(self.timezone)
         for slot in slots:
             hour, minute = map(int, slot.split(':'))
@@ -173,13 +174,16 @@ class CourtMonitor:
         return None
 
     def _to_timezone(self, dt: datetime) -> datetime:
+        t('monitoring.court_monitor.CourtMonitor._to_timezone')
         if dt.tzinfo is None:
             return self.timezone.localize(dt)
         return dt.astimezone(self.timezone)
 
     async def __aenter__(self):
+        t('monitoring.court_monitor.CourtMonitor.__aenter__')
         await self.start()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        t('monitoring.court_monitor.CourtMonitor.__aexit__')
         await self.stop()

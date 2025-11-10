@@ -1,6 +1,7 @@
 """Playwright-backed regression tests for future date booking flows."""
 
 from __future__ import annotations
+from tracking import t
 
 from datetime import date, timedelta
 from types import SimpleNamespace
@@ -22,12 +23,15 @@ class _StubReservationQueue:
     """Minimal reservation queue stub for handler dependencies."""
 
     def get_reservation(self, reservation_id):  # pragma: no cover - behaviour unused here
+        t('tests.bot.test_future_date_flow_playwright._StubReservationQueue.get_reservation')
         return None
 
     def update_reservation(self, reservation_id, payload):  # pragma: no cover - behaviour unused here
+        t('tests.bot.test_future_date_flow_playwright._StubReservationQueue.update_reservation')
         return None
 
     def get_user_reservations(self, user_id):  # pragma: no cover - behaviour unused here
+        t('tests.bot.test_future_date_flow_playwright._StubReservationQueue.get_user_reservations')
         return []
 
 
@@ -35,6 +39,7 @@ class _StubUserManager:
     """Provide the admin check required by the booking handler."""
 
     def is_admin(self, user_id):
+        t('tests.bot.test_future_date_flow_playwright._StubUserManager.is_admin')
         return False
 
 
@@ -48,6 +53,7 @@ async def test_future_date_flow_uses_markdown_v2_with_escaped_symbols():
     uses Playwright to validate that the emitted text still contains the
     necessary escapes, giving us coverage without launching the full bot.
     """
+    t('tests.bot.test_future_date_flow_playwright.test_future_date_flow_uses_markdown_v2_with_escaped_symbols')
 
     logger = DummyLogger()
     deps = CallbackDependencies(
@@ -121,6 +127,7 @@ async def test_future_date_flow_uses_markdown_v2_with_escaped_symbols():
 @pytest.mark.asyncio
 async def test_matrix_selection_skips_additional_court_prompt():
     """Selecting a matrix slot should jump straight to confirmation."""
+    t('tests.bot.test_future_date_flow_playwright.test_matrix_selection_skips_additional_court_prompt')
 
     harness = BotTestHarness()
 

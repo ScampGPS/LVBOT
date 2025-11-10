@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _manager_delegate(method_name: str, tracking_id: str, doc: str):
     """Create an async wrapper that forwards to ``BrowserPoolManager``."""
+    t('automation.browser.async_browser_pool._manager_delegate')
 
     async def handler(self, *args, **kwargs):
         t(tracking_id)
@@ -34,6 +35,7 @@ def _manager_delegate(method_name: str, tracking_id: str, doc: str):
 
 
 def _health_delegate(method_name: str, tracking_id: str, doc: str, *, is_async: bool):
+    t('automation.browser.async_browser_pool._health_delegate')
     health_method = getattr(pool_health, method_name)
 
     if is_async:

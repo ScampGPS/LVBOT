@@ -1,3 +1,4 @@
+from tracking import t
 from reservations.queue.reservation_transitions import (
     add_to_waitlist,
     apply_status_update,
@@ -5,6 +6,7 @@ from reservations.queue.reservation_transitions import (
 
 
 def test_apply_status_update_mutates_reservation():
+    t('tests.unit.test_reservation_transitions.test_apply_status_update_mutates_reservation')
     reservation = {"status": "pending", "attempts": 0}
 
     updated = apply_status_update(reservation, "scheduled", attempts=1)
@@ -16,6 +18,7 @@ def test_apply_status_update_mutates_reservation():
 
 
 def test_add_to_waitlist_sets_fields():
+    t('tests.unit.test_reservation_transitions.test_add_to_waitlist_sets_fields')
     reservation = {"status": "pending"}
 
     add_to_waitlist(reservation, position=2)

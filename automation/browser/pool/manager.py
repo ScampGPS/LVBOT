@@ -51,12 +51,14 @@ class BrowserPoolManager:
     @staticmethod
     def _get_storage_state_path(court: int) -> Path:
         """Get path to saved browser state for a court."""
+        t('automation.browser.pool.manager.BrowserPoolManager._get_storage_state_path')
         BROWSER_STATES_DIR.mkdir(exist_ok=True)
         return BROWSER_STATES_DIR / f"court_{court}_state.json"
 
     @staticmethod
     def _has_saved_state(court: int) -> bool:
         """Check if saved browser state exists for a court."""
+        t('automation.browser.pool.manager.BrowserPoolManager._has_saved_state')
         return BrowserPoolManager._get_storage_state_path(court).exists()
 
     @staticmethod
@@ -78,6 +80,7 @@ class BrowserPoolManager:
 
     async def _save_context_state(self, context, court: int) -> None:
         """Save browser state (cookies, localStorage) for returning user simulation."""
+        t('automation.browser.pool.manager.BrowserPoolManager._save_context_state')
         try:
             state_path = self._get_storage_state_path(court)
             await context.storage_state(path=str(state_path))
@@ -524,6 +527,7 @@ class BrowserPoolManager:
         self, court: Optional[int], total_cleanup: bool = False
     ) -> None:
         """Close page/context for a specific court or perform full cleanup."""
+        t('automation.browser.pool.manager.BrowserPoolManager._cleanup_failed_page')
 
         if court is not None:
             page = self.pool.pages.pop(court, None)

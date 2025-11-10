@@ -28,6 +28,7 @@ def _delegate(
     doc: str,
 ):
     """Create an async handler that logs and forwards to a dependency."""
+    t('botapp.handlers.queue.handler._delegate')
 
     async def handler(self, *args, **kwargs):
         t(tracking_id)
@@ -71,9 +72,11 @@ class QueueHandler(CallbackResponseMixin):
         self.messages = QueueMessageFactory()
 
         async def safe_answer(query, text: str | None = None) -> None:
+            t('botapp.handlers.queue.handler.QueueHandler.__init__.safe_answer')
             return await self._safe_answer_callback(query, text)
 
         async def edit_message(query, text: str, **kwargs) -> None:
+            t('botapp.handlers.queue.handler.QueueHandler.__init__.edit_message')
             return await self._edit_callback_message(query, text, **kwargs)
 
         self.booking_flow = QueueBookingFlow(
@@ -107,6 +110,7 @@ class QueueHandler(CallbackResponseMixin):
         selected_date: date,
     ) -> None:
         """Compatibility hook that delegates to the booking flow time selector."""
+        t('botapp.handlers.queue.handler.QueueHandler._show_queue_time_selection')
         user_id = (
             update.callback_query.from_user.id
             if update.callback_query and getattr(update.callback_query, 'from_user', None)

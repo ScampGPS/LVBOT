@@ -50,9 +50,11 @@ class QueueSessionStore:
         return cls(context)
 
     def _load(self) -> QueueSessionData:
+        t('botapp.handlers.queue.session.QueueSessionStore._load')
         return _ensure_state(self._context)
 
     def _persist(self, data: QueueSessionData) -> None:
+        t('botapp.handlers.queue.session.QueueSessionStore._persist')
         _persist_state(self._context, data)
 
     def update(

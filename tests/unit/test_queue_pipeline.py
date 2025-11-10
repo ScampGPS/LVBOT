@@ -1,3 +1,4 @@
+from tracking import t
 import datetime as dt
 from typing import List
 
@@ -13,14 +14,17 @@ from reservations.queue.scheduler import (
 
 class DummyQueue:
     def __init__(self, reservations: List[dict]):
+        t('tests.unit.test_queue_pipeline.DummyQueue.__init__')
         self._reservations = reservations
 
     def get_pending_reservations(self) -> List[dict]:
+        t('tests.unit.test_queue_pipeline.DummyQueue.get_pending_reservations')
         return list(self._reservations)
 
 
 @pytest.fixture
 def sample_reservations():
+    t('tests.unit.test_queue_pipeline.sample_reservations')
     base = {
         "id": "abc123",
         "user_id": 1,
@@ -41,6 +45,7 @@ def sample_reservations():
 
 
 def test_pull_ready_reservations_groups_slots(sample_reservations):
+    t('tests.unit.test_queue_pipeline.test_pull_ready_reservations_groups_slots')
     queue = DummyQueue(sample_reservations)
     now = dt.datetime.fromisoformat("2024-01-03T08:05:00")
 
@@ -56,6 +61,7 @@ def test_pull_ready_reservations_groups_slots(sample_reservations):
 
 
 def test_hydrate_reservation_batch_builds_requests(sample_reservations):
+    t('tests.unit.test_queue_pipeline.test_hydrate_reservation_batch_builds_requests')
     batch = ReservationBatch(
         time_key="2024-01-05_08:00",
         target_date="2024-01-05",
@@ -71,6 +77,7 @@ def test_hydrate_reservation_batch_builds_requests(sample_reservations):
 
 
 def test_hydrate_reservation_batch_collects_failures(sample_reservations):
+    t('tests.unit.test_queue_pipeline.test_hydrate_reservation_batch_collects_failures')
     broken = dict(sample_reservations[0])
     broken.pop("target_time")
     batch = ReservationBatch(

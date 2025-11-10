@@ -1,3 +1,4 @@
+from tracking import t
 from datetime import datetime
 
 import pytest
@@ -9,10 +10,12 @@ from reservations.queue.reservation_queue import QueueRecordSerializer
 
 @pytest.fixture()
 def builder() -> ReservationRequestBuilder:
+    t('tests.unit.test_reservation_request_builder.builder')
     return ReservationRequestBuilder()
 
 
 def test_from_summary_produces_reservation_record(builder):
+    t('tests.unit.test_reservation_request_builder.test_from_summary_produces_reservation_record')
     summary = {
         "reservation_id": "abc123",
         "user_id": 42,
@@ -38,6 +41,7 @@ def test_from_summary_produces_reservation_record(builder):
 
 
 def test_from_dict_generates_booking_request(builder):
+    t('tests.unit.test_reservation_request_builder.test_from_dict_generates_booking_request')
     reservation = {
         "id": "xyz789",
         "user_id": 99,
@@ -63,6 +67,7 @@ def test_from_dict_generates_booking_request(builder):
 
 
 def test_record_from_payload_handles_missing_user_fields(builder):
+    t('tests.unit.test_reservation_request_builder.test_record_from_payload_handles_missing_user_fields')
     payload = {
         "id": "minimal-1",
         "user_id": 0,
@@ -81,6 +86,7 @@ def test_record_from_payload_handles_missing_user_fields(builder):
 
 
 def test_to_payload_round_trip(builder):
+    t('tests.unit.test_reservation_request_builder.test_to_payload_round_trip')
     reservation = builder.from_summary(
         {
             "reservation_id": "round-1",
@@ -104,6 +110,7 @@ def test_to_payload_round_trip(builder):
 
 
 def test_queue_record_serializer_normalises_payload(builder):
+    t('tests.unit.test_reservation_request_builder.test_queue_record_serializer_normalises_payload')
     serializer = QueueRecordSerializer(builder)
     payload = {
         "id": "ser-1",

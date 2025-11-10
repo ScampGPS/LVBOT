@@ -1,7 +1,9 @@
+from tracking import t
 from reservations.queue.scheduler.metrics import SchedulerStats
 
 
 def test_scheduler_stats_records_success_and_failure():
+    t('tests.unit.test_scheduler_metrics.test_scheduler_stats_records_success_and_failure')
     stats = SchedulerStats()
 
     stats.record_success(execution_time=2.0)
@@ -15,6 +17,7 @@ def test_scheduler_stats_records_success_and_failure():
 
 
 def test_scheduler_stats_health_and_recovery_counters():
+    t('tests.unit.test_scheduler_metrics.test_scheduler_stats_health_and_recovery_counters')
     stats = SchedulerStats()
 
     stats.record_health_check()

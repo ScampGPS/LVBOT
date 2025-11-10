@@ -1,3 +1,4 @@
+from tracking import t
 import asyncio
 from types import SimpleNamespace
 
@@ -11,23 +12,28 @@ from botapp.booking.immediate_handler import ImmediateBookingHandler
 
 class StubUserManager:
     def __init__(self, profile):
+        t('tests.unit.test_immediate_booking_flow.StubUserManager.__init__')
         self._profile = profile
 
     def get_user(self, user_id):
+        t('tests.unit.test_immediate_booking_flow.StubUserManager.get_user')
         return self._profile if user_id == self._profile.get("user_id") else None
 
 
 class DummyQuery:
     def __init__(self, data, user_id):
+        t('tests.unit.test_immediate_booking_flow.DummyQuery.__init__')
         self.data = data
         self.from_user = SimpleNamespace(id=user_id)
         self._messages = []
         self.answered = False
 
     async def answer(self):
+        t('tests.unit.test_immediate_booking_flow.DummyQuery.answer')
         self.answered = True
 
     async def edit_message_text(self, message, parse_mode=None, reply_markup=None):
+        t('tests.unit.test_immediate_booking_flow.DummyQuery.edit_message_text')
         self._messages.append(
             {
                 "message": message,
@@ -39,11 +45,13 @@ class DummyQuery:
 
 class DummyUpdate:
     def __init__(self, query):
+        t('tests.unit.test_immediate_booking_flow.DummyUpdate.__init__')
         self.callback_query = query
 
 
 @pytest.mark.asyncio
 async def test_handle_booking_confirmation_success_flow(monkeypatch):
+    t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_success_flow')
     profile = {
         "user_id": 42,
         "first_name": "Ada",
@@ -57,9 +65,11 @@ async def test_handle_booking_confirmation_success_flow(monkeypatch):
 
     class StubExecutor:
         def __init__(self, pool, config=None):
+            t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_success_flow.StubExecutor.__init__')
             assert pool == "pool"
 
         async def execute_booking(self, court_number, time_slot, user_info, target_date):
+            t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_success_flow.StubExecutor.execute_booking')
             return ExecutionResult(
                 success=True,
                 message="Booked via natural flow",
@@ -74,10 +84,12 @@ async def test_handle_booking_confirmation_success_flow(monkeypatch):
     recorded = {}
 
     def fake_persist_success(request, result, tracker=None):
+        t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_success_flow.fake_persist_success')
         recorded["persist"] = (request, result)
         return "imm-1"
 
     def fake_send_success(user_id, result):
+        t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_success_flow.fake_send_success')
         recorded["notification"] = (user_id, result)
         return {
             "message": "✅ success",
@@ -117,6 +129,7 @@ async def test_handle_booking_confirmation_success_flow(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_handle_booking_confirmation_failure_flow(monkeypatch):
+    t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_failure_flow')
     profile = {
         "user_id": 7,
         "first_name": "Grace",
@@ -129,9 +142,11 @@ async def test_handle_booking_confirmation_failure_flow(monkeypatch):
 
     class FailingExecutor:
         def __init__(self, pool, config=None):
+            t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_failure_flow.FailingExecutor.__init__')
             pass
 
         async def execute_booking(self, court_number, time_slot, user_info, target_date):
+            t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_failure_flow.FailingExecutor.execute_booking')
             return ExecutionResult(success=False, error_message="No slots available")
 
     monkeypatch.setattr(handler_module, "UnifiedAsyncBookingExecutor", FailingExecutor)
@@ -139,10 +154,12 @@ async def test_handle_booking_confirmation_failure_flow(monkeypatch):
     recorded = {}
 
     def fake_persist_failure(request, result, tracker=None):
+        t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_failure_flow.fake_persist_failure')
         recorded.setdefault("persist_failures", []).append((request, result))
         return "imm-f-1"
 
     def fake_send_failure(user_id, result):
+        t('tests.unit.test_immediate_booking_flow.test_handle_booking_confirmation_failure_flow.fake_send_failure')
         recorded["notification"] = (user_id, result)
         return {
             "message": "❌ failure",

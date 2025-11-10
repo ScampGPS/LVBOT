@@ -14,6 +14,7 @@ With natural navigation enabled:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import os
 import shutil
@@ -28,6 +29,7 @@ from automation.browser.pool.manager import BrowserPoolManager, BROWSER_STATES_D
 @pytest.fixture
 def cleanup_browser_states():
     """Cleanup browser states before and after test."""
+    t('tests.bot.test_browser_warmup_playwright.cleanup_browser_states')
     # Clean before test
     if BROWSER_STATES_DIR.exists():
         shutil.rmtree(BROWSER_STATES_DIR)
@@ -50,6 +52,7 @@ async def test_browser_warmup_sophisticated_behavior(cleanup_browser_states, cap
     - Sophisticated warmup behavior is executed (HumanLikeActions)
     - No simple random mouse movements
     """
+    t('tests.bot.test_browser_warmup_playwright.test_browser_warmup_sophisticated_behavior')
 
     flag = os.getenv("LV_WARMUP_TEST_ENABLE", "").strip()
     if flag != "1":
@@ -108,6 +111,7 @@ async def test_cookie_persistence_save_and_load(cleanup_browser_states, caplog):
     - Second run: Browser state is loaded from saved file
     - State files are created in correct location
     """
+    t('tests.bot.test_browser_warmup_playwright.test_cookie_persistence_save_and_load')
 
     flag = os.getenv("LV_WARMUP_TEST_ENABLE", "").strip()
     if flag != "1":
@@ -177,6 +181,7 @@ async def test_warmup_without_natural_navigation(cleanup_browser_states, caplog)
     - When natural navigation is OFF: No warmup occurs (no main site visit)
     - But browser state IS still saved (cookie persistence is independent)
     """
+    t('tests.bot.test_browser_warmup_playwright.test_warmup_without_natural_navigation')
 
     flag = os.getenv("LV_WARMUP_TEST_ENABLE", "").strip()
     if flag != "1":
@@ -219,6 +224,7 @@ async def test_browser_state_helper_methods():
 
     Tests BrowserPoolManager helper methods without actually starting browsers.
     """
+    t('tests.bot.test_browser_warmup_playwright.test_browser_state_helper_methods')
 
     test_court = 99  # Use unique court number to avoid conflicts
     state_path = BrowserPoolManager._get_storage_state_path(test_court)

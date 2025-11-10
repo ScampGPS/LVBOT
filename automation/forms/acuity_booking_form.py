@@ -89,6 +89,7 @@ def _build_form(
     use_javascript: bool = True,
     enable_tracing: bool = True,
 ) -> AcuityBookingForm:
+    t('automation.forms.acuity_booking_form._build_form')
     return AcuityBookingForm(
         use_javascript=use_javascript,
         logger=logger,
@@ -105,6 +106,7 @@ async def _invoke_form_method(
     enable_tracing: bool = True,
     **kwargs,
 ):
+    t('automation.forms.acuity_booking_form._invoke_form_method')
     form = _build_form(
         logger=logger,
         use_javascript=use_javascript,
@@ -120,6 +122,7 @@ def _make_simple_form_proxy(
     tracking_id: str,
     doc: str,
 ):
+    t('automation.forms.acuity_booking_form._make_simple_form_proxy')
     async def _call(
         page: Page,
         *,

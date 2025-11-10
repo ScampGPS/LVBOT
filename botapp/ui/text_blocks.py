@@ -97,6 +97,7 @@ class MarkdownBuilderBase:
         self._builder_factory = builder_factory
 
     def _new_builder(self) -> MarkdownBlockBuilder:
+        t('botapp.ui.text_blocks.MarkdownBuilderBase._new_builder')
         return self._builder_factory()
 
     def create_builder(self) -> MarkdownBlockBuilder:

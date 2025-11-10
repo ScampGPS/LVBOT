@@ -221,6 +221,7 @@ def update_test_mode(**kwargs: object) -> TestModeConfig:
 
 
 def _write_test_mode_file(config: TestModeConfig) -> None:
+    t('infrastructure.settings._write_test_mode_file')
     try:
         TEST_MODE_FILE.parent.mkdir(parents=True, exist_ok=True)
         TEST_MODE_FILE.write_text(

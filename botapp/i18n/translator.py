@@ -1,6 +1,7 @@
 """Translation service for internationalization support."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import Any, Dict, Optional
 
@@ -17,6 +18,7 @@ class Translator:
         Args:
             language: Language code ('es', 'en') or Language enum
         """
+        t('botapp.i18n.translator.Translator.__init__')
         # Extract value from enum if needed
         if isinstance(language, Language):
             self.language = language.value
@@ -38,6 +40,7 @@ class Translator:
             >>> translator.t('court.label', number=3)
             'Court 3'
         """
+        t('botapp.i18n.translator.Translator.t')
         # Get translation for current language
         default_lang = DEFAULT_LANGUAGE.value if isinstance(DEFAULT_LANGUAGE, Language) else DEFAULT_LANGUAGE
         lang_strings = STRINGS.get(self.language, STRINGS[default_lang])
@@ -64,6 +67,7 @@ class Translator:
         Args:
             language: New language code or Language enum
         """
+        t('botapp.i18n.translator.Translator.set_language')
         # Extract value from enum if needed
         if isinstance(language, Language):
             self.language = language.value
@@ -76,6 +80,7 @@ class Translator:
         Returns:
             Current language code (e.g., 'es', 'en')
         """
+        t('botapp.i18n.translator.Translator.get_language')
         return self.language
 
 
@@ -88,6 +93,7 @@ def create_translator(language: Optional[str | Language] = None) -> Translator:
     Returns:
         Translator instance
     """
+    t('botapp.i18n.translator.create_translator')
     if language is None:
         language = DEFAULT_LANGUAGE
     return Translator(language)
@@ -114,6 +120,7 @@ def translate(key: str, language: Optional[str | Language] = None, **params: Any
         >>> translate('court.label', language='es', number=2)
         'Cancha 2'
     """
+    t('botapp.i18n.translator.translate')
     if language is None:
         return _default_translator.t(key, **params)
     else:

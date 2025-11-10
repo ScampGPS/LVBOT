@@ -50,6 +50,7 @@ def shutdown_browser_managers_blocking(
     log = logger or logging.getLogger('BrowserShutdown')
 
     async def _shutdown() -> bool:
+        t('automation.browser.lifecycle.shutdown_browser_managers_blocking._shutdown')
         return await shutdown_browser_managers(logger=log, managers=active)
 
     try:
@@ -171,6 +172,7 @@ def list_running_browser_processes(
 
 def _find_playwright_processes() -> List[Tuple[int, str]]:
     """Locate processes spawned by Playwright-managed Chromium binaries."""
+    t('automation.browser.lifecycle._find_playwright_processes')
 
     system = platform.system()
     processes: List[Tuple[int, str]] = []
@@ -187,6 +189,7 @@ def _find_playwright_processes() -> List[Tuple[int, str]]:
 
 
 def _find_playwright_processes_windows() -> List[Tuple[int, str]]:
+    t('automation.browser.lifecycle._find_playwright_processes_windows')
     filters = ','.join(_WINDOWS_PROCESS_NAMES)
     command = (
         "Get-Process -Name "
@@ -253,6 +256,7 @@ def _find_playwright_processes_windows() -> List[Tuple[int, str]]:
 
 
 def _find_playwright_processes_unix() -> List[Tuple[int, str]]:
+    t('automation.browser.lifecycle._find_playwright_processes_unix')
     try:
         result = subprocess.run(
             ['ps', '-eo', 'pid=,comm=,args='],

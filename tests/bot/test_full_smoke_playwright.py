@@ -1,6 +1,7 @@
 """End-to-end smoke test that drives the Playwright booking flow."""
 
 from __future__ import annotations
+from tracking import t
 
 import json
 import os
@@ -17,6 +18,7 @@ from automation.executors.booking import AsyncBookingExecutor
 
 
 def _load_user_profile(user_id: int) -> Dict[str, str]:
+    t('tests.bot.test_full_smoke_playwright._load_user_profile')
     users_path = Path("data/users.json")
     data = json.loads(users_path.read_text(encoding="utf-8"))
     profile = data.get(str(user_id))
@@ -43,6 +45,7 @@ def _resolve_target_slot(
     preferred_date: Optional[str],
     preferred_time: Optional[str],
 ) -> Optional[Tuple[int, str, str]]:
+    t('tests.bot.test_full_smoke_playwright._resolve_target_slot')
     courts = (
         [preferred_court]
         if preferred_court is not None
@@ -79,6 +82,7 @@ def _resolve_target_slot(
 
 
 async def _capture_confirmation_screenshot(pool: AsyncBrowserPool, court: int, filename: str) -> Path:
+    t('tests.bot.test_full_smoke_playwright._capture_confirmation_screenshot')
     page = pool.pages.get(court)
     if not page:
         raise RuntimeError(f"No active page for court {court}; cannot capture screenshot")
@@ -105,6 +109,7 @@ async def test_full_booking_smoke_playwright(capfd):
         * ``LV_SMOKE_TARGET_TIME`` (HH:MM, default: 20:15)
         * ``LV_SMOKE_TIMEZONE`` (default: America/Mexico_City)
     """
+    t('tests.bot.test_full_smoke_playwright.test_full_booking_smoke_playwright')
 
     flag = os.getenv("LV_SMOKE_ENABLE")
     if flag != "1":

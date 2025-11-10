@@ -1,3 +1,4 @@
+from tracking import t
 import pytest
 from datetime import datetime
 
@@ -8,10 +9,12 @@ from tests.helpers import DummyLogger
 
 @pytest.mark.asyncio
 async def test_runner_returns_degraded_when_some_courts_fail():
+    t('tests.unit.test_browser_health_runner.test_runner_returns_degraded_when_some_courts_fail')
     logger = DummyLogger()
     runner = HealthCheckRunner(logger=logger)
 
     async def pool_check():
+        t('tests.unit.test_browser_health_runner.test_runner_returns_degraded_when_some_courts_fail.pool_check')
         return HealthCheckResult(
             status=HealthStatus.HEALTHY,
             message="ok",
@@ -20,6 +23,7 @@ async def test_runner_returns_degraded_when_some_courts_fail():
         )
 
     async def healthy_court():
+        t('tests.unit.test_browser_health_runner.test_runner_returns_degraded_when_some_courts_fail.healthy_court')
         return CourtHealthStatus(
             court_number=1,
             status=HealthStatus.HEALTHY,
@@ -27,6 +31,7 @@ async def test_runner_returns_degraded_when_some_courts_fail():
         )
 
     async def failing_court():
+        t('tests.unit.test_browser_health_runner.test_runner_returns_degraded_when_some_courts_fail.failing_court')
         return CourtHealthStatus(
             court_number=2,
             status=HealthStatus.FAILED,
@@ -44,10 +49,12 @@ async def test_runner_returns_degraded_when_some_courts_fail():
 
 @pytest.mark.asyncio
 async def test_runner_handles_court_exceptions():
+    t('tests.unit.test_browser_health_runner.test_runner_handles_court_exceptions')
     logger = DummyLogger()
     runner = HealthCheckRunner(logger=logger)
 
     async def pool_check():
+        t('tests.unit.test_browser_health_runner.test_runner_handles_court_exceptions.pool_check')
         return HealthCheckResult(
             status=HealthStatus.HEALTHY,
             message="ok",
@@ -55,6 +62,7 @@ async def test_runner_handles_court_exceptions():
         )
 
     async def raising():
+        t('tests.unit.test_browser_health_runner.test_runner_handles_court_exceptions.raising')
         raise RuntimeError("failure")
 
     result = await runner.run(pool_check, {5: raising})

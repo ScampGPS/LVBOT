@@ -1,6 +1,7 @@
 """CLI for exercising bot scenarios without Telegram."""
 
 from __future__ import annotations
+from tracking import t
 
 import argparse
 from datetime import datetime
@@ -10,12 +11,14 @@ from .scenarios import queue_booking_flow
 
 
 def _parse_date(value: Optional[str]):
+    t('tests.bot.__main__._parse_date')
     if value is None:
         return None
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
 def _safe_print(payload: str) -> None:
+    t('tests.bot.__main__._safe_print')
     try:
         print(payload)
     except UnicodeEncodeError:
@@ -23,6 +26,7 @@ def _safe_print(payload: str) -> None:
 
 
 def main() -> None:
+    t('tests.bot.__main__.main')
     parser = argparse.ArgumentParser(description="Run conversational bot scenarios headlessly")
     subparsers = parser.add_subparsers(dest="scenario", required=True)
 

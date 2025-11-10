@@ -1,6 +1,7 @@
 """Helper functions for i18n in handlers and UI components."""
 
 from __future__ import annotations
+from tracking import t
 
 from typing import TYPE_CHECKING, Optional
 
@@ -20,6 +21,7 @@ def get_user_translator(user_manager: 'UserManager', user_id: int) -> Translator
     Returns:
         Translator instance configured for the user's language (defaults to Spanish)
     """
+    t('botapp.i18n.helpers.get_user_translator')
     language = user_manager.get_user_language(user_id)
     return create_translator(language)
 
@@ -33,4 +35,5 @@ def get_translator(language: Optional[str] = None) -> Translator:
     Returns:
         Translator instance
     """
+    t('botapp.i18n.helpers.get_translator')
     return create_translator(language)

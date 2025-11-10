@@ -1,3 +1,4 @@
+from tracking import t
 import asyncio
 from types import SimpleNamespace
 
@@ -9,6 +10,7 @@ from reservations.queue.scheduler.outcome import record_outcome
 
 @pytest.mark.asyncio
 async def test_dispatch_to_executors_returns_results():
+    t('tests.unit.test_scheduler_dispatch.test_dispatch_to_executors_returns_results')
     jobs = [
         DispatchJob(
             reservation_id="res-1",
@@ -20,6 +22,7 @@ async def test_dispatch_to_executors_returns_results():
     ]
 
     async def execute_single(assignment, reservation, index, total, *, prebuilt_request=None):
+        t('tests.unit.test_scheduler_dispatch.test_dispatch_to_executors_returns_results.execute_single')
         await asyncio.sleep(0)
         return {"success": True, "court": 1}
 
@@ -35,6 +38,7 @@ async def test_dispatch_to_executors_returns_results():
 
 @pytest.mark.asyncio
 async def test_dispatch_to_executors_reports_timeouts():
+    t('tests.unit.test_scheduler_dispatch.test_dispatch_to_executors_reports_timeouts')
     jobs = [
         DispatchJob(
             reservation_id="res-timeout",
@@ -46,6 +50,7 @@ async def test_dispatch_to_executors_reports_timeouts():
     ]
 
     async def slow_execute(assignment, reservation, index, total, *, prebuilt_request=None):
+        t('tests.unit.test_scheduler_dispatch.test_dispatch_to_executors_reports_timeouts.slow_execute')
         await asyncio.sleep(0.2)
         return {"success": True}
 
@@ -61,6 +66,7 @@ async def test_dispatch_to_executors_reports_timeouts():
 
 class DummyScheduler:
     def __init__(self, fallback_response=None):
+        t('tests.unit.test_scheduler_dispatch.DummyScheduler.__init__')
         self.success_calls = []
         self.failed_calls = []
         self.fallback_calls = []
@@ -68,20 +74,25 @@ class DummyScheduler:
         self._fallback_response = fallback_response
 
     def handle_booking_result(self, reservation_id, **kwargs):
+        t('tests.unit.test_scheduler_dispatch.DummyScheduler.handle_booking_result')
         self.recorded = (reservation_id, kwargs)
         return self._fallback_response
 
     def _update_reservation_success(self, reservation_id, result):
+        t('tests.unit.test_scheduler_dispatch.DummyScheduler._update_reservation_success')
         self.success_calls.append((reservation_id, result))
 
     def _update_reservation_failed(self, reservation_id, error):
+        t('tests.unit.test_scheduler_dispatch.DummyScheduler._update_reservation_failed')
         self.failed_calls.append((reservation_id, error))
 
     def schedule_fallback_retry(self, reservation_id, fallback):
+        t('tests.unit.test_scheduler_dispatch.DummyScheduler.schedule_fallback_retry')
         self.fallback_calls.append((reservation_id, fallback))
 
 
 def test_record_outcome_success_invokes_handlers():
+    t('tests.unit.test_scheduler_dispatch.test_record_outcome_success_invokes_handlers')
     scheduler = DummyScheduler()
     result = {"success": True, "court": 3}
 
@@ -93,6 +104,7 @@ def test_record_outcome_success_invokes_handlers():
 
 
 def test_record_outcome_failure_invokes_handlers():
+    t('tests.unit.test_scheduler_dispatch.test_record_outcome_failure_invokes_handlers')
     scheduler = DummyScheduler()
     result = {"success": False, "error": "boom"}
 
@@ -104,6 +116,7 @@ def test_record_outcome_failure_invokes_handlers():
 
 
 def test_record_outcome_schedules_fallback():
+    t('tests.unit.test_scheduler_dispatch.test_record_outcome_schedules_fallback')
     fallback_payload = {
         "assignment": {"attempt": SimpleNamespace(target_court=2)},
         "remaining_fallbacks": [3],

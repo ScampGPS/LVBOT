@@ -198,6 +198,7 @@ class ReservationQueue:
 
     def _normalise_loaded_entries(self) -> int:
         """Repair queue entries loaded from disk that may lack required metadata."""
+        t('reservations.queue.reservation_queue.ReservationQueue._normalise_loaded_entries')
 
         repaired = 0
         tz = pytz.timezone('America/Guatemala')
@@ -265,6 +266,7 @@ class ReservationQueue:
     @staticmethod
     def _compute_scheduled_execution(reservation: Mapping[str, Any], tz) -> datetime:
         """Compute when a reservation should execute based on configuration."""
+        t('reservations.queue.reservation_queue.ReservationQueue._compute_scheduled_execution')
 
         config = get_test_mode()
         if config.enabled:
@@ -282,6 +284,7 @@ class ReservationQueue:
 
     @staticmethod
     def _parse_target_datetime(reservation: Mapping[str, Any], tz) -> Optional[datetime]:
+        t('reservations.queue.reservation_queue.ReservationQueue._parse_target_datetime')
         target_date = reservation.get('target_date')
         target_time = reservation.get('target_time')
         if not target_date or not target_time:

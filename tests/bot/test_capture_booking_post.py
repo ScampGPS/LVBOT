@@ -12,6 +12,7 @@ Run on Windows CMD:
 """
 
 from __future__ import annotations
+from tracking import t
 
 import asyncio
 import json
@@ -41,6 +42,7 @@ USER_INFO = {
 @pytest.fixture
 def capture_artifacts_dir():
     """Create directory for capture artifacts."""
+    t('tests.bot.test_capture_booking_post.capture_artifacts_dir')
     artifacts_dir = Path("logs/latest_log/post_capture")
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return artifacts_dir
@@ -48,12 +50,14 @@ def capture_artifacts_dir():
 
 async def setup_request_interception(page, artifacts_dir: Path):
     """Set up comprehensive request/response interception."""
+    t('tests.bot.test_capture_booking_post.setup_request_interception')
 
     captured_requests = []
     captured_responses = []
 
     async def log_request(route, request):
         """Intercept and log all requests."""
+        t('tests.bot.test_capture_booking_post.setup_request_interception.log_request')
 
         # Capture request details
         request_data = {
@@ -86,6 +90,7 @@ async def setup_request_interception(page, artifacts_dir: Path):
 
     async def log_response(response):
         """Log response details."""
+        t('tests.bot.test_capture_booking_post.setup_request_interception.log_response')
 
         # Capture response details
         response_data = {
@@ -128,6 +133,7 @@ async def setup_request_interception(page, artifacts_dir: Path):
 @pytest.mark.capture
 async def test_capture_booking_post_request(capture_artifacts_dir):
     """Capture complete booking POST request with real user data."""
+    t('tests.bot.test_capture_booking_post.test_capture_booking_post_request')
 
     flag = os.getenv("LV_CAPTURE_POST_ENABLE", "").strip()
     if flag != "1":
