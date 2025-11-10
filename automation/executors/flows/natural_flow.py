@@ -6,7 +6,7 @@ from tracking import t
 import asyncio
 import logging
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Tuple, Optional
 
 from playwright.async_api import Page
@@ -21,6 +21,11 @@ WORKING_SPEED_MULTIPLIER = 1.5  # Conservative speed to avoid detection
 _VALIDATION_SLEEP = (0.3, 0.6)  # More natural validation pauses
 _MOUSE_DELAY = (0.15, 0.35)     # Natural mouse delays
 _FIELD_LINGER = (0.5, 0.9)      # Natural field review time
+_REFRESH_DELAY = (0.35, 0.65)
+_MAX_REFRESH_WITHOUT_TARGET = 15
+_POST_SLOT_GRACE_SECONDS = 6
+_TARGET_POLL_INTERVAL = (0.25, 0.45)
+_MAX_POST_TARGET_REFRESHES = 5
 
 
 class NaturalFlowSteps:
@@ -141,7 +146,12 @@ class NaturalFlowSteps:
         await self.move_mouse()
 
         self.logger.info("Looking for %s time slot...", time_slot)
-        time_button = await self.select_time_button(time_slot)
+        target_datetime = self._resolve_slot_datetime(target_date, time_slot)
+        time_button = await self._wait_for_time_slot(
+            time_slot,
+            court_number,
+            target_datetime=target_datetime,
+        )
         if not time_button:
             self.logger.error("Time slot %s not found", time_slot)
             return ExecutionResult(
@@ -211,6 +221,144 @@ class NaturalFlowSteps:
         self.debug_logger.print_summary()
 
         return result
+
+    async def _wait_until_target_release(
+        self,
+        *,
+        target_datetime: datetime,
+        time_slot: str,
+        court_number: int,
+    ) -> None:
+        """Pause until the configured slot release time has passed."""
+
+        t("automation.executors.flows.natural_flow.NaturalFlowSteps._wait_until_target_release")
+        tzinfo = target_datetime.tzinfo
+        now = datetime.now(tzinfo) if tzinfo else datetime.now()
+        if now >= target_datetime:
+            return
+
+        wait_seconds = (target_datetime - now).total_seconds()
+        self.logger.info(
+            "Arrived %.2fs before target %s for Court %s - waiting before slot scan",
+            wait_seconds,
+            target_datetime,
+            court_number,
+        )
+
+        while now < target_datetime:
+            remaining = max((target_datetime - now).total_seconds(), 0)
+            sleep_for = min(
+                _TARGET_POLL_INTERVAL[1],
+                max(_TARGET_POLL_INTERVAL[0], remaining),
+            )
+            await asyncio.sleep(sleep_for)
+            now = datetime.now(tzinfo) if tzinfo else datetime.now()
+
+        self.logger.debug(
+            "Reached target time %s for Court %s; beginning slot refresh loop",
+            target_datetime,
+            court_number,
+        )
+
+    def _resolve_slot_datetime(
+        self, target_date: datetime, time_slot: str
+    ) -> Optional[datetime]:
+        """Build a datetime for the target slot to know when to stop refreshing."""
+
+        t("automation.executors.flows.natural_flow.NaturalFlowSteps._resolve_slot_datetime")
+        try:
+            slot_time = datetime.strptime(time_slot, "%H:%M").time()
+        except ValueError:
+            return None
+
+        base_date = target_date.date()
+        resolved = datetime.combine(base_date, slot_time)
+        if target_date.tzinfo is not None:
+            resolved = resolved.replace(tzinfo=target_date.tzinfo)
+        return resolved
+
+    async def _wait_for_time_slot(
+        self,
+        time_slot: str,
+        court_number: int,
+        *,
+        target_datetime: Optional[datetime],
+    ):
+        """Refresh the calendar until the desired time slot appears."""
+
+        t("automation.executors.flows.natural_flow.NaturalFlowSteps._wait_for_time_slot")
+        refresh_count = 0
+        deadline = (
+            target_datetime + timedelta(seconds=_POST_SLOT_GRACE_SECONDS)
+            if target_datetime
+            else None
+        )
+
+        if target_datetime:
+            await self._wait_until_target_release(
+                target_datetime=target_datetime,
+                time_slot=time_slot,
+                court_number=court_number,
+            )
+
+        max_refreshes = (
+            _MAX_POST_TARGET_REFRESHES
+            if target_datetime
+            else _MAX_REFRESH_WITHOUT_TARGET
+        )
+
+        while True:
+            button = await self.select_time_button(time_slot)
+            if button:
+                if refresh_count:
+                    self.logger.info(
+                        "Time slot %s appeared after %s refresh(es) for Court %s",
+                        time_slot,
+                        refresh_count,
+                        court_number,
+                    )
+                return button
+
+            now = (
+                datetime.now(target_datetime.tzinfo)
+                if target_datetime and target_datetime.tzinfo
+                else datetime.now()
+            )
+
+            if refresh_count >= max_refreshes:
+                break
+
+            refresh_count += 1
+
+            if deadline and now > deadline:
+                break
+
+            self.logger.info(
+                "Time slot %s not visible yet for Court %s - refreshing (attempt %s)",
+                time_slot,
+                court_number,
+                refresh_count,
+            )
+            await self._refresh_time_grid(refresh_count)
+
+        return None
+
+    async def _refresh_time_grid(self, attempt: int) -> None:
+        """Reload the time grid and wait naturally between refreshes."""
+
+        t("automation.executors.flows.natural_flow.NaturalFlowSteps._refresh_time_grid")
+        try:
+            await self.debug_logger.capture_state(
+                self.page, f"refresh_wait_{attempt:02d}"
+            )
+        except Exception:
+            pass
+
+        try:
+            await self.page.reload(wait_until="domcontentloaded")
+        except Exception as exc:
+            self.logger.debug("Refresh attempt %s failed: %s", attempt, exc)
+        await self.actions.pause(*_REFRESH_DELAY)
 
 
 async def execute_natural_flow(
