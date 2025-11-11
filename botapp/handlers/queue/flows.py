@@ -1117,7 +1117,7 @@ class QueueBookingFlow(QueueFlowBase):
         if user_id is None and query and getattr(query, 'from_user', None):
             user_id = query.from_user.id
 
-        _, language = self._translator_for_user(user_id)
+        translator, language = self._translator_for_user(user_id)
 
         user_profile = self.deps.user_manager.get_user(user_id) if user_id is not None else {}
         required_fields = ('first_name', 'last_name', 'email', 'phone')
