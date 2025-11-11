@@ -10,8 +10,11 @@ from typing import Dict, Optional
 from playwright.async_api import Page
 
 from automation.executors.core import ExecutionResult
-from datetime import datetime
+from datetime import date, datetime, time
 from pathlib import Path
+from urllib.parse import quote, urlencode
+
+from infrastructure.constants import COURT_CONFIG
 
 
 def safe_sleep(seconds: float) -> None:
@@ -22,6 +25,63 @@ def safe_sleep(seconds: float) -> None:
 
 
 _ARTIFACT_DIR = Path('logs/latest_log/booking_artifacts')
+_DEFAULT_TZ_OFFSET = "-06:00"
+
+
+def _parse_slot_time(time_slot: str) -> time:
+    """Return a ``time`` object for HH:MM formatted slots."""
+
+    try:
+        slot_time = datetime.strptime(time_slot, "%H:%M").time()
+    except ValueError as exc:
+        raise ValueError(f"Invalid time slot format '{time_slot}' (expected HH:MM)") from exc
+    return slot_time
+
+
+def _resolve_slot_datetime(target_date: date | datetime, time_slot: str) -> datetime:
+    """Combine date and time slot into a datetime value."""
+
+    base_date = target_date.date() if isinstance(target_date, datetime) else target_date
+    slot_time = _parse_slot_time(time_slot)
+
+    combined = datetime.combine(base_date, slot_time)
+    if isinstance(target_date, datetime) and target_date.tzinfo:
+        combined = combined.replace(tzinfo=target_date.tzinfo)
+    return combined
+
+
+def _format_tz_offset(target: datetime) -> str:
+    """Format the UTC offset (e.g. ``-06:00``) for a datetime."""
+
+    offset = target.utcoffset()
+    if offset is None:
+        return _DEFAULT_TZ_OFFSET
+
+    total_minutes = int(offset.total_seconds() // 60)
+    sign = "+" if total_minutes >= 0 else "-"
+    total_minutes = abs(total_minutes)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{sign}{hours:02d}:{minutes:02d}"
+
+
+def build_direct_slot_url(
+    court_number: int,
+    target_date: date | datetime,
+    time_slot: str,
+) -> str:
+    """Construct the canonical Acuity URL for a specific court/time slot."""
+
+    config = COURT_CONFIG.get(court_number)
+    if not config:
+        raise ValueError(f"No court configuration available for court {court_number}")
+
+    slot_datetime = _resolve_slot_datetime(target_date, time_slot)
+    tz_offset = _format_tz_offset(slot_datetime)
+    iso_component = f"{slot_datetime.strftime('%Y-%m-%dT%H:%M:%S')}{tz_offset}"
+    encoded_datetime = quote(iso_component, safe="-T")
+
+    query = urlencode({"appointmentTypeIds[]": config["appointment_id"]})
+    return f"{config['full_url']}/datetime/{encoded_datetime}?{query}"
 
 
 async def confirmation_result(

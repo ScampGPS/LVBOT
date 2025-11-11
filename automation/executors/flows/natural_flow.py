@@ -14,7 +14,7 @@ from playwright.async_api import Page
 from automation.executors.core import ExecutionResult
 from automation.debug import get_logger
 
-from .helpers import confirmation_result
+from .helpers import build_direct_slot_url, confirmation_result
 from .human_behaviors import HumanLikeActions
 
 WORKING_SPEED_MULTIPLIER = 1.5  # Conservative speed to avoid detection
@@ -169,29 +169,14 @@ class NaturalFlowSteps:
         self.logger.info("Clicking time slot...")
         await self.debug_logger.capture_state(self.page, "02_before_time_click")
 
-        await self.actions.click_with_hesitation(
-            time_button,
-            hesitation_prob=0.6,              # Natural hesitation before committing
-            correction_count_range=(0, 1)     # Sometimes correct cursor position
+        await self._commit_time_selection(time_button)
+
+        form_ready = await self._ensure_booking_form_visible(
+            court_number=court_number,
+            target_date=target_date,
+            time_slot=time_slot,
         )
-
-        await self.actions.pause(*_VALIDATION_SLEEP)
-
-        try:
-            await self.page.wait_for_selector("form", timeout=8000)
-            await self.debug_logger.capture_state(self.page, "03_after_time_click_form_loaded")
-        except Exception:
-            self.logger.error("Booking form not found after selecting time slot")
-            await self.debug_logger.capture_state(self.page, "03_ERROR_no_form_after_click")
-            return ExecutionResult(
-                success=False,
-                error_message="Booking form not found",
-                court_number=court_number,
-            )
-
-        form_present = await self.page.query_selector("form")
-        if not form_present:
-            self.logger.error("Booking form not found after selecting time slot")
+        if not form_ready:
             return ExecutionResult(
                 success=False,
                 error_message="Booking form not found",
@@ -389,6 +374,126 @@ class NaturalFlowSteps:
         except Exception as exc:
             self.logger.debug("Refresh attempt %s failed: %s", attempt, exc)
         await self.actions.pause(*_REFRESH_DELAY)
+
+    async def _commit_time_selection(self, button) -> None:
+        """Click a time button with human-like hesitation."""
+
+        await self.actions.click_with_hesitation(
+            button,
+            hesitation_prob=0.6,
+            correction_count_range=(0, 1),
+        )
+        await self.actions.pause(*_VALIDATION_SLEEP)
+
+    async def _ensure_booking_form_visible(
+        self,
+        *,
+        court_number: int,
+        target_date: datetime,
+        time_slot: str,
+    ) -> bool:
+        """Ensure the booking form renders, trying recovery strategies when missing."""
+
+        if await self._wait_for_form_once("03_after_time_click_form_loaded"):
+            return True
+
+        self.logger.warning(
+            "Booking form not found after selecting time slot %s for Court %s - attempting recovery",
+            time_slot,
+            court_number,
+        )
+        await self.debug_logger.capture_state(self.page, "03_ERROR_no_form_after_click")
+
+        if await self._reload_and_retry_time_slot(time_slot):
+            return True
+
+        return await self._navigate_direct_slot(
+            court_number=court_number,
+            target_date=target_date,
+            time_slot=time_slot,
+        )
+
+    async def _wait_for_form_once(self, label: str, timeout: int = 8000) -> bool:
+        """Wait for a booking form element to appear once."""
+
+        try:
+            await self.page.wait_for_selector("form", timeout=timeout)
+            await self.debug_logger.capture_state(self.page, label)
+            form_present = await self.page.query_selector("form")
+            return form_present is not None
+        except Exception:
+            return False
+
+    async def _reload_and_retry_time_slot(self, time_slot: str) -> bool:
+        """Reload the calendar and try clicking the time slot again."""
+
+        self.logger.info("Reloading page to retry time selection for %s", time_slot)
+        try:
+            await self.page.reload(wait_until="domcontentloaded")
+        except Exception as exc:
+            self.logger.warning("Page reload failed during booking-form recovery: %s", exc)
+            return False
+
+        await self.actions.pause(0.8, 1.2)
+        retry_button = await self.select_time_button(time_slot)
+        if not retry_button:
+            self.logger.warning("Time slot %s no longer visible after refresh", time_slot)
+            return False
+
+        await self._commit_time_selection(retry_button)
+        recovered = await self._wait_for_form_once(
+            "03_after_time_click_form_loaded_retry",
+            timeout=6000,
+        )
+        if not recovered:
+            self.logger.warning("Booking form still missing after refresh retry")
+        return recovered
+
+    async def _navigate_direct_slot(
+        self,
+        *,
+        court_number: int,
+        target_date: datetime,
+        time_slot: str,
+    ) -> bool:
+        """Jump straight to the slot URL if inline interaction never surfaces the form."""
+
+        try:
+            direct_url = build_direct_slot_url(court_number, target_date, time_slot)
+        except Exception as exc:
+            self.logger.error(
+                "Unable to build direct slot URL for court %s (%s at %s): %s",
+                court_number,
+                target_date.date(),
+                time_slot,
+                exc,
+            )
+            return False
+
+        self.logger.warning(
+            "Direct slot fallback engaged for Court %s (%s @ %s)",
+            court_number,
+            target_date.date(),
+            time_slot,
+        )
+
+        try:
+            await self.page.goto(
+                direct_url,
+                wait_until="domcontentloaded",
+                timeout=30000,
+            )
+        except Exception as exc:
+            self.logger.error("Direct slot navigation failed: %s", exc)
+            return False
+
+        recovered = await self._wait_for_form_once(
+            "03_after_direct_nav_form_loaded",
+            timeout=10000,
+        )
+        if not recovered:
+            self.logger.error("Booking form still unavailable after direct slot navigation")
+        return recovered
 
 
 async def execute_natural_flow(
