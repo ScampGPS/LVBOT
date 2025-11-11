@@ -188,6 +188,7 @@ class BotApplication:
         t('botapp.runtime.bot_application.BotApplication._post_init')
         await self.lifecycle.post_init(application)
         self.application = application
+        application.bot_data['user_manager'] = self.user_manager
 
     async def _post_stop(self, application) -> None:
         """Clean up async components after the Telegram app stops."""

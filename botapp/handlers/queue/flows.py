@@ -151,6 +151,18 @@ class QueueBookingFlow(QueueFlowBase):
         t('botapp.handlers.queue.flows.QueueBookingFlow.show_menu')
 
         query = update.callback_query
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        translator, language = self._translator_for_user(user_id)
+        user_id = (
+            query.from_user.id
+            if query and getattr(query, 'from_user', None)
+            else (update.effective_user.id if update.effective_user else None)
+        )
+        translator, language = self._translator_for_user(user_id)
         await self.answer_callback(query)
 
         user_id = (
@@ -158,7 +170,7 @@ class QueueBookingFlow(QueueFlowBase):
             if query and getattr(query, 'from_user', None)
             else (update.effective_user.id if update.effective_user else None)
         )
-        _, language = self._translator_for_user(user_id)
+        translator, language = self._translator_for_user(user_id)
         self.logger.info(
             "QueueBookingFlow.show_menu user=%s current_flow=%s",
             user_id,
@@ -733,11 +745,13 @@ class QueueBookingFlow(QueueFlowBase):
         reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS, translator=translator)
         await self.edit_callback(
             query,
-            f"⏰ **Queue Booking**\n\n"
-            f"📅 Date: {selected_date.strftime('%A, %B %d, %Y')}\n"
-            f"⏱️ Time: {selected_time}\n\n"
-            "🎾 Select your preferred court(s) for the reservation:",
-            parse_mode='Markdown',
+            TelegramUI.format_queue_court_selection_prompt(
+                selected_date,
+                selected_time,
+                translator=translator,
+                language=language,
+            ),
+            parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
         )
 
@@ -761,6 +775,7 @@ class QueueBookingFlow(QueueFlowBase):
         query = update.callback_query
 
         user_id = update.effective_user.id if update.effective_user else None
+        translator, language = self._translator_for_user(user_id)
         self.logger.info(
             "QueueBookingFlow._show_time_selection user=%s selected_date=%s",
             user_id,
@@ -792,15 +807,18 @@ class QueueBookingFlow(QueueFlowBase):
             )
             await self.edit_callback(
                 query,
-                "⏰ Queue Booking\n\n"
-                "❌ No time slots available for this date.\n\n"
-                "Please pick a different date or try again later.",
-                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                TelegramUI.format_queue_no_times(selected_date, language=language, translator=translator),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
+                parse_mode=ParseMode.MARKDOWN_V2,
             )
             return
 
         keyboard = TelegramUI.create_queue_time_selection_keyboard(selected_date, time_slots)
-        message = TelegramUI.format_queue_time_prompt(selected_date)
+        message = TelegramUI.format_queue_time_prompt(
+            selected_date,
+            language=language,
+            translator=translator,
+        )
         await self.edit_callback(
             query,
             message,
@@ -965,9 +983,13 @@ class QueueBookingFlow(QueueFlowBase):
             )
             await self.edit_callback(
                 query,
-                TelegramUI.format_queue_no_times(selected_date),
+                TelegramUI.format_queue_no_times(
+                    selected_date,
+                    language=language,
+                    translator=translator,
+                ),
                 parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=TelegramUI.create_back_to_menu_keyboard(),
+                reply_markup=TelegramUI.create_back_to_menu_keyboard(language=language),
             )
             return True
 
@@ -1017,10 +1039,18 @@ class QueueBookingFlow(QueueFlowBase):
         from botapp.i18n.translator import create_translator
         translator = create_translator(language)
 
-        reply_markup = TelegramUI.create_queue_court_selection_keyboard(self.AVAILABLE_COURTS, translator=translator)
+        reply_markup = TelegramUI.create_queue_court_selection_keyboard(
+            self.AVAILABLE_COURTS,
+            translator=translator,
+        )
         await self.edit_callback(
             query,
-            TelegramUI.format_queue_court_selection_prompt(selected_date, selected_time),
+            TelegramUI.format_queue_court_selection_prompt(
+                selected_date,
+                selected_time,
+                language=language,
+                translator=translator,
+            ),
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
         )
@@ -1139,6 +1169,8 @@ class QueueBookingFlow(QueueFlowBase):
                 selected_date,
                 selected_time,
                 courts_text,
+                language=language,
+                translator=translator,
             ),
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=reply_markup,
@@ -1738,6 +1770,8 @@ class QueueReservationManager(QueueFlowBase):
 
         query = update.callback_query
         await self.answer_callback(query)
+        from_user = getattr(query, 'from_user', None)
+        translator, language = self._translator_for_user(from_user.id if from_user else None)
 
         try:
             all_reservations: list[dict[str, Any]] = []
@@ -1756,15 +1790,16 @@ class QueueReservationManager(QueueFlowBase):
                     all_reservations.append(copy)
 
             user_name = self._get_user_name(target_user_id)
+            header = translator.t('admin.user_reservations', user_name=user_name)
 
             if not all_reservations:
                 await self.edit_callback(
                     query,
-                    f"📅 **Reservations for {user_name}**\n\nNo active reservations found.",
+                    f"{header}\n\n{translator.t('admin.no_user_reservations')}",
                     parse_mode='Markdown',
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("⬅️ Back", callback_data='admin_view_users_list')],
-                        [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')],
+                        [InlineKeyboardButton(translator.t('admin.back_to_admin'), callback_data='admin_view_users_list')],
+                        [InlineKeyboardButton(translator.t('nav.main_menu'), callback_data='back_to_menu')],
                     ]),
                 )
                 return
@@ -1777,7 +1812,7 @@ class QueueReservationManager(QueueFlowBase):
             )
 
             keyboard: list[list[InlineKeyboardButton]] = []
-            message = f"📅 **Reservations for {user_name}**\n\n"
+            message = f"{header}\n\n"
 
             for res in all_reservations:
                 date_obj = DateTimeHelpers.parse_date_string(res.get('target_date', res.get('date', '')))
@@ -1804,8 +1839,8 @@ class QueueReservationManager(QueueFlowBase):
                 ])
 
             keyboard.extend([
-                [InlineKeyboardButton("⬅️ Back", callback_data='admin_view_users_list')],
-                [InlineKeyboardButton("🏠 Main Menu", callback_data='back_to_menu')],
+                [InlineKeyboardButton(translator.t('admin.back_to_admin'), callback_data='admin_view_users_list')],
+                [InlineKeyboardButton(translator.t('nav.main_menu'), callback_data='back_to_menu')],
             ])
 
             await self.edit_callback(

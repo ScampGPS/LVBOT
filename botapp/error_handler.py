@@ -11,6 +11,7 @@ from telegram.ext import ContextTypes
 from telegram.error import RetryAfter
 from .ui.telegram_ui import TelegramUI
 from botapp.messages.message_handlers import MessageHandlers
+from botapp.i18n import get_translator, get_user_translator
 
 
 class ErrorHandler:
@@ -132,15 +133,47 @@ class ErrorHandler:
         logger = logging.getLogger('ErrorHandler')
         
         # Log booking error with context
-        user_id = update.effective_user.id if update.effective_user else "Unknown"
-        logger.warning(f"Booking error - User: {user_id}, Type: {error_type}, Details: {details}")
+        user_obj = update.effective_user
+        user_id = user_obj.id if user_obj else None
+        logger.warning(
+            "Booking error - User: %s, Type: %s, Details: %s",
+            user_id or "Unknown",
+            error_type,
+            details,
+        )
         
         try:
+            # Determine translator for the current user when available
+            translator = None
+            application = getattr(context, 'application', None)
+            user_manager = None
+            if application is not None:
+                user_manager = getattr(application, 'user_manager', None)
+                if not user_manager:
+                    bot_data = getattr(application, 'bot_data', {})
+                    user_manager = bot_data.get('user_manager')
+
+            if user_manager and user_id is not None:
+                try:
+                    translator = get_user_translator(user_manager, user_id)
+                except Exception:
+                    translator = None
+
+            if translator is None:
+                translator = get_translator()
+
+            language = translator.get_language()
+
             # Generate user-friendly error message using TelegramUI
-            error_message = TelegramUI.format_error_message(error_type, details)
-            
+            error_message = TelegramUI.format_error_message(
+                error_type,
+                details,
+                translator=translator,
+                language=language,
+            )
+
             # Create navigation keyboard
-            reply_markup = TelegramUI.create_back_to_menu_keyboard()
+            reply_markup = TelegramUI.create_back_to_menu_keyboard(language=language)
             
             # Send error message via callback query if available
             if update.callback_query:

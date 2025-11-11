@@ -458,26 +458,34 @@ def create_pagination_keyboard(
     return buttons
 
 
-def format_error_message(error_type: str, details: Optional[str] = None) -> str:
+def format_error_message(
+    error_type: str,
+    details: Optional[str] = None,
+    *,
+    translator=None,
+    language=None,
+) -> str:
     """Format standardized error messages."""
 
     t('botapp.ui.booking.format_error_message')
-    error_messages = {
-        'unauthorized': "🔐 You are not authorized to use this bot.\nPlease send /start to request access.",
-        'invalid_date': "❌ Invalid date selected. Please choose a valid date.",
-        'invalid_time': "❌ Invalid time selected. Please choose from available times.",
-        'invalid_court': "❌ Invalid court selection. Please choose valid courts.",
-        'no_availability': "😔 No courts available at this time. Please try another time slot.",
-        'booking_failed': "❌ Booking failed. Please try again later.",
-        'profile_incomplete': "❌ Please complete your profile first using /profile command.",
-        'outside_window': "⏰ This time slot is outside the 48-hour booking window.",
-        'already_booked': "🚫 You already have a reservation at this time.",
-        'system_error': "❌ System error occurred. Please contact admin.",
+    tr = translator or get_translator(language)
+
+    error_keys = {
+        'unauthorized': 'error.unauthorized',
+        'invalid_date': 'error.invalid_date',
+        'invalid_time': 'error.invalid_time',
+        'invalid_court': 'error.invalid_court',
+        'no_availability': 'error.no_availability',
+        'booking_failed': 'error.booking_failed',
+        'profile_incomplete': 'error.profile_incomplete',
+        'outside_window': 'error.outside_window',
+        'already_booked': 'error.already_booked',
+        'system_error': 'error.system_error',
     }
 
-    message = error_messages.get(error_type, "❌ An error occurred.")
+    message = tr.t(error_keys.get(error_type, 'error.generic'))
     if details:
-        message += f"\n\nDetails: {details}"
+        message += f"\n\n{tr.t('error.details', details=details)}"
     return message
 
 

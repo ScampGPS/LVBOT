@@ -5,6 +5,7 @@ from tracking import t
 
 from datetime import date
 from botapp.ui.text_blocks import escape_telegram_markdown, bold_telegram_text
+from botapp.i18n import get_translator
 
 
 def _md(value: object) -> str:
@@ -19,85 +20,119 @@ def _bold(value: object) -> str:
     return bold_telegram_text(value, escape_special_chars=True)
 
 
-def format_time_selection_prompt(selected_date: date, availability_note: str | None = None) -> str:
+def _resolve_translator(translator=None, language=None):
+    """Return a translator instance honoring overrides."""
+
+    t('botapp.ui.queue._resolve_translator')
+    if translator is not None:
+        return translator
+    return get_translator(language)
+
+
+def format_time_selection_prompt(
+    selected_date: date,
+    availability_note: str | None = None,
+    *,
+    translator=None,
+    language=None,
+) -> str:
     """Return the message shown before picking a time slot."""
 
     t('botapp.ui.queue.format_time_selection_prompt')
+    tr = _resolve_translator(translator, language)
     lines = [
-        f"⏰ {_bold('Queue Booking')}",
+        f"⏰ {_bold(tr.t('queue.booking_title'))}",
         "",
-        f"📅 Selected Date: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
+        _md(tr.t('queue.selected_date', date=selected_date.strftime('%A, %B %d, %Y'))),
         "",
-        _md("⏱️ Select a time for your queued reservation:"),
+        _md(tr.t('queue.select_time')),
     ]
     if availability_note:
         lines.append(_md(availability_note))
     return "\n".join(lines)
 
 
-def format_no_time_slots_message(selected_date: date) -> str:
+def format_no_time_slots_message(
+    selected_date: date,
+    *,
+    translator=None,
+    language=None,
+) -> str:
     """Return the message shown when no time slots remain."""
 
     t('botapp.ui.queue.format_no_time_slots_message')
+    tr = _resolve_translator(translator, language)
     return "\n".join(
         [
-            f"⚠️ {_bold('No time slots available')}",
+            f"⚠️ {_bold(tr.t('queue.no_slots_title'))}",
             "",
-            f"📅 Date: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
+            _md(tr.t('queue.selected_date', date=selected_date.strftime('%A, %B %d, %Y'))),
             "",
-            _md("All time slots on this date are within 48 hours."),
-            _md("Please select a later date for queue booking."),
+            _md(tr.t('queue.no_slots_within_window')),
+            _md(tr.t('queue.no_slots_cta')),
         ]
     )
 
 
-def format_confirmation_message(selected_date: date, selected_time: str, courts_text: str) -> str:
+def format_confirmation_message(
+    selected_date: date,
+    selected_time: str,
+    courts_text: str,
+    *,
+    translator=None,
+    language=None,
+) -> str:
     """Return the queue confirmation summary shown before enqueueing."""
 
     t('botapp.ui.queue.format_confirmation_message')
+    tr = _resolve_translator(translator, language)
     lines = [
-        f"⏰ {_bold('Queue Booking Confirmation')}",
+        f"⏰ {_bold(tr.t('queue.confirmation_title'))}",
         "",
-        f"📅 Date: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
-        f"⏱️ Time: {_md(selected_time)}",
-        f"🎾 Courts: {_md(courts_text)}",
+        f"{tr.t('notif.date')}: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
+        f"{tr.t('notif.time')}: {_md(selected_time)}",
+        f"{tr.t('notif.courts')}: {_md(courts_text)}",
         "",
-        _md(
-            "🤖 This reservation will be queued and automatically booked when the booking window opens."
-        ),
+        _md(tr.t('queue.confirmation_notice')),
         "",
-        _bold("Confirm to add this reservation to your queue?"),
+        _bold(tr.t('queue.confirmation_cta')),
     ]
     return "\n".join(lines)
 
 
-def format_cancellation_message() -> str:
+def format_cancellation_message(*, translator=None, language=None) -> str:
     """Return the user-facing cancellation message."""
 
     t('botapp.ui.queue.format_cancellation_message')
+    tr = _resolve_translator(translator, language)
     return "\n".join(
         [
-            f"❌ {_bold('Queue Booking Cancelled')}",
+            f"❌ {_bold(tr.t('queue.cancelled_title'))}",
             "",
-            _md(
-                "Your reservation request has been cancelled. No changes have been made to your queue."
-            ),
+            _md(tr.t('queue.cancelled_body')),
             "",
-            _md("You can start a new booking anytime using the main menu."),
+            _md(tr.t('queue.cancelled_cta')),
         ]
     )
 
 
-def format_court_selection_prompt(selected_date: date, selected_time: str) -> str:
+def format_court_selection_prompt(
+    selected_date: date,
+    selected_time: str,
+    *,
+    translator=None,
+    language=None,
+) -> str:
     """Return the prompt shown before choosing preferred courts."""
 
     t('botapp.ui.queue.format_court_selection_prompt')
+    tr = _resolve_translator(translator, language)
     lines = [
-        f"⏰ {_bold('Queue Booking')}",
+        f"⏰ {_bold(tr.t('queue.booking_title'))}",
         "",
-        f"📅 Date: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
-        f"⏱️ Time: {_md(selected_time)}",
+        f"{tr.t('notif.date')}: {_md(selected_date.strftime('%A, %B %d, %Y'))}",
+        f"{tr.t('notif.time')}: {_md(selected_time)}",
         "",
-        _md("🎾 Select your preferred court(s) for the reservation:"),
+        _md(tr.t('queue.select_court_prompt')),
     ]
     return "\n".join(lines)

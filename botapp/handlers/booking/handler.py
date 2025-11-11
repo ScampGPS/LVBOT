@@ -41,6 +41,14 @@ class BookingHandler:
         t('botapp.handlers.booking.handler.BookingHandler._get_translator')
         return get_user_translator(self.deps.user_manager, user_id)
 
+    def _get_locale(self, user_id: int):
+        """Convenience helper returning translator and language code."""
+
+        t('botapp.handlers.booking.handler.BookingHandler._get_locale')
+        translator = self._get_translator(user_id)
+        language = translator.get_language()
+        return translator, language
+
     async def handle_reserve_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle Reserve Court menu option - show booking type selection
@@ -390,7 +398,7 @@ class BookingHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
-        tr = self._get_translator(user_id)
+        tr, language = self._get_locale(user_id)
         language = tr.get_language()
         user_id = query.from_user.id
         tr = self._get_translator(user_id)
@@ -506,7 +514,7 @@ class BookingHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
-        tr = self._get_translator(user_id)
+        tr, language = self._get_locale(user_id)
 
         # Extract year from callback data
         year = int(callback_data.split('_')[1])
@@ -537,7 +545,7 @@ class BookingHandler:
         query = update.callback_query
         callback_data = query.data
         user_id = query.from_user.id
-        tr = self._get_translator(user_id)
+        tr, language = self._get_locale(user_id)
 
         # Extract year and month from callback data (format: month_YYYY_MM)
         parts = callback_data.split('_')
